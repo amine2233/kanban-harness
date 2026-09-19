@@ -5,16 +5,16 @@ import Testing
 @testable import DashboardPersistenceFluent
 
 @Suite(.serialized) struct FluentProjectStoreTests {
-    func registry() async throws -> SQLiteRegistry {
+    func registry() async throws -> SQLiteDatabase {
         let path = NSTemporaryDirectory() + "mvp-dashboard-fluent-" + UUID().uuidString + "/nested/projects.sqlite"
-        let registry = try SQLiteRegistry(path: path)
+        let registry = try SQLiteDatabase.registry(path: path)
         try await registry.migrate()
         return registry
     }
 
     @Test func satisfiesStoreContract() async throws {
         let registry = try await registry()
-        try await StoreContract.verify(registry.store())
+        try await StoreContract.verify(FluentProjectStore(database: registry.database))
         try await registry.shutdown()
     }
 
@@ -28,12 +28,12 @@ import Testing
     @Test func dataSurvivesReopeningTheFile() async throws {
         let first = try await registry()
         let project = StoreContract.sampleProject("Persist", "p")
-        try await first.store().save([project])
+        try await FluentProjectStore(database: first.database).save([project])
         try await first.shutdown()
 
-        let second = try SQLiteRegistry(path: first.path)
+        let second = try SQLiteDatabase.registry(path: first.path)
         try await second.migrate()
-        #expect(try await second.store().load() == [project])
+        #expect(try await FluentProjectStore(database: second.database).load() == [project])
         try await second.shutdown()
     }
 
@@ -43,7 +43,7 @@ import Testing
         model.storage = "yaml"
         try await model.create(on: registry.database)
         await #expect(throws: (any Error).self) {
-            try await registry.store().load()
+            try await FluentProjectStore(database: registry.database).load()
         }
         try await registry.shutdown()
     }

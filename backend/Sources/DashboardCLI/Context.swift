@@ -6,14 +6,14 @@ import Foundation
 
 /// Boots the same registry the server uses, without a Vapor application.
 struct CLIContext {
-    let registry: SQLiteRegistry
+    let registry: SQLiteDatabase
     let projects: ProjectService
 
     static func open(home: String) async throws -> CLIContext {
-        let registry = try SQLiteRegistry(path: ServerConfig(home: home).registryPath)
+        let registry = try SQLiteDatabase.registry(path: ServerConfig(home: home).registryPath)
         try await registry.migrate()
         let projects = ProjectService(
-            store: registry.store(),
+            store: FluentProjectStore(database: registry.database),
             workspaces: WorkspaceStoreFactory { KanbanJSONStore(path: $0.dataFile) }
         )
         return CLIContext(registry: registry, projects: projects)

@@ -475,6 +475,7 @@ dependencies = [
  "kanban-persistence-json",
  "kanban-persistence-sqlite",
  "kanban-service",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.20",
  "tokio",

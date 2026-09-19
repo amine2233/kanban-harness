@@ -71,6 +71,28 @@ import Testing
         }
     }
 
+    @Test func updateReplacesProjectWithSameId() throws {
+        var registry = ProjectRegistry()
+        let project = try registry.add(project("A", "a"))
+        try registry.update(project.with(storage: .sqlite))
+        #expect(try registry.get(.id(project.id)).storage == .sqlite)
+        #expect(registry.count == 1)
+    }
+
+    @Test func updateUnknownIdThrowsAndStillChecksInvariants() throws {
+        var registry = ProjectRegistry()
+        try registry.add(project("A", "a"))
+        let b = try registry.add(project("B", "b"))
+        let stranger = try project("X", "x")
+        #expect(throws: DomainError.idNotFound(stranger.id)) {
+            try registry.update(stranger)
+        }
+        let renamed = try Project(name: "a", path: "/b", id: b.id)
+        #expect(throws: DomainError.duplicateName("A")) {
+            try registry.update(renamed)
+        }
+    }
+
     @Test func projectsRoundTripThroughInit() throws {
         var registry = ProjectRegistry()
         try registry.add(project("A", "a"))

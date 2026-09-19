@@ -34,6 +34,14 @@ export const projectsApi = baseApi.injectEndpoints({
       query: (body) => ({ url: 'projects', method: 'POST', body }),
       invalidatesTags: [{ type: 'Project', id: 'LIST' }],
     }),
+     
+    updateProject: build.mutation<Project, { id: string; storage: StorageKind }>({
+      query: ({ id, storage }) => ({ url: `projects/${id}`, method: 'PATCH', body: { storage } }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Project', id: 'LIST' },
+        { type: 'Project', id },
+      ],
+    }),
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- 204 has no body
     deleteProject: build.mutation<void, string>({
       query: (id) => ({ url: `projects/${id}`, method: 'DELETE' }),
@@ -49,5 +57,6 @@ export const {
   useListProjectsQuery,
   useGetProjectQuery,
   useCreateProjectMutation,
+  useUpdateProjectMutation,
   useDeleteProjectMutation,
 } = projectsApi

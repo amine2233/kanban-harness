@@ -135,6 +135,27 @@ struct CLI {
         #expect(boards[0]["task_list_view"] as? String == "flat")
     }
 
+    @Test func projectStorageConvertsBetweenFormats() throws {
+        let cli = try CLI()
+        let folder = cli.tempFolder("conv")
+        _ = try cli.json("project", "add", folder, "--name", "Conv")
+        let sqlite = try #require(try cli.json("project", "storage", "Conv", "sqlite") as? [String: Any])
+        #expect(sqlite["storage"] as? String == "sqlite")
+        #expect(FileManager.default.fileExists(atPath: folder + "/kanban.sqlite"))
+        let boards = try #require(try cli.json("project", "boards", "Conv") as? [[String: Any]])
+        #expect(boards.first?["name"] as? String == "Conv")
+        let json = try #require(try cli.json("project", "storage", "Conv", "json") as? [String: Any])
+        #expect(json["storage"] as? String == "json")
+    }
+
+    @Test func projectAddWithSQLiteStorage() throws {
+        let cli = try CLI()
+        let folder = cli.tempFolder("sq")
+        let created = try #require(try cli.json("project", "add", folder, "--storage", "sqlite") as? [String: Any])
+        #expect(created["storage"] as? String == "sqlite")
+        #expect(FileManager.default.fileExists(atPath: folder + "/kanban.sqlite"))
+    }
+
     @Test func registryPersistsBetweenInvocations() throws {
         let cli = try CLI()
         _ = try cli.json("project", "add", cli.tempFolder("p"), "--name", "Persist")

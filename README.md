@@ -1,6 +1,6 @@
 # MVP Dashboard
 
-Plugin-based dashboard (React 19 + TypeScript + Redux Toolkit, styled with Heroku's [purple3](https://design.herokai.com/purple3/)) backed by a Swift server (Vapor 4 + Fluent) and CLI (swift-argument-parser), wired with [cascade-kit](https://github.com/amine2233/cascade-kit). Each project is a folder on your machine holding a `kanban.json` workspace in the [kanban-rs](https://github.com/kanban-rs/kanban) v18 format, so the `kanban` CLI/TUI can open the same file.
+Plugin-based dashboard (React 19 + TypeScript + Redux Toolkit, styled with Heroku's [purple3](https://design.herokai.com/purple3/)) backed by a Swift server (Vapor 4 + Fluent) and CLI (swift-argument-parser), wired with [cascade-kit](https://github.com/amine2233/cascade-kit). Each project is a folder on your machine holding its board data as either `kanban.json` ([kanban-rs](https://github.com/kanban-rs/kanban) v18 format, so the `kanban` CLI/TUI can open it) or `kanban.sqlite` (Fluent). Both formats carry the same `Workspace` aggregate and a project can switch between them at any time.
 
 ## Run
 
@@ -17,7 +17,8 @@ Single binary deployment: `pnpm build && dashboard serve --static-dir dist`.
 ## CLI
 
 ```sh
-dashboard project add ~/work/demo --name Demo
+dashboard project add ~/work/demo --name Demo [--storage json|sqlite]
+dashboard project storage Demo sqlite        # convert in place, old file kept
 dashboard project list | show <name|id> | remove <name|id> | boards <name|id>
 dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist]
 ```

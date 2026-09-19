@@ -32,6 +32,15 @@ import Testing
     @Test func dataFileJoinsStorageFileName() throws {
         let project = try Project(name: "A", path: "/projects/demo")
         #expect(project.dataFile == "/projects/demo/kanban.json")
+        #expect(project.with(storage: .sqlite).dataFile == "/projects/demo/kanban.sqlite")
+    }
+
+    @Test func withStorageKeepsIdentity() throws {
+        let project = try Project(name: "A", path: "/p")
+        let switched = project.with(storage: .sqlite)
+        #expect(switched.id == project.id)
+        #expect(switched.storage == .sqlite)
+        #expect(project.storage == .json)
     }
 
     @Test func projectCodableUsesSnakeCaseAndRoundTrips() throws {

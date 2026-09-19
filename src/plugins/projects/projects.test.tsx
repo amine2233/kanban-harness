@@ -131,6 +131,25 @@ describe('ProjectPage', () => {
     expect(api.calls.some((c) => c.key === `DELETE /api/projects/${demo.id}`)).toBe(true)
   })
 
+  test('switches storage through PATCH', async () => {
+    let current = demo
+    const api = stubApi({
+      [`GET /api/projects/${demo.id}`]: () => ({ body: current }),
+      [`PATCH /api/projects/${demo.id}`]: (body) => {
+        current = { ...demo, storage: (body as { storage: string }).storage }
+        return { body: current }
+      },
+    })
+    renderAt({ route: '/projects/:id', url: `/projects/${demo.id}`, element: <ProjectPage /> })
+    await screen.findByRole('heading', { level: 1 })
+    await userEvent.selectOptions(screen.getByLabelText('Storage'), 'sqlite')
+    await waitFor(() => {
+      expect(screen.getByLabelText('Storage')).toHaveValue('sqlite')
+    })
+    const patch = api.calls.find((c) => c.key === `PATCH /api/projects/${demo.id}`)
+    expect(patch?.body).toEqual({ storage: 'sqlite' })
+  })
+
   test('shows a not-found banner for an unknown id', async () => {
     stubApi({})
     renderAt({ route: '/projects/:id', url: '/projects/missing', element: <ProjectPage /> })

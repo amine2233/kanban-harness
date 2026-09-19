@@ -2,13 +2,16 @@ import Foundation
 
 public let maxProjectNameLength = 64
 
-/// Which kanban-rs store format lives inside the project folder.
+/// Which store format lives inside the project folder. Both hold the same
+/// `Workspace` aggregate and can be switched at any time.
 public enum StorageKind: String, Codable, Sendable, CaseIterable {
     case json
+    case sqlite
 
     public var fileName: String {
         switch self {
         case .json: "kanban.json"
+        case .sqlite: "kanban.sqlite"
         }
     }
 }
@@ -18,7 +21,7 @@ public struct Project: Codable, Hashable, Sendable {
     public let id: UUID
     public let name: String
     public let path: String
-    public let storage: StorageKind
+    public private(set) var storage: StorageKind
     public let createdAt: Date
 
     enum CodingKeys: String, CodingKey {
@@ -48,6 +51,12 @@ public struct Project: Codable, Hashable, Sendable {
 
     public var dataFile: String {
         (path as NSString).appendingPathComponent(storage.fileName)
+    }
+
+    public func with(storage: StorageKind) -> Project {
+        var copy = self
+        copy.storage = storage
+        return copy
     }
 }
 

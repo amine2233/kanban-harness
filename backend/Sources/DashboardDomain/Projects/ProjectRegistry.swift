@@ -36,6 +36,23 @@ public struct ProjectRegistry: Equatable, Sendable {
         return projects.remove(at: index)
     }
 
+    /// Replaces the project with the same id; name/path invariants are re-checked against the others.
+    @discardableResult
+    public mutating func update(_ project: Project) throws -> Project {
+        guard let index = projects.firstIndex(where: { $0.id == project.id }) else {
+            throw DomainError.idNotFound(project.id)
+        }
+        let others = projects.enumerated().filter { $0.offset != index }.map(\.element)
+        if let clash = others.first(where: { ProjectRef.name(project.name).matches($0) }) {
+            throw DomainError.duplicateName(clash.name)
+        }
+        if others.contains(where: { $0.path == project.path }) {
+            throw DomainError.duplicatePath(project.path)
+        }
+        projects[index] = project
+        return project
+    }
+
     public func find(_ reference: ProjectRef) -> Project? {
         projects.first(where: reference.matches)
     }

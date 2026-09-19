@@ -1,6 +1,7 @@
 import CascadeKit
 import DashboardDomain
 import DashboardPersistence
+import DashboardPersistenceFluent
 import DashboardPersistenceJSON
 import Foundation
 import Testing
@@ -50,6 +51,19 @@ func jsonService(home: String) -> ProjectService {
     ProjectService(
         store: JSONProjectStore(path: home + "/projects.json"),
         workspaces: WorkspaceStoreFactory { KanbanJSONStore(path: $0.dataFile) }
+    )
+}
+
+/// Real files for both formats, chosen per project like the composition roots do.
+func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
+    ProjectService(
+        store: JSONProjectStore(path: home + "/projects.json"),
+        workspaces: WorkspaceStoreFactory { project in
+            switch project.storage {
+            case .json: KanbanJSONStore(path: project.dataFile)
+            case .sqlite: SQLiteWorkspaceStore(path: project.dataFile, pool: pool)
+            }
+        }
     )
 }
 
@@ -186,6 +200,53 @@ func jsonService(home: String) -> ProjectService {
             #expect(error.isValidation)
         }
         #expect(try await svc.workspace(.name("Demo")).boards.count == 1)
+    }
+
+    @Test func addWithSQLiteStorageSeedsASQLiteFile() async throws {
+        let pool = SQLiteDatabasePool()
+        let svc = fileService(home: try tempDir(), pool: pool)
+        let project = try await svc.add(name: "Demo", path: try tempDir(), storage: .sqlite)
+        #expect(project.dataFile.hasSuffix("kanban.sqlite"))
+        let header = try Data(contentsOf: URL(fileURLWithPath: project.dataFile)).prefix(16)
+        #expect(String(decoding: header, as: UTF8.self).hasPrefix("SQLite format 3"))
+        #expect(try await svc.workspace(.id(project.id)).boards.map(\.name) == ["Demo"])
+        await pool.shutdownAll()
+    }
+
+    @Test func changeStorageConvertsWorkspaceBothWaysWithoutLoss() async throws {
+        let pool = SQLiteDatabasePool()
+        let svc = fileService(home: try tempDir(), pool: pool)
+        let project = try await svc.add(name: "Demo", path: try tempDir())
+        let card = try await svc.mutate(.id(project.id)) { workspace, now in
+            let column = workspace.columns(of: workspace.boards[0].id)[1]
+            return try workspace.createCard(columnId: column.id, title: "Survives", priority: .critical, now: now)
+        }
+        let before = try await svc.workspace(.id(project.id))
+
+        let sqlite = try await svc.changeStorage(.id(project.id), to: .sqlite)
+        #expect(sqlite.storage == .sqlite)
+        #expect(sqlite.id == project.id)
+        #expect(try await svc.get(.id(project.id)).storage == .sqlite)
+        #expect(FileManager.default.fileExists(atPath: sqlite.dataFile))
+        #expect(FileManager.default.fileExists(atPath: project.dataFile), "old json file is kept")
+        #expect(try await svc.workspace(.id(project.id)) == before)
+
+        try await svc.mutate(.id(project.id)) { workspace, now in
+            try workspace.moveCard(card.id, toColumn: workspace.columns(of: workspace.boards[0].id)[2].id, now: now)
+        }
+        let json = try await svc.changeStorage(.id(project.id), to: .json)
+        #expect(json.storage == .json)
+        let after = try await svc.workspace(.id(project.id))
+        #expect(after.cards.map(\.title) == ["Survives"])
+        #expect(after.cards[0].status == .done)
+        #expect(after.prefixes == before.prefixes)
+        await pool.shutdownAll()
+    }
+
+    @Test func changeStorageToSameKindIsNoOp() async throws {
+        let svc = memoryService()
+        let project = try await svc.add(name: "Demo", path: try tempDir())
+        #expect(try await svc.changeStorage(.id(project.id), to: .json) == project)
     }
 
     @Test func workspaceForUnknownProjectIsNotFound() async {

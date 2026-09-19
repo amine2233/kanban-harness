@@ -49,6 +49,23 @@ public actor ProjectService {
         }
     }
 
+    /// Converts a project's workspace to another format: read through the
+    /// current store, write through the new one, then re-point the registry.
+    /// The previous file is left on disk as a fallback.
+    public func changeStorage(_ reference: ProjectRef, to storage: StorageKind) async throws(ServiceError) -> Project {
+        try await wrap {
+            var registry = try await registry()
+            let project = try registry.get(reference)
+            guard project.storage != storage else { return project }
+            let workspace = try await workspaces.make(project).load()
+            let converted = project.with(storage: storage)
+            try await workspaces.make(converted).save(workspace)
+            try registry.update(converted)
+            try await store.save(registry.projects)
+            return converted
+        }
+    }
+
     // MARK: Workspaces
 
     public func workspace(_ reference: ProjectRef) async throws(ServiceError) -> Workspace {

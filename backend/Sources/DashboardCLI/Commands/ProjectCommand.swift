@@ -7,7 +7,7 @@ struct ProjectCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "project",
         abstract: "Register, list and inspect projects.",
-        subcommands: [Add.self, List.self, Show.self, Remove.self, Boards.self]
+        subcommands: [Add.self, List.self, Show.self, Remove.self, Boards.self, Storage.self]
     )
 
     struct Add: AsyncParsableCommand {
@@ -21,7 +21,7 @@ struct ProjectCommand: AsyncParsableCommand {
         @Option(help: "Display name; defaults to the folder name.")
         var name: String?
 
-        @Option(help: "Workspace format written into the folder (json).")
+        @Option(help: "Workspace format written into the folder (json or sqlite).")
         var storage: StorageKind = .json
 
         func run() async throws {
@@ -88,6 +88,25 @@ struct ProjectCommand: AsyncParsableCommand {
             try await failing {
                 let context = try await CLIContext.open(home: global.resolvedHome)
                 try Output.json(try await context.run { try await $0.remove(.parse(project)) })
+            }
+        }
+    }
+
+    struct Storage: AsyncParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Convert a project's workspace to json or sqlite (the old file is kept).")
+
+        @OptionGroup var global: GlobalOptions
+
+        @Argument(help: "Project name or id.")
+        var project: String
+
+        @Argument(help: "Target format: json or sqlite.")
+        var storage: StorageKind
+
+        func run() async throws {
+            try await failing {
+                let context = try await CLIContext.open(home: global.resolvedHome)
+                try Output.json(try await context.run { try await $0.changeStorage(.parse(project), to: storage) })
             }
         }
     }

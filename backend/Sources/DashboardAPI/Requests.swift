@@ -13,6 +13,14 @@ public struct CreateProjectRequest: Codable, Sendable {
     }
 }
 
+public struct UpdateProjectRequest: Codable, Sendable {
+    public var storage: StorageKind
+
+    public init(storage: StorageKind) {
+        self.storage = storage
+    }
+}
+
 public struct CreateCardRequest: Codable, Sendable {
     public var title: String
     public var description: String?

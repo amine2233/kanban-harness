@@ -67,7 +67,7 @@ let package = Package(
         ),
         .testTarget(
             name: "DashboardServiceTests",
-            dependencies: ["DashboardService", "DashboardPersistenceJSON"]
+            dependencies: ["DashboardService", "DashboardPersistenceJSON", "DashboardPersistenceFluent"]
         ),
         .testTarget(
             name: "DashboardServerTests",

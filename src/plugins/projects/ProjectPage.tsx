@@ -1,14 +1,20 @@
 import { useNavigate, useParams } from 'react-router'
 import { errorMessage } from '@/app/api'
-import { Badge, Banner, Button, PageHeader, Spinner } from '@/design-system'
+import { Banner, Button, PageHeader, Select, Spinner } from '@/design-system'
 import { KanbanBoard } from './KanbanBoard'
-import { useDeleteProjectMutation, useGetProjectQuery } from './projectsApi'
+import {
+  useDeleteProjectMutation,
+  useGetProjectQuery,
+  useUpdateProjectMutation,
+  type StorageKind,
+} from './projectsApi'
 
 export function ProjectPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const { data: project, isLoading, error } = useGetProjectQuery(id)
   const [deleteProject, { isLoading: deleting }] = useDeleteProjectMutation()
+  const [updateProject, { isLoading: switching }] = useUpdateProjectMutation()
 
   if (isLoading) return <Spinner />
   if (error || !project) {
@@ -32,9 +38,19 @@ export function ProjectPage() {
         description={project.path}
         actions={
           <>
-            <Badge variant="outline" className="mr2">
-              {project.storage}
-            </Badge>
+            <Select
+              name="storage"
+              aria-label="Storage"
+              value={project.storage}
+              disabled={switching}
+              className="mr2"
+              onChange={(e) => {
+                void updateProject({ id: project.id, storage: e.target.value as StorageKind })
+              }}
+            >
+              <option value="json">JSON</option>
+              <option value="sqlite">SQLite</option>
+            </Select>
             <Button
               variant="danger"
               size="sm"

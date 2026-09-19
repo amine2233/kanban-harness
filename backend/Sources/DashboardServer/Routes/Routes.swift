@@ -7,6 +7,7 @@ extension BoardResponse: Content {}
 extension ColumnResponse: Content {}
 extension CardResponse: Content {}
 extension CreateProjectRequest: Content {}
+extension UpdateProjectRequest: Content {}
 extension CreateCardRequest: Content {}
 extension UpdateCardRequest: Content {}
 extension Page: Content {}

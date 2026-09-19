@@ -119,6 +119,40 @@ extension TestingApplicationTester {
         }
     }
 
+    @Test func patchProjectSwitchesStorageAndKeepsBoardData() async throws {
+        try await withServer { app, home in
+            let id = try #require(try await app.createProject("Demo", at: home + "/demo")["id"] as? String)
+            let base = "/api/projects/\(id)/kanban/v1"
+            let (boardId, columns) = try await app.firstBoardAndColumns(base)
+            let todo = try #require(columns[0]["id"] as? String)
+            _ = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "Keep me"])
+
+            let (status, body) = try await app.json(.PATCH, "/api/projects/\(id)", body: ["storage": "sqlite"])
+            #expect(status == .ok)
+            #expect((body as? [String: Any])?["storage"] as? String == "sqlite")
+            #expect(FileManager.default.fileExists(atPath: home + "/demo/kanban.sqlite"))
+
+            let (_, cards) = try await app.json(.GET, "\(base)/boards/\(boardId)/cards")
+            let items = try #require((cards as? [String: Any])?["items"] as? [[String: Any]])
+            #expect(items.map { $0["title"] as? String } == ["Keep me"])
+
+            let (bad, err) = try await app.json(.PATCH, "/api/projects/\(id)", body: ["storage": "yaml"])
+            #expect(bad == .badRequest)
+            #expect((err as? [String: Any])?["code"] as? String == "VALIDATION_FAILED")
+        }
+    }
+
+    @Test func createProjectWithSQLiteStorage() async throws {
+        try await withServer { app, home in
+            let (status, body) = try await app.json(.POST, "/api/projects", body: ["name": "S", "path": home + "/s", "storage": "sqlite"])
+            #expect(status == .created)
+            #expect((body as? [String: Any])?["storage"] as? String == "sqlite")
+            let id = try #require((body as? [String: Any])?["id"] as? String)
+            let (_, boards) = try await app.json(.GET, "/api/projects/\(id)/kanban/v1/boards")
+            #expect((boards as? [String: Any])?["total"] as? Int == 1)
+        }
+    }
+
     @Test func registryPersistsAcrossRestarts() async throws {
         let home = try tempDir()
         try await withApp(configure: { try await configure($0, config: ServerConfig(home: home)) }) { app in

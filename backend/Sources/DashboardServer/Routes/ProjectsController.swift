@@ -9,6 +9,7 @@ struct ProjectsController: RouteCollection {
         projects.post(use: create)
         projects.group(":project") { project in
             project.get(use: show)
+            project.patch(use: update)
             project.delete(use: remove)
         }
     }
@@ -27,6 +28,11 @@ struct ProjectsController: RouteCollection {
 
     func show(req: Request) async throws -> Project {
         try await req.projects.get(req.projectRef)
+    }
+
+    func update(req: Request) async throws -> Project {
+        let body = try req.content.decode(UpdateProjectRequest.self)
+        return try await req.projects.changeStorage(req.projectRef, to: body.storage)
     }
 
     func remove(req: Request) async throws -> HTTPStatus {

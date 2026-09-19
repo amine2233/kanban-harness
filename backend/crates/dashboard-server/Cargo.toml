@@ -1,0 +1,25 @@
+[package]
+name = "dashboard-server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "HTTP API: project registry plus a kanban REST API per project"
+
+[dependencies]
+dashboard-domain = { workspace = true }
+dashboard-service = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+kanban-server = { workspace = true }
+kanban-service = { workspace = true }
+
+[dev-dependencies]
+dashboard-persistence = { workspace = true }
+tempfile = { workspace = true }

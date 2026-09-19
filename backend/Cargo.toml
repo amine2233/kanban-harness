@@ -1,0 +1,50 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/dashboard-domain",
+    "crates/dashboard-persistence",
+    "crates/dashboard-persistence-json",
+    "crates/dashboard-service",
+    "crates/dashboard-cli",
+    "crates/dashboard-server",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+tokio = { version = "1.42", features = ["full"] }
+async-trait = "0.1"
+anyhow = "1.0"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.11", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.5", features = ["derive", "env"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tempfile = "3.8"
+assert_cmd = "2.0"
+predicates = "3.0"
+axum = "0.8"
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["fs", "trace"] }
+
+kanban-core = "0.9"
+kanban-domain = "0.9"
+kanban-persistence = "0.9"
+kanban-persistence-json = "0.9"
+kanban-persistence-sqlite = "0.9"
+kanban-backend = "0.9"
+kanban-service = "0.9"
+kanban-server = "0.9"
+
+dashboard-domain = { path = "crates/dashboard-domain" }
+dashboard-persistence = { path = "crates/dashboard-persistence" }
+dashboard-persistence-json = { path = "crates/dashboard-persistence-json" }
+dashboard-service = { path = "crates/dashboard-service" }
+dashboard-server = { path = "crates/dashboard-server" }

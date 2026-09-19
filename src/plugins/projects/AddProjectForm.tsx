@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { errorMessage } from '@/app/api'
 import { Button, Input, Select } from '@/design-system'
 import { folderName } from './paths'
+import { useGetServerSettingsQuery } from '@/plugins/settings/settingsApi'
 import { useCreateProjectMutation, type StorageKind } from './projectsApi'
 
 export function AddProjectForm({ onDone }: { onDone: () => void }) {
@@ -10,7 +11,9 @@ export function AddProjectForm({ onDone }: { onDone: () => void }) {
   const [createProject, { isLoading, error }] = useCreateProjectMutation()
   const [name, setName] = useState('')
   const [path, setPath] = useState('')
-  const [storage, setStorage] = useState<StorageKind>('json')
+  const [storageChoice, setStorage] = useState<StorageKind>()
+  const { data: serverSettings } = useGetServerSettingsQuery()
+  const storage = storageChoice ?? serverSettings?.default_storage ?? 'json'
 
   const submit = async (event: SyntheticEvent) => {
     event.preventDefault()

@@ -4,6 +4,7 @@ import { Provider } from 'react-redux'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { createStore } from '@/app/store'
 import { selectServerUrl, SETTINGS_STORAGE_KEY } from '@/core/settings/settingsSlice'
+import { stubApi } from '@/test/fakeApi'
 import { SettingsPage } from './SettingsPage'
 
 afterEach(() => {
@@ -12,6 +13,7 @@ afterEach(() => {
 })
 
 function renderPage() {
+  stubApi({ 'GET /api/settings': () => ({ body: { default_storage: 'json', cors_origins: [] } }) })
   const store = createStore()
   render(
     <Provider store={store}>
@@ -51,11 +53,12 @@ describe('SettingsPage', () => {
   })
 
   test('test connection reports reachable and unreachable servers', async () => {
+    renderPage()
+    await screen.findByLabelText('Default storage for new projects')
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(new Response('{"status":"ok"}', { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
-    renderPage()
     await userEvent.type(screen.getByLabelText('Server URL'), 'http://127.0.0.1:5175')
     await userEvent.click(screen.getByRole('button', { name: 'Test connection' }))
     expect(await screen.findByText('Server reachable')).toBeInTheDocument()

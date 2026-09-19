@@ -9,6 +9,7 @@ import {
   setServerUrl,
 } from '@/core/settings/settingsSlice'
 import { Banner, Button, Card, Input, PageHeader, type Tone } from '@/design-system'
+import { ServerSettingsCard } from './ServerSettingsCard'
 
 interface Check {
   tone: Tone
@@ -61,8 +62,8 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Where the dashboard talks to." />
-      <Card title="API server" className="mw7">
+      <PageHeader title="Settings" description="This browser, and the server it talks to." />
+      <Card title="This browser" className="mw7">
         <form onSubmit={save}>
           <Input
             name="server-url"
@@ -75,8 +76,8 @@ export function SettingsPage() {
             className="mb1"
           />
           <p className="f6 gray mt0 mb3">
-            Leave empty to use the page&apos;s own origin. Currently using{' '}
-            <code>{apiBaseUrl(serverUrl)}</code>.
+            Stored in this browser only. Leave empty to use the page&apos;s own origin. Currently
+            using <code>{apiBaseUrl(serverUrl)}</code>.
           </p>
           {invalid && (
             <p className="f6 red mt0 mb2">Enter an absolute http(s) URL, or leave it empty.</p>
@@ -113,6 +114,7 @@ export function SettingsPage() {
           </Banner>
         )}
       </Card>
+      <ServerSettingsCard />
     </>
   )
 }

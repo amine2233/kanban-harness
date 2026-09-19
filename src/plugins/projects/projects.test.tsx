@@ -67,6 +67,7 @@ describe('ProjectsSidebar', () => {
     let projects: unknown[] = []
     const api = stubApi({
       'GET /api/projects': () => ({ body: projects }),
+      'GET /api/settings': () => ({ body: { default_storage: 'sqlite', cors_origins: [] } }),
       'POST /api/projects': () => {
         projects = [demo]
         return { status: 201, body: demo }
@@ -81,7 +82,9 @@ describe('ProjectsSidebar', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Add project' }))
     await userEvent.type(screen.getByLabelText('Folder path'), '/tmp/demo')
-    await userEvent.selectOptions(screen.getByLabelText('Storage'), 'sqlite')
+    await waitFor(() => {
+      expect(screen.getByLabelText('Storage')).toHaveValue('sqlite')
+    })
     await userEvent.click(screen.getByRole('button', { name: 'Add' }))
 
     await waitFor(() => {

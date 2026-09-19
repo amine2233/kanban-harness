@@ -21,6 +21,21 @@ public struct UpdateProjectRequest: Codable, Sendable {
     }
 }
 
+public struct UpdateSettingsRequest: Codable, Sendable {
+    public var defaultStorage: StorageKind?
+    public var corsOrigins: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case defaultStorage = "default_storage"
+        case corsOrigins = "cors_origins"
+    }
+
+    public init(defaultStorage: StorageKind? = nil, corsOrigins: [String]? = nil) {
+        self.defaultStorage = defaultStorage
+        self.corsOrigins = corsOrigins
+    }
+}
+
 public struct CreateBoardRequest: Codable, Sendable {
     public var name: String
     public var description: String?

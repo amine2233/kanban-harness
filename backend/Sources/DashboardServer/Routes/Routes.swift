@@ -3,6 +3,8 @@ import DashboardDomain
 import Vapor
 
 extension Project: Content {}
+extension Settings: Content {}
+extension UpdateSettingsRequest: Content {}
 extension BoardResponse: Content {}
 extension ColumnResponse: Content {}
 extension CardResponse: Content {}
@@ -26,6 +28,7 @@ func routes(_ app: Vapor.Application, config: ServerConfig) throws {
     let api = app.grouped("api")
     api.get("health") { _ in Health() }
     try api.register(collection: ProjectsController())
+    try api.register(collection: SettingsController())
     try api.grouped("projects", ":project", "kanban", "v1").register(collection: KanbanController())
 
     if let staticDir = config.staticDir {

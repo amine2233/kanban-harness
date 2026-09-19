@@ -7,7 +7,7 @@ struct Dashboard: AsyncParsableCommand {
         commandName: "dashboard",
         abstract: "Manage dashboard projects (kanban workspaces in folders) and run the API server.",
         version: "0.1.0",
-        subcommands: [ProjectCommand.self, ServeCommand.self]
+        subcommands: [ProjectCommand.self, SettingsCommand.self, ServeCommand.self]
     )
 
     @OptionGroup var global: GlobalOptions

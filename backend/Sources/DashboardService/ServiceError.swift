@@ -23,6 +23,7 @@ public enum ServiceError: Error, Sendable {
     }
 
     public var isValidation: Bool {
+        if case .domain(.invalidOrigin) = self { return true }
         if case .domain = self { return !isNotFound && !isConflict }
         return false
     }

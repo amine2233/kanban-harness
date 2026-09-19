@@ -192,6 +192,24 @@ struct CLI {
         #expect(body == #"{"status":"ok"}"#)
     }
 
+    @Test func settingsShowAndSetPersistToSettingsFile() throws {
+        let cli = try CLI()
+        let initial = try #require(try cli.json("settings", "show") as? [String: Any])
+        #expect(initial["default_storage"] as? String == "json")
+        let updated = try #require(try cli.json("settings", "set", "--default-storage", "sqlite", "--cors-origin", "http://localhost:5173/", "http://127.0.0.1:5173") as? [String: Any])
+        #expect(updated["default_storage"] as? String == "sqlite")
+        #expect(updated["cors_origins"] as? [String] == ["http://localhost:5173", "http://127.0.0.1:5173"])
+        #expect(FileManager.default.fileExists(atPath: cli.home + "/settings.json"))
+        let cleared = try #require(try cli.json("settings", "set", "--clear-cors") as? [String: Any])
+        #expect(cleared["cors_origins"] as? [String] == [])
+        #expect(cleared["default_storage"] as? String == "sqlite", "unrelated fields are kept")
+        let created = try #require(try cli.json("project", "add", cli.tempFolder("def")) as? [String: Any])
+        #expect(created["storage"] as? String == "sqlite", "project add follows default_storage")
+        let bad = try cli.run("settings", "set", "--cors-origin", "nope")
+        #expect(bad.status == 1)
+        #expect(bad.stderr.contains("invalid origin"))
+    }
+
     @Test func helpListsSubcommands() throws {
         let result = try CLI().run("--help")
         #expect(result.status == 0)

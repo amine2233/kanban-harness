@@ -22,19 +22,13 @@ public func configure(_ app: Vapor.Application, config: ServerConfig) async thro
     ContentConfiguration.global.use(encoder: encoder, for: .json)
     ContentConfiguration.global.use(decoder: decoder, for: .json)
 
+    registerServices(app, config: config)
     app.middleware = Middlewares()
-    if !config.corsOrigins.isEmpty {
-        app.middleware.use(CORSMiddleware(configuration: .init(
-            allowedOrigin: .any(config.corsOrigins),
-            allowedMethods: [.GET, .POST, .PATCH, .DELETE, .OPTIONS],
-            allowedHeaders: [.accept, .contentType, .origin]
-        )))
-    }
+    app.middleware.use(DynamicCORSMiddleware(staticOrigins: config.corsOrigins))
     app.middleware.use(ApiErrorMiddleware())
     if let staticDir = config.staticDir {
         app.middleware.use(FileMiddleware(publicDirectory: staticDir))
     }
 
-    registerServices(app)
     try routes(app, config: config)
 }

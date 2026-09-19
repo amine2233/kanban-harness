@@ -18,6 +18,10 @@ public enum WorkspacePoolKey: ServiceKey {
     public typealias Value = SQLiteDatabasePool
 }
 
+public enum SettingsServiceKey: ServiceKey {
+    public typealias Value = SettingsService
+}
+
 private struct ContainerKey: Vapor.StorageKey {
     typealias Value = CascadeKit.Application
 }
@@ -36,12 +40,20 @@ extension Vapor.Request {
     public var projects: ProjectService {
         application.services.make(ProjectServiceKey.self)
     }
+
+    public var settings: SettingsService {
+        application.services.make(SettingsServiceKey.self)
+    }
 }
 
 /// Default wiring: registry in Fluent SQLite, board data in kanban-rs JSON files.
-func registerServices(_ app: Vapor.Application) {
+func registerServices(_ app: Vapor.Application, config: ServerConfig) {
     let database = app.db
     let pool = SQLiteDatabasePool()
+    let settingsPath = config.settingsPath
+    app.services.register(SettingsServiceKey.self) { _ in
+        SettingsService(store: JSONSettingsStore(path: settingsPath))
+    }
     app.services.register(ProjectStoreKey.self) { _ in FluentProjectStore(database: database) }
     app.services.register(WorkspacePoolKey.self) { _ in pool }
     app.services.register(ProjectServiceKey.self) { container in

@@ -21,12 +21,18 @@ struct ProjectCommand: AsyncParsableCommand {
         @Option(help: "Display name; defaults to the folder name.")
         var name: String?
 
-        @Option(help: "Workspace format written into the folder (json or sqlite).")
-        var storage: StorageKind = .json
+        @Option(help: "Workspace format written into the folder (json or sqlite); defaults to the settings' default_storage.")
+        var storage: StorageKind?
 
         func run() async throws {
             try await failing {
                 let absolute = Self.absolute(path)
+                let storage: StorageKind
+                if let requested = self.storage {
+                    storage = requested
+                } else {
+                    storage = try await SettingsCommand.service(home: global.resolvedHome).current().defaultStorage
+                }
                 let context = try await CLIContext.open(home: global.resolvedHome)
                 let project = try await context.run {
                     try await $0.add(name: name ?? Self.folderName(absolute), path: absolute, storage: storage)

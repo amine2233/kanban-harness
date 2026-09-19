@@ -43,7 +43,7 @@ public enum StoreContract {
         try require(loaded.prefixes == workspace.prefixes, "prefixes must round-trip")
     }
 
-    private static func require(_ condition: Bool, _ message: String) throws {
+    static func require(_ condition: Bool, _ message: String) throws {
         if !condition { throw Violation(description: message) }
     }
 }

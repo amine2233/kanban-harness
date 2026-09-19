@@ -16,6 +16,7 @@ public enum DomainError: Error, Equatable, Sendable {
     case emptyBoardName
     case emptyColumnName
     case lastColumn(board: String)
+    case invalidOrigin(String)
 }
 
 extension DomainError: LocalizedError {
@@ -36,6 +37,7 @@ extension DomainError: LocalizedError {
         case .emptyBoardName: "board name must not be empty"
         case .emptyColumnName: "column name must not be empty"
         case let .lastColumn(board): "board '\(board)' must keep at least one column"
+        case let .invalidOrigin(origin): "invalid origin '\(origin)': expected http(s)://host[:port]"
         }
     }
 }

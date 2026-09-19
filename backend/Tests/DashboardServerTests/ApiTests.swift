@@ -239,6 +239,43 @@ extension TestingApplicationTester {
         }
     }
 
+    @Test func settingsAreReadAndUpdatedLiveAndDriveDefaultStorage() async throws {
+        try await withServer { app, home in
+            let (status, initial) = try await app.json(.GET, "/api/settings")
+            #expect(status == .ok)
+            #expect((initial as? [String: Any])?["default_storage"] as? String == "json")
+
+            let (patched, body) = try await app.json(.PATCH, "/api/settings", body: ["default_storage": "sqlite", "cors_origins": ["http://localhost:5173/"]])
+            #expect(patched == .ok)
+            #expect((body as? [String: Any])?["cors_origins"] as? [String] == ["http://localhost:5173"])
+            let raw = try String(contentsOfFile: home + "/settings.json", encoding: .utf8)
+            #expect(raw.contains("\"default_storage\" : \"sqlite\""))
+
+            let project = try await app.createProject("Uses default", at: home + "/d")
+            #expect(project["storage"] as? String == "sqlite")
+
+            try "{\"default_storage\": \"json\"}".write(toFile: home + "/settings.json", atomically: true, encoding: .utf8)
+            let (_, reread) = try await app.json(.GET, "/api/settings")
+            #expect((reread as? [String: Any])?["default_storage"] as? String == "json", "hand edits apply without restart")
+
+            let (bad, err) = try await app.json(.PATCH, "/api/settings", body: ["cors_origins": ["ftp://x"]])
+            #expect(bad == .badRequest)
+            #expect((err as? [String: Any])?["code"] as? String == "VALIDATION_FAILED")
+        }
+    }
+
+    @Test func corsOriginsFromSettingsApplyWithoutRestart() async throws {
+        try await withServer { app, _ in
+            var origin = HTTPHeaders()
+            origin.add(name: .origin, value: "http://localhost:5173")
+            let before = try await app.sendRequest(.GET, "/api/health", headers: origin)
+            #expect(before.headers[.accessControlAllowOrigin].isEmpty)
+            _ = try await app.json(.PATCH, "/api/settings", body: ["cors_origins": ["http://localhost:5173"]])
+            let after = try await app.sendRequest(.GET, "/api/health", headers: origin)
+            #expect(after.headers[.accessControlAllowOrigin] == ["http://localhost:5173"])
+        }
+    }
+
     @Test func corsIsOffByDefaultAndOptInPerOrigin() async throws {
         let home = try tempDir()
         var origin = HTTPHeaders()

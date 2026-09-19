@@ -23,3 +23,5 @@ kanban-service = { workspace = true }
 [dev-dependencies]
 dashboard-persistence = { workspace = true }
 tempfile = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }

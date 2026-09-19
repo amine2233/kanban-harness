@@ -24,4 +24,4 @@ dist-ssr
 *.sw?
 
 # Rust
-backend/target
+backend/.build

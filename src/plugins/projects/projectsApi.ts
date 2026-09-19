@@ -34,7 +34,7 @@ export const projectsApi = baseApi.injectEndpoints({
       query: (body) => ({ url: 'projects', method: 'POST', body }),
       invalidatesTags: [{ type: 'Project', id: 'LIST' }],
     }),
-     
+
     updateProject: build.mutation<Project, { id: string; storage: StorageKind }>({
       query: ({ id, storage }) => ({ url: `projects/${id}`, method: 'PATCH', body: { storage } }),
       invalidatesTags: (_result, _error, { id }) => [

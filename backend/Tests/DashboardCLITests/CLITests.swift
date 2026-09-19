@@ -1,5 +1,8 @@
 import Foundation
 import Testing
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// Runs the built `dashboard` executable, the way a user would.
 struct CLI {

@@ -1,5 +1,10 @@
 import DashboardPersistence
 import Foundation
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Darwin)
+import Darwin
+#endif
 
 /// Crash-safe file writes: temp file in the same directory, then `rename(2)`.
 enum AtomicFile {

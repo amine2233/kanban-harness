@@ -8,7 +8,7 @@ const store = createStore()
 
 const router = createBrowserRouter([
   {
-    element: <AppShell title="MVP Dashboard" nav={registry.nav} />,
+    element: <AppShell title="MVP Dashboard" registry={registry} />,
     children: [
       { index: true, element: <Navigate to={registry.nav[0]?.to ?? '/'} replace /> },
       ...registry.routes,

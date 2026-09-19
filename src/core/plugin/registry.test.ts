@@ -16,6 +16,12 @@ describe('buildRegistry', () => {
     expect(registry.routes.map((r) => r.path)).toEqual(['/a', '/b'])
   })
 
+  test('collects sidebar sections only from plugins that define one', () => {
+    const Section = () => null
+    const registry = buildRegistry([plugin('a', '/a'), { ...plugin('b', '/b'), sidebar: Section }])
+    expect(registry.sidebarSections).toEqual([Section])
+  })
+
   test('rejects duplicate ids', () => {
     expect(() => buildRegistry([plugin('a', '/a'), plugin('a', '/b')])).toThrow(
       'Duplicate plugin id: a',

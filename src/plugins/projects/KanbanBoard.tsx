@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { errorMessage } from '@/app/api'
-import { Banner, Select, Spinner } from '@/design-system'
+import { Banner, Spinner } from '@/design-system'
 import { groupCardsByColumn } from './board'
+import { BoardTabs } from './BoardTabs'
 import { KanbanColumn } from './KanbanColumn'
 import { useListBoardsQuery, useListCardsQuery, useListColumnsQuery } from './kanbanApi'
 
 export function KanbanBoard({ projectId }: { projectId: string }) {
   const boards = useListBoardsQuery(projectId)
   const [selected, setSelected] = useState<string>()
-  const boardId = selected ?? boards.data?.[0]?.id
+  const boardList = boards.data ?? []
+  const boardId = boardList.some((b) => b.id === selected) ? selected : boardList[0]?.id
 
   if (boards.isLoading) return <Spinner />
   if (boards.error) {
@@ -18,27 +20,23 @@ export function KanbanBoard({ projectId }: { projectId: string }) {
       </Banner>
     )
   }
-  if (!boardId) return <Banner tone="info" title="This project has no board yet" />
+  if (!boardId) {
+    return (
+      <>
+        <Banner tone="info" title="This project has no board yet" className="mb3" />
+        <BoardTabs projectId={projectId} boards={[]} selectedId="" onSelect={setSelected} />
+      </>
+    )
+  }
 
   return (
     <>
-      {(boards.data?.length ?? 0) > 1 && (
-        <Select
-          name="board"
-          label="Board"
-          value={boardId}
-          className="mb3 mw5"
-          onChange={(e) => {
-            setSelected(e.target.value)
-          }}
-        >
-          {boards.data?.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </Select>
-      )}
+      <BoardTabs
+        projectId={projectId}
+        boards={boardList}
+        selectedId={boardId}
+        onSelect={setSelected}
+      />
       <BoardColumns projectId={projectId} boardId={boardId} />
     </>
   )

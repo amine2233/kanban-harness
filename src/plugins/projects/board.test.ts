@@ -21,6 +21,8 @@ const card = (id: string, column_id: string, position: number, card_number = 1):
   priority: 'medium',
   status: 'todo',
   position,
+  due_date: null,
+  points: null,
 })
 
 const columns = [column('todo', 0), column('doing', 1), column('done', 2)]

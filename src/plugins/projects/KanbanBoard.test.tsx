@@ -8,7 +8,7 @@ import { KanbanBoard } from './KanbanBoard'
 
 const projectId = 'p1'
 const base = `/api/projects/${projectId}/kanban/v1`
-const board = { id: 'b1', name: 'Demo', description: null }
+const board = { id: 'b1', name: 'Demo', description: null, card_prefix: null, position: 0 }
 const columns = [
   { id: 'todo', board_id: 'b1', name: 'TODO', position: 0, wip_limit: null },
   { id: 'doing', board_id: 'b1', name: 'Doing', position: 1, wip_limit: 1 },
@@ -25,6 +25,8 @@ const cardOf = (id: string, column_id: string, title: string, priority = 'medium
   priority,
   status: 'todo',
   position: 0,
+  due_date: null,
+  points: null,
 })
 const page = <T,>(items: T[]) => ({
   items,
@@ -94,7 +96,7 @@ describe('KanbanBoard', () => {
       await within(screen.getByRole('region', { name: 'Doing' })).findByText('Brand new'),
     ).toBeInTheDocument()
     const post = api.calls.find((c) => c.key === `POST ${base}/columns/doing/cards`)
-    expect(post?.body).toEqual({ title: 'Brand new', priority: 'medium' })
+    expect(post?.body).toEqual({ title: 'Brand new', priority: 'medium', description: null })
     expect(screen.getByLabelText('New card in Doing')).toHaveValue('')
   })
 

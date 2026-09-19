@@ -85,3 +85,50 @@ body {
 .ds-icon-button:hover {
   background: rgba(255, 255, 255, 0.12);
 }
+
+.ds-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(50, 59, 73, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 64px 16px;
+  z-index: 100;
+}
+
+.ds-modal {
+  width: min(520px, 100%);
+  max-height: calc(100vh - 128px);
+  overflow: auto;
+}
+
+.ds-modal-footer {
+  gap: 8px;
+}
+
+.ds-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #eef1f6;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.ds-tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475366;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ds-tab[aria-selected='true'] {
+  color: var(--ds-purple);
+  border-bottom-color: var(--ds-purple);
+  font-weight: 600;
+}

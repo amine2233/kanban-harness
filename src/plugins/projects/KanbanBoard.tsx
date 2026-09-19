@@ -44,6 +44,7 @@ export function KanbanBoard({ projectId }: { projectId: string }) {
 
 function BoardColumns({ projectId, boardId }: { projectId: string; boardId: string }) {
   const scope = { projectId, boardId }
+  const boards = useListBoardsQuery(projectId)
   const columns = useListColumnsQuery(scope)
   const cards = useListCardsQuery(scope)
 
@@ -67,6 +68,7 @@ function BoardColumns({ projectId, boardId }: { projectId: string; boardId: stri
           scope={scope}
           column={column}
           columns={columnList}
+          boards={boards.data ?? []}
           cards={grouped.get(column.id) ?? []}
         />
       ))}

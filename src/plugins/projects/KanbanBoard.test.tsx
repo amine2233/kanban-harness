@@ -25,8 +25,8 @@ const cardOf = (id: string, column_id: string, title: string, priority = 'medium
   priority,
   status: 'todo',
   position: 0,
-  due_date: null,
-  points: null,
+  due_date: null as string | null,
+  points: null as number | null,
 })
 const page = <T,>(items: T[]) => ({
   items,
@@ -75,7 +75,7 @@ describe('KanbanBoard', () => {
     ])
   })
 
-  test('creates a card in a column and refetches', async () => {
+  test('creates a card from the modal and refetches', async () => {
     const cards = [cardOf('c1', 'todo', 'Existing')]
     const api = boardRoutes(cards, {
       [`POST ${base}/columns/doing/cards`]: (body) => {
@@ -87,17 +87,80 @@ describe('KanbanBoard', () => {
     renderBoard()
     await screen.findByText('Existing')
 
-    await userEvent.type(screen.getByLabelText('New card in Doing'), 'Brand new')
-    await userEvent.click(
-      within(screen.getByRole('region', { name: 'Doing' })).getByRole('button', { name: 'Add' }),
-    )
+    await userEvent.click(screen.getByRole('button', { name: 'Add card to Doing' }))
+    const dialog = screen.getByRole('dialog', { name: 'New card' })
+    expect(within(dialog).getByLabelText('Column')).toHaveValue('doing')
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Brand new')
+    await userEvent.type(within(dialog).getByLabelText('Description'), 'details')
+    await userEvent.selectOptions(within(dialog).getByLabelText('Priority'), 'high')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
 
     expect(
       await within(screen.getByRole('region', { name: 'Doing' })).findByText('Brand new'),
     ).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     const post = api.calls.find((c) => c.key === `POST ${base}/columns/doing/cards`)
-    expect(post?.body).toEqual({ title: 'Brand new', priority: 'medium', description: null })
-    expect(screen.getByLabelText('New card in Doing')).toHaveValue('')
+    expect(post?.body).toEqual({ title: 'Brand new', priority: 'high', description: 'details' })
+  })
+
+  test('edits a card in the modal: fields, column and due date', async () => {
+    const cards = [cardOf('c1', 'todo', 'Editable')]
+    const api = boardRoutes(cards, {
+      [`PATCH ${base}/boards/b1/cards/c1`]: (body) => {
+        const patch = body as { title: string; column_id?: string }
+        cards[0] = { ...cardOf('c1', patch.column_id ?? 'todo', patch.title), points: 3 }
+        return { body: cards[0] }
+      },
+    })
+    renderBoard()
+    await userEvent.click(await screen.findByRole('button', { name: 'Open Editable' }))
+    const dialog = screen.getByRole('dialog', { name: 'task-1' })
+    await userEvent.clear(within(dialog).getByLabelText('Title'))
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Edited')
+    await userEvent.selectOptions(within(dialog).getByLabelText('Status'), 'blocked')
+    await userEvent.selectOptions(within(dialog).getByLabelText('Column'), 'done')
+    await userEvent.type(within(dialog).getByLabelText('Due date'), '2026-12-24')
+    await userEvent.type(within(dialog).getByLabelText('Points'), '3')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole('region', { name: 'Complete' })).getByText('Edited'),
+      ).toBeInTheDocument()
+    })
+    const patch = api.calls.find((c) => c.key === `PATCH ${base}/boards/b1/cards/c1`)
+    expect(patch?.body).toEqual({
+      title: 'Edited',
+      description: null,
+      priority: 'medium',
+      status: 'blocked',
+      due_date: '2026-12-24T00:00:00.000Z',
+      points: 3,
+      column_id: 'done',
+    })
+    expect(screen.getByText('task-1 · 3 pt')).toBeInTheDocument()
+  })
+
+  test('moves a card to another board from the modal', async () => {
+    const api = boardRoutes([cardOf('c1', 'todo', 'Traveller')], {
+      [`GET ${base}/boards`]: () => ({
+        body: page([board, { ...board, id: 'b2', name: 'Other', position: 1 }]),
+      }),
+      [`PATCH ${base}/boards/b1/cards/c1`]: () => ({
+        body: { ...cardOf('c1', 'x', 'Traveller'), board_id: 'b2' },
+      }),
+    })
+    renderBoard()
+    await userEvent.click(await screen.findByRole('button', { name: 'Open Traveller' }))
+    const dialog = screen.getByRole('dialog', { name: 'task-1' })
+    await userEvent.selectOptions(within(dialog).getByLabelText('Board'), 'b2')
+    expect(within(dialog).queryByLabelText('Column')).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    const patch = api.calls.find((c) => c.key === `PATCH ${base}/boards/b1/cards/c1`)
+    expect((patch?.body as { board_id?: string }).board_id).toBe('b2')
   })
 
   test('moves a card to the next column via PATCH', async () => {
@@ -124,7 +187,7 @@ describe('KanbanBoard', () => {
     expect(patch?.body).toEqual({ column_id: 'doing' })
   })
 
-  test('deletes a card', async () => {
+  test('deletes a card after confirmation from the modal', async () => {
     let cards = [cardOf('c1', 'todo', 'Doomed')]
     boardRoutes(cards, {
       [`DELETE ${base}/boards/b1/cards/c1`]: () => {
@@ -134,11 +197,19 @@ describe('KanbanBoard', () => {
       [`GET ${base}/boards/b1/cards`]: () => ({ body: page(cards) }),
     })
     renderBoard()
-    await screen.findByText('Doomed')
-    await userEvent.click(screen.getByRole('button', { name: 'Delete Doomed' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Open Doomed' }))
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }),
+    )
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: 'Delete "Doomed"?' })).getByRole('button', {
+        name: 'Delete',
+      }),
+    )
     await waitFor(() => {
       expect(screen.queryByText('Doomed')).not.toBeInTheDocument()
     })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   test('shows an info banner when the project has no board', async () => {

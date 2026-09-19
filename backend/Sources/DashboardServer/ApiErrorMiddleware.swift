@@ -1,4 +1,5 @@
 import DashboardAPI
+import DashboardDomain
 import DashboardService
 import Vapor
 
@@ -19,7 +20,10 @@ struct ApiErrorMiddleware: AsyncMiddleware {
     }
 
     static func classify(_ error: any Error) -> (HTTPStatus, ApiError) {
-        switch error {
+        if let domain = error as? DomainError {
+            return classify(ServiceError.domain(domain))
+        }
+        return switch error {
         case let error as ServiceError where error.isNotFound:
             (.notFound, ApiError(code: "NOT_FOUND", message: error.localizedDescription))
         case let error as ServiceError where error.isConflict:

@@ -62,6 +62,23 @@ public struct BoardResponse: Codable, Sendable, Equatable {
         case updatedAt = "updated_at"
     }
 
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(description, forKey: .description)
+        try c.encode(sprintPrefix, forKey: .sprintPrefix)
+        try c.encode(cardPrefix, forKey: .cardPrefix)
+        try c.encode(taskSortField, forKey: .taskSortField)
+        try c.encode(taskSortOrder, forKey: .taskSortOrder)
+        try c.encode(sprintDurationDays, forKey: .sprintDurationDays)
+        try c.encode(taskListView, forKey: .taskListView)
+        try c.encode(activeSprintId, forKey: .activeSprintId)
+        try c.encode(position, forKey: .position)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(updatedAt, forKey: .updatedAt)
+    }
+
     public init(_ board: Board) {
         id = board.id
         name = board.name
@@ -96,6 +113,18 @@ public struct ColumnResponse: Codable, Sendable, Equatable {
         case defaultStatus = "default_status"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(boardId, forKey: .boardId)
+        try c.encode(name, forKey: .name)
+        try c.encode(position, forKey: .position)
+        try c.encode(wipLimit, forKey: .wipLimit)
+        try c.encode(defaultStatus, forKey: .defaultStatus)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(updatedAt, forKey: .updatedAt)
     }
 
     public init(_ column: Column) {
@@ -138,6 +167,26 @@ public struct CardResponse: Codable, Sendable, Equatable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case completedAt = "completed_at"
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(columnId, forKey: .columnId)
+        try c.encode(boardId, forKey: .boardId)
+        try c.encode(prefix, forKey: .prefix)
+        try c.encode(title, forKey: .title)
+        try c.encode(description, forKey: .description)
+        try c.encode(priority, forKey: .priority)
+        try c.encode(status, forKey: .status)
+        try c.encode(position, forKey: .position)
+        try c.encode(dueDate, forKey: .dueDate)
+        try c.encode(points, forKey: .points)
+        try c.encode(cardNumber, forKey: .cardNumber)
+        try c.encode(sprintId, forKey: .sprintId)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(updatedAt, forKey: .updatedAt)
+        try c.encode(completedAt, forKey: .completedAt)
     }
 
     public init(_ card: Card) {

@@ -179,6 +179,8 @@ extension TestingApplicationTester {
             let (_, columns) = try await app.firstBoardAndColumns(base)
             #expect(columns.map { $0["name"] as? String } == ["TODO", "Doing", "Complete"])
             #expect(columns.map { $0["default_status"] as? String } == ["todo", "in_progress", "done"])
+            #expect(columns[0]["wip_limit"] is NSNull, "nullable fields are explicit nulls, like kanban-api")
+            #expect(board["description"] is NSNull)
         }
     }
 

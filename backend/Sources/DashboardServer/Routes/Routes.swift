@@ -9,6 +9,11 @@ extension CardResponse: Content {}
 extension CreateProjectRequest: Content {}
 extension UpdateProjectRequest: Content {}
 extension CreateCardRequest: Content {}
+extension CreateBoardRequest: Content {}
+extension UpdateBoardRequest: Content {}
+extension CloneBoardRequest: Content {}
+extension CreateColumnRequest: Content {}
+extension UpdateColumnRequest: Content {}
 extension UpdateCardRequest: Content {}
 extension Page: Content {}
 extension ApiError: Content {}

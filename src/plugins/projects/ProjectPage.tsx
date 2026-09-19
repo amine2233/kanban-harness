@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router'
 import { errorMessage } from '@/app/api'
 import { Badge, Banner, Button, PageHeader, Spinner } from '@/design-system'
+import { KanbanBoard } from './KanbanBoard'
 import { useDeleteProjectMutation, useGetProjectQuery } from './projectsApi'
 
 export function ProjectPage() {
@@ -47,6 +48,7 @@ export function ProjectPage() {
           </>
         }
       />
+      <KanbanBoard projectId={project.id} />
     </>
   )
 }

@@ -22,6 +22,7 @@ export interface Column {
   name: string
   position: number
   wip_limit: number | null
+  default_status: CardStatus | null
 }
 
 export type CardPriority = 'low' | 'medium' | 'high' | 'critical'

@@ -10,9 +10,16 @@ const projectId = 'p1'
 const base = `/api/projects/${projectId}/kanban/v1`
 const board = { id: 'b1', name: 'Demo', description: null, card_prefix: null, position: 0 }
 const columns = [
-  { id: 'todo', board_id: 'b1', name: 'TODO', position: 0, wip_limit: null },
-  { id: 'doing', board_id: 'b1', name: 'Doing', position: 1, wip_limit: 1 },
-  { id: 'done', board_id: 'b1', name: 'Complete', position: 2, wip_limit: null },
+  { id: 'todo', board_id: 'b1', name: 'TODO', position: 0, wip_limit: null, default_status: null },
+  { id: 'doing', board_id: 'b1', name: 'Doing', position: 1, wip_limit: 1, default_status: null },
+  {
+    id: 'done',
+    board_id: 'b1',
+    name: 'Complete',
+    position: 2,
+    wip_limit: null,
+    default_status: null,
+  },
 ]
 const cardOf = (id: string, column_id: string, title: string, priority = 'medium') => ({
   id,

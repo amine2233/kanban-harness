@@ -8,6 +8,7 @@ const column = (id: string, position: number): Column => ({
   name: id,
   position,
   wip_limit: null,
+  default_status: null,
 })
 
 const card = (id: string, column_id: string, position: number, card_number = 1): Card => ({

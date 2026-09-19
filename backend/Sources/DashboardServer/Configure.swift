@@ -23,6 +23,13 @@ public func configure(_ app: Vapor.Application, config: ServerConfig) async thro
     ContentConfiguration.global.use(decoder: decoder, for: .json)
 
     app.middleware = Middlewares()
+    if !config.corsOrigins.isEmpty {
+        app.middleware.use(CORSMiddleware(configuration: .init(
+            allowedOrigin: .any(config.corsOrigins),
+            allowedMethods: [.GET, .POST, .PATCH, .DELETE, .OPTIONS],
+            allowedHeaders: [.accept, .contentType, .origin]
+        )))
+    }
     app.middleware.use(ApiErrorMiddleware())
     if let staticDir = config.staticDir {
         app.middleware.use(FileMiddleware(publicDirectory: staticDir))

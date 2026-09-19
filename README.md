@@ -14,13 +14,15 @@ pnpm install && pnpm dev                                    # http://localhost:5
 
 Single binary deployment: `pnpm build && dashboard serve --static-dir dist`.
 
+The web app talks to `/api` on its own origin by default. **Settings → API server** lets you point it at another server (persisted in the browser); start that server with `--cors-origin <web origin>` so the browser is allowed to call it.
+
 ## CLI
 
 ```sh
 dashboard project add ~/work/demo --name Demo [--storage json|sqlite]
 dashboard project storage Demo sqlite        # convert in place, old file kept
 dashboard project list | show <name|id> | remove <name|id> | boards <name|id>
-dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist]
+dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin http://localhost:5173]
 ```
 
 All output is JSON. The registry is a Fluent SQLite database at `$XDG_CONFIG_HOME/mvp-dashboard/projects.sqlite` (`--home` / `MVP_DASHBOARD_HOME` override). Removing a project never deletes files.

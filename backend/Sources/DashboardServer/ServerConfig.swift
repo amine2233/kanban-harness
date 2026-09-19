@@ -7,10 +7,13 @@ public struct ServerConfig: Sendable {
     public var home: String
     /// Built frontend to serve alongside the API (SPA fallback to index.html).
     public var staticDir: String?
+    /// Browser origins allowed to call the API from another host (empty = same origin only).
+    public var corsOrigins: [String]
 
-    public init(home: String, staticDir: String? = nil) {
+    public init(home: String, staticDir: String? = nil, corsOrigins: [String] = []) {
         self.home = home
         self.staticDir = staticDir
+        self.corsOrigins = corsOrigins
     }
 
     public var registryPath: String {

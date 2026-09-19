@@ -239,6 +239,29 @@ extension TestingApplicationTester {
         }
     }
 
+    @Test func corsIsOffByDefaultAndOptInPerOrigin() async throws {
+        let home = try tempDir()
+        var origin = HTTPHeaders()
+        origin.add(name: .origin, value: "http://localhost:5173")
+        try await withApp(configure: { try await configure($0, config: ServerConfig(home: home)) }) { app in
+            let response = try await app.testing().sendRequest(.GET, "/api/health", headers: origin)
+            #expect(response.headers[.accessControlAllowOrigin].isEmpty)
+        }
+        try await withApp(configure: { try await configure($0, config: ServerConfig(home: home, corsOrigins: ["http://localhost:5173"])) }) { app in
+            let response = try await app.testing().sendRequest(.GET, "/api/health", headers: origin)
+            #expect(response.headers[.accessControlAllowOrigin] == ["http://localhost:5173"])
+            var other = HTTPHeaders()
+            other.add(name: .origin, value: "http://evil.example")
+            let denied = try await app.testing().sendRequest(.GET, "/api/health", headers: other)
+            #expect(denied.headers[.accessControlAllowOrigin].isEmpty)
+            var preflight = origin
+            preflight.add(name: .accessControlRequestMethod, value: "PATCH")
+            let options = try await app.testing().sendRequest(.OPTIONS, "/api/projects", headers: preflight)
+            #expect(options.status == .ok)
+            #expect(options.headers[.accessControlAllowMethods].first?.contains("PATCH") == true)
+        }
+    }
+
     @Test func staticDirServesSpaFallback() async throws {
         let home = try tempDir()
         let dist = home + "/dist"

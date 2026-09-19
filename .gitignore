@@ -25,3 +25,7 @@ dist-ssr
 
 # Rust
 backend/.build
+
+# Local dev data and personal env (see mise.toml)
+.local/
+.env.local

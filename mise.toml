@@ -1,0 +1,98 @@
+# Toolchain, environment and tasks for the whole repo (web + backend).
+# Install mise: https://mise.jdx.dev — then `mise install` and `mise run setup`.
+
+[tools]
+node = "24.21.0"
+pnpm = "12.4.2"
+swift = "6.3.3"
+
+[env]
+# Keep dev data out of ~/.config: registry, settings.json and project folders
+# created during development live under .local/ (git-ignored).
+MVP_DASHBOARD_HOME = "{{config_root}}/.local/dashboard-home"
+# Where `dashboard serve` listens; the Vite dev server proxies /api to it.
+MVP_DASHBOARD_PORT = "5175"
+# Personal overrides (never committed).
+_.file = ".env.local"
+
+# --- Setup -------------------------------------------------------------------
+
+[tasks.setup]
+description = "Install web dependencies and resolve Swift packages"
+run = ["pnpm install --frozen-lockfile", "swift package --package-path backend resolve"]
+
+# --- Web ---------------------------------------------------------------------
+
+[tasks."web:dev"]
+description = "Vite dev server on http://localhost:5173 (proxies /api to the backend)"
+run = "pnpm dev"
+
+[tasks."web:test"]
+description = "Run the web unit tests"
+run = "pnpm test"
+
+[tasks."web:check"]
+description = "Prettier, ESLint and tsc for the web app"
+run = ["pnpm format:check", "pnpm lint", "pnpm typecheck"]
+
+[tasks."web:build"]
+description = "Production build into dist/"
+run = "pnpm build"
+
+# --- Backend -----------------------------------------------------------------
+
+[tasks."backend:build"]
+description = "Build the Swift package (server + dashboard CLI)"
+dir = "backend"
+run = "swift build"
+
+[tasks."backend:test"]
+description = "Run the Swift test suites"
+dir = "backend"
+run = "swift test"
+
+[tasks."backend:serve"]
+description = "Run the API server on $MVP_DASHBOARD_PORT"
+dir = "backend"
+run = "swift run dashboard serve --port $MVP_DASHBOARD_PORT"
+
+[tasks."backend:release"]
+description = "Build an optimized dashboard binary into backend/.build/release/"
+dir = "backend"
+run = "swift build -c release"
+
+# --- Whole project -----------------------------------------------------------
+
+[tasks.dev]
+description = "Backend + web dev servers together (Ctrl-C stops both)"
+depends = ["backend:build"]
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$MISE_PROJECT_ROOT"
+backend/.build/debug/dashboard serve --port "$MVP_DASHBOARD_PORT" &
+trap 'kill %1 2>/dev/null' EXIT
+pnpm dev
+"""
+
+[tasks.test]
+description = "All tests (web + backend)"
+depends = ["web:test", "backend:test"]
+
+[tasks.check]
+description = "Everything CI runs: web checks + tests + build, backend tests"
+depends = ["web:check", "web:test", "web:build", "backend:test"]
+
+[tasks.serve]
+description = "Serve the built web app and the API from one process"
+depends = ["web:build", "backend:release"]
+run = "backend/.build/release/dashboard serve --port $MVP_DASHBOARD_PORT --static-dir dist"
+
+[tasks.cli]
+description = "Run the dashboard CLI, e.g. `mise run cli -- project list`"
+dir = "backend"
+run = "swift run -q dashboard"
+
+[tasks.clean]
+description = "Remove build outputs (keeps .local dev data)"
+run = ["rm -rf dist coverage backend/.build"]

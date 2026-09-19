@@ -12,11 +12,20 @@ let package = Package(
         .package(url: "https://github.com/amine2233/cascade-kit.git", from: "1.0.0"),
         .package(url: "https://github.com/vapor/vapor.git", from: "4.122.0"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.0"),
+        .package(url: "https://github.com/vapor/fluent.git", from: "4.13.0"),
+        .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.9.0"),
     ],
     targets: [
         .target(name: "DashboardDomain"),
         .target(name: "DashboardPersistence", dependencies: ["DashboardDomain"]),
         .target(name: "DashboardPersistenceJSON", dependencies: ["DashboardPersistence"]),
+        .target(
+            name: "DashboardPersistenceFluent",
+            dependencies: [
+                "DashboardPersistence",
+                .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
+            ]
+        ),
         .target(
             name: "DashboardService",
             dependencies: [
@@ -31,7 +40,10 @@ let package = Package(
                 "DashboardService",
                 "DashboardAPI",
                 "DashboardPersistenceJSON",
+                "DashboardPersistenceFluent",
                 .product(name: "Vapor", package: "vapor"),
+                .product(name: "Fluent", package: "fluent"),
+                .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
                 .product(name: "CascadeKit", package: "cascade-kit"),
             ]
         ),
@@ -47,6 +59,10 @@ let package = Package(
             name: "DashboardPersistenceJSONTests",
             dependencies: ["DashboardPersistenceJSON"],
             resources: [.copy("Fixtures")]
+        ),
+        .testTarget(
+            name: "DashboardPersistenceFluentTests",
+            dependencies: ["DashboardPersistenceFluent"]
         ),
         .testTarget(
             name: "DashboardServiceTests",

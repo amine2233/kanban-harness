@@ -63,7 +63,7 @@ public struct Workspace: Equatable, Sendable {
 
     @discardableResult
     public mutating func createBoard(name: String, id: UUID = UUID(), now: Date = Date()) -> Board {
-        let board = Board(name: name, position: boards.count, id: id, now: now)
+        let board = Board(name: name.trimmingCharacters(in: .whitespacesAndNewlines), position: boards.count, id: id, now: now)
         boards.append(board)
         return board
     }
@@ -169,6 +169,8 @@ public struct Workspace: Equatable, Sendable {
         description: String?? = nil,
         priority: CardPriority? = nil,
         status: CardStatus? = nil,
+        dueDate: Date?? = nil,
+        points: Int?? = nil,
         now: Date = Date()
     ) throws -> Card {
         let index = try cardIndex(id)
@@ -181,8 +183,53 @@ public struct Workspace: Equatable, Sendable {
         if let description { card.description = description }
         if let priority { card.priority = priority }
         if let status { card.updateStatus(status, now: now) }
+        if let dueDate { card.dueDate = dueDate }
+        if let points { card.points = points }
         card.updatedAt = now
         cards[index] = card
+        return card
+    }
+
+    /// Moves a card to another board: it lands in `columnId` (default: the
+    /// board's first column), gets a number from that board's prefix and
+    /// drops its sprint binding, which is board-scoped.
+    @discardableResult
+    public mutating func moveCardToBoard(
+        _ id: UUID,
+        boardId destinationBoardId: UUID,
+        columnId: UUID? = nil,
+        now: Date = Date()
+    ) throws -> Card {
+        let index = try cardIndex(id)
+        var card = cards[index]
+        let board = try board(destinationBoardId)
+        guard board.id != card.boardId else {
+            return try columnId.map { try moveCard(id, toColumn: $0, now: now) } ?? card
+        }
+        let destination: Column
+        if let columnId {
+            destination = try column(columnId)
+            guard destination.boardId == board.id else { throw DomainError.columnNotFound(columnId) }
+        } else {
+            guard let first = columns(of: board.id).first else { throw DomainError.lastColumn(board: board.name) }
+            destination = first
+        }
+        try checkWipLimit(destination, adding: 1)
+        let originColumnId = card.columnId
+        let prefix = board.cardPrefix ?? Prefix.defaultCardPrefix
+        card.boardId = board.id
+        card.columnId = destination.id
+        card.prefix = prefix
+        card.cardNumber = allocateCardNumber(prefix: prefix)
+        card.position = cards(in: destination.id).count
+        card.sprintId = nil
+        card.updatedAt = now
+        if let status = CardLifecycle.statusAfterMove(card: card, to: destination, from: nil) {
+            card.updateStatus(status, now: now)
+        }
+        cards[index] = card
+        compactPositions(in: originColumnId)
+        removeGraphEdges(mentioning: id)
         return card
     }
 
@@ -201,14 +248,14 @@ public struct Workspace: Equatable, Sendable {
         return index
     }
 
-    private func checkWipLimit(_ column: Column, adding: Int) throws {
+    func checkWipLimit(_ column: Column, adding: Int) throws {
         guard let limit = column.wipLimit else { return }
         if cards(in: column.id).count + adding > limit {
             throw DomainError.wipLimitExceeded(column: column.name, limit: limit)
         }
     }
 
-    private mutating func allocateCardNumber(prefix: String) -> Int {
+    mutating func allocateCardNumber(prefix: String) -> Int {
         let key = prefix.lowercased()
         if let index = prefixes.firstIndex(where: { $0.name == key }) {
             prefixes[index].cardCounter += 1
@@ -218,7 +265,7 @@ public struct Workspace: Equatable, Sendable {
         return 1
     }
 
-    private mutating func compactPositions(in columnId: UUID) {
+    mutating func compactPositions(in columnId: UUID) {
         let ordered = cards(in: columnId)
         for (position, card) in ordered.enumerated() {
             if let index = cards.firstIndex(where: { $0.id == card.id }), cards[index].position != position {
@@ -228,7 +275,7 @@ public struct Workspace: Equatable, Sendable {
     }
 
     /// Drops every edge in `graph.{spawns,blocks,relates}.edges` that names the card.
-    private mutating func removeGraphEdges(mentioning cardId: UUID) {
+    mutating func removeGraphEdges(mentioning cardId: UUID) {
         guard var graph = extra["graph"]?.objectValue else { return }
         let needle = cardId.uuidString
         for (kind, value) in graph {

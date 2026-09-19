@@ -39,7 +39,7 @@ public enum CardPriority: String, Codable, Hashable, Sendable, CaseIterable {
 
 public struct Card: Codable, Hashable, Sendable, Identifiable {
     public let id: UUID
-    public let boardId: UUID
+    public var boardId: UUID
     public var columnId: UUID
     public var prefix: String
     public var cardNumber: Int

@@ -13,6 +13,9 @@ public enum DomainError: Error, Equatable, Sendable {
     case cardNotFound(UUID)
     case wipLimitExceeded(column: String, limit: Int)
     case emptyTitle
+    case emptyBoardName
+    case emptyColumnName
+    case lastColumn(board: String)
 }
 
 extension DomainError: LocalizedError {
@@ -30,6 +33,9 @@ extension DomainError: LocalizedError {
         case let .cardNotFound(id): "card not found: \(id)"
         case let .wipLimitExceeded(column, limit): "column '\(column)' is at its WIP limit of \(limit)"
         case .emptyTitle: "card title must not be empty"
+        case .emptyBoardName: "board name must not be empty"
+        case .emptyColumnName: "column name must not be empty"
+        case let .lastColumn(board): "board '\(board)' must keep at least one column"
         }
     }
 }

@@ -1,5 +1,5 @@
 import ArgumentParser
-import DashboardPersistenceJSON
+import DashboardPersistence
 import Foundation
 
 enum Output {

@@ -1,3 +1,4 @@
+import DashboardPersistence
 import DashboardPersistenceFluent
 import DashboardPersistenceJSON
 import Fluent

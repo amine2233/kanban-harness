@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import DashboardPersistenceJSON
+import DashboardPersistence
 
 @Suite struct RFC3339Tests {
     @Test func parsesChronoMicrosecondTimestamps() throws {

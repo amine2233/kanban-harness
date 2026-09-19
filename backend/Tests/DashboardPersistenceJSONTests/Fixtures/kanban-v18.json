@@ -1,0 +1,126 @@
+{
+  "version": 18,
+  "metadata": {
+    "instance_id": "951ecf71-2a11-4891-89f6-ef944b0e8f7c",
+    "saved_at": "2026-09-19T08:56:45.318377Z",
+    "writer_version": "0.9.0",
+    "writer_commit": "6dbce0c0785e5f3e14954f653aedc46c3b78c95f"
+  },
+  "data": {
+    "archived_boards": [],
+    "archived_cards": [],
+    "boards": [
+      {
+        "active_sprint_id": null,
+        "card_prefix": null,
+        "created_at": "2026-09-19T08:56:43.809749Z",
+        "description": null,
+        "id": "d22b5bb8-d947-4b30-9722-171beff8e9a4",
+        "name": "Sample",
+        "next_sprint_number": 1,
+        "position": 0,
+        "sprint_duration_days": null,
+        "sprint_name_used_count": 1,
+        "sprint_names": [
+          "S1"
+        ],
+        "sprint_prefix": null,
+        "task_list_view": "Flat",
+        "task_sort_field": "Default",
+        "task_sort_order": "Ascending",
+        "updated_at": "2026-09-19T08:56:45.317828Z"
+      }
+    ],
+    "cards": [
+      {
+        "board_id": "d22b5bb8-d947-4b30-9722-171beff8e9a4",
+        "card_number": 1,
+        "column_id": "f354b764-57f9-40f9-beaf-3dbbc1c9bca4",
+        "completed_at": null,
+        "created_at": "2026-09-19T08:56:44.648808Z",
+        "description": "desc",
+        "due_date": null,
+        "id": "27ef3ffb-9c76-4462-8c4d-303bc14720c9",
+        "points": null,
+        "position": 0,
+        "prefix": "task",
+        "priority": "High",
+        "sprint_id": null,
+        "sprint_logs": [],
+        "status": "Todo",
+        "title": "Hello",
+        "updated_at": "2026-09-19T08:56:44.648808Z"
+      }
+    ],
+    "columns": [
+      {
+        "board_id": "d22b5bb8-d947-4b30-9722-171beff8e9a4",
+        "created_at": "2026-09-19T08:56:43.809839Z",
+        "default_status": "Todo",
+        "id": "f354b764-57f9-40f9-beaf-3dbbc1c9bca4",
+        "name": "TODO",
+        "position": 0,
+        "updated_at": "2026-09-19T08:56:43.809839Z",
+        "wip_limit": null
+      },
+      {
+        "board_id": "d22b5bb8-d947-4b30-9722-171beff8e9a4",
+        "created_at": "2026-09-19T08:56:43.809864Z",
+        "default_status": "InProgress",
+        "id": "865b715d-16ac-4811-a961-7f80c042ebec",
+        "name": "Doing",
+        "position": 1,
+        "updated_at": "2026-09-19T08:56:43.809864Z",
+        "wip_limit": null
+      },
+      {
+        "board_id": "d22b5bb8-d947-4b30-9722-171beff8e9a4",
+        "created_at": "2026-09-19T08:56:43.809887Z",
+        "default_status": "Done",
+        "id": "2e2b7518-9bc9-4c7b-a1c0-3827ddc1468c",
+        "name": "Complete",
+        "position": 2,
+        "updated_at": "2026-09-19T08:56:43.809887Z",
+        "wip_limit": null
+      }
+    ],
+    "graph": {
+      "blocks": {
+        "edges": []
+      },
+      "relates": {
+        "edges": []
+      },
+      "spawns": {
+        "edges": []
+      }
+    },
+    "prefixes": [
+      {
+        "card_counter": 1,
+        "name": "task",
+        "sprint_counter": 0
+      },
+      {
+        "card_counter": 0,
+        "name": "sprint",
+        "sprint_counter": 1
+      }
+    ],
+    "sprints": [
+      {
+        "board_id": "d22b5bb8-d947-4b30-9722-171beff8e9a4",
+        "card_prefix": null,
+        "created_at": "2026-09-19T08:56:45.317829Z",
+        "end_date": null,
+        "id": "46345e7b-9937-4ef8-8d01-8d33fe2d7455",
+        "name_index": 0,
+        "prefix": "sprint",
+        "sprint_number": 1,
+        "start_date": null,
+        "status": "Planning",
+        "updated_at": "2026-09-19T08:56:45.317829Z"
+      }
+    ]
+  }
+}

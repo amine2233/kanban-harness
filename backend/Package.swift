@@ -45,7 +45,8 @@ let package = Package(
         .testTarget(name: "DashboardDomainTests", dependencies: ["DashboardDomain"]),
         .testTarget(
             name: "DashboardPersistenceJSONTests",
-            dependencies: ["DashboardPersistenceJSON"]
+            dependencies: ["DashboardPersistenceJSON"],
+            resources: [.copy("Fixtures")]
         ),
         .testTarget(
             name: "DashboardServiceTests",

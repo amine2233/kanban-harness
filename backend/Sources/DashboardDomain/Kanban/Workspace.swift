@@ -230,7 +230,7 @@ public struct Workspace: Equatable, Sendable {
     /// Drops every edge in `graph.{spawns,blocks,relates}.edges` that names the card.
     private mutating func removeGraphEdges(mentioning cardId: UUID) {
         guard var graph = extra["graph"]?.objectValue else { return }
-        let needle = cardId.uuidString.lowercased()
+        let needle = cardId.uuidString
         for (kind, value) in graph {
             guard var bucket = value.objectValue, let edges = bucket["edges"]?.arrayValue else { continue }
             bucket["edges"] = .array(edges.filter { !$0.containsString(needle) })

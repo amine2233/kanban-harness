@@ -1,3 +1,5 @@
+import Foundation
+
 /// Schema-less JSON, used to round-trip parts of a kanban-rs file this
 /// backend does not model (sprints, archives, dependency graph, unknown keys).
 public enum JSONValue: Codable, Hashable, Sendable {
@@ -52,10 +54,22 @@ public enum JSONValue: Codable, Hashable, Sendable {
         return nil
     }
 
-    /// True when any string leaf anywhere inside this value equals `needle`.
+    /// Rewrites every UUID-shaped string leaf to lowercase, the spelling
+    /// kanban-rs (Rust `uuid`) writes; Foundation encodes UUIDs uppercase.
+    public func lowercasingUUIDs() -> JSONValue {
+        switch self {
+        case let .string(value) where value.count == 36 && UUID(uuidString: value) != nil:
+            .string(value.lowercased())
+        case let .array(values): .array(values.map { $0.lowercasingUUIDs() })
+        case let .object(values): .object(values.mapValues { $0.lowercasingUUIDs() })
+        default: self
+        }
+    }
+
+    /// True when any string leaf anywhere inside this value equals `needle` (case-insensitive).
     public func containsString(_ needle: String) -> Bool {
         switch self {
-        case let .string(value): value == needle
+        case let .string(value): value.caseInsensitiveCompare(needle) == .orderedSame
         case let .array(values): values.contains { $0.containsString(needle) }
         case let .object(values): values.values.contains { $0.containsString(needle) }
         default: false

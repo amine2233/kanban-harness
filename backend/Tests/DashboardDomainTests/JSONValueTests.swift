@@ -12,6 +12,15 @@ import Testing
         #expect(out == #"{"a":[1,2.5,"s",null,true],"b":{"c":123456789012}}"#)
     }
 
+    @Test func lowercasingUUIDsOnlyTouchesUUIDShapedStrings() {
+        let id = UUID()
+        let value: JSONValue = .object(["id": .string(id.uuidString), "title": .string("Keep Me"), "n": .array([.string(id.uuidString)])])
+        let lowered = value.lowercasingUUIDs()
+        #expect(lowered.objectValue?["id"] == .string(id.uuidString.lowercased()))
+        #expect(lowered.objectValue?["title"] == .string("Keep Me"))
+        #expect(lowered.objectValue?["n"] == .array([.string(id.uuidString.lowercased())]))
+    }
+
     @Test func containsStringSearchesNestedLeaves() {
         let value: JSONValue = .object(["edges": .array([.object(["to": .string("abc")])])])
         #expect(value.containsString("abc"))

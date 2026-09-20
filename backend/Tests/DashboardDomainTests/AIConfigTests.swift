@@ -23,6 +23,15 @@ import Testing
         #expect(throws: DomainError.invalidMaxTokens(0)) { try AIProviderConfig(id: "a", kind: .ollama, name: "x", model: "m", maxTokens: 0) }
     }
 
+    @Test func pricingIsValidatedAndPricesTokens() throws {
+        let pricing = try AIPricing(inputPerMillion: 3, outputPerMillion: 15)
+        #expect(pricing.cost(inputTokens: 1_000_000, outputTokens: 200_000) == 6)
+        #expect(pricing.cost(inputTokens: nil, outputTokens: nil) == 0)
+        #expect(throws: DomainError.invalidPricing) { try AIPricing(inputPerMillion: -1, outputPerMillion: 0) }
+        #expect(throws: DomainError.invalidPricing) { try AIPricing(inputPerMillion: .infinity, outputPerMillion: 0) }
+        #expect(AIProviderKind.apple.isFree && AIProviderKind.ollama.isFree && !AIProviderKind.anthropic.isFree && !AIProviderKind.claudeCode.isFree)
+    }
+
     @Test func kindKnowsWhetherAKeyIsRequired() {
         #expect(AIProviderKind.anthropic.requiresAPIKey)
         #expect(AIProviderKind.openai.requiresAPIKey)

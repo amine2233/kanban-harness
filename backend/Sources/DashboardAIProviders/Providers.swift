@@ -6,7 +6,7 @@ import Foundation
 extension AIProviderRegistry {
     /// Every vendor this build ships. Cloud/local backends go through
     /// AnyLanguageModel; Claude Code is our own CLI-backed implementation.
-    public static var standard: AIProviderRegistry {
+    public static func standard(claudeExecutable: String = "claude") -> AIProviderRegistry {
         var registry = AIProviderRegistry()
         registry.register(.apple) { config in
             AnyLanguageModelProvider(config: config) {
@@ -42,7 +42,7 @@ extension AIProviderRegistry {
                 OllamaLanguageModel(baseURL: Self.url(config.baseURL, default: "http://127.0.0.1:11434"), model: config.model)
             }
         }
-        registry.register(.claudeCode) { ClaudeCodeProvider(config: $0) }
+        registry.register(.claudeCode) { ClaudeCodeProvider(config: $0, executable: claudeExecutable) }
         return registry
     }
 

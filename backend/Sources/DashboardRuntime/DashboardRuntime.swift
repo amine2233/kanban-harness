@@ -69,7 +69,9 @@ public enum DashboardRuntime {
         }
         container.register(SettingsCommandsKey.self) { c in c.make(SettingsServiceKey.self) }
         container.register(BoardCommandsKey.self) { c in LocalBoardCommands(projects: c.make(ProjectServiceKey.self)) }
-        container.register(AIProviderRegistryKey.self) { _ in AIProviderRegistry.standard }
+        container.register(AIProviderRegistryKey.self) { c in
+            AIProviderRegistry.standard(claudeExecutable: c.make(RuntimeConfigKey.self).claudeExecutable)
+        }
         container.register(AssistantCommandsKey.self) { c in
             AssistantService(aiConfig: c.make(AIConfigCommandsKey.self), boards: c.make(BoardCommandsKey.self), registry: c.make(AIProviderRegistryKey.self))
         }

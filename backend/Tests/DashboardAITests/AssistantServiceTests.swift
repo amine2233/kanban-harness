@@ -108,6 +108,18 @@ import Testing
         }
     }
 
+    @Test func draftCostComesFromTheVendorThenPricingThenFree() throws {
+        let reported = CompletionUsage(inputTokens: 10, outputTokens: 20, costUSD: 0.5)
+        let tokensOnly = CompletionUsage(inputTokens: 1_000_000, outputTokens: 100_000)
+        let priced = try AIProviderConfig(id: "a", kind: .anthropic, name: "A", model: "m", pricing: AIPricing(inputPerMillion: 3, outputPerMillion: 15))
+        let unpriced = try AIProviderConfig(id: "a", kind: .anthropic, name: "A", model: "m")
+        let local = try AIProviderConfig(id: "l", kind: .ollama, name: "L", model: "m")
+        #expect(AssistantService.priced(reported, for: priced) == reported, "a reported cost is never overridden")
+        #expect(AssistantService.priced(tokensOnly, for: priced) == CompletionUsage(inputTokens: 1_000_000, outputTokens: 100_000, costUSD: 4.5, estimated: true))
+        #expect(AssistantService.priced(tokensOnly, for: unpriced).costUSD == nil, "no pricing, no guess")
+        #expect(AssistantService.priced(tokensOnly, for: local) == CompletionUsage(inputTokens: 1_000_000, outputTokens: 100_000, costUSD: 0))
+    }
+
     @Test func jsonExtractorFindsTheFirstObjectThroughProseAndFences() {
         let text = "Here you go:\n```json\n{\"title\":\"a {b} c\",\"n\":{\"x\":1}}\n```\nDone."
         #expect(String(decoding: JSONExtractor.firstObject(in: text)!, as: UTF8.self) == #"{"title":"a {b} c","n":{"x":1}}"#)
@@ -152,7 +164,7 @@ import Testing
         #expect(partials.last?.title == "Fix login crash")
         #expect(partials.last?.acceptanceCriteria == ["No crash"])
         #expect(partials == partials.reduce(into: []) { if $0.last != $1 { $0.append($1) } }, "no duplicate partials")
-        #expect(usage == CompletionUsage(inputTokens: 10, outputTokens: 20))
+        #expect(usage == CompletionUsage(inputTokens: 10, outputTokens: 20, costUSD: 0), "a local provider is free")
         #expect(result?.draft.title == "Fix login crash")
         #expect(result?.usage == usage)
     }

@@ -13,6 +13,9 @@ public enum AIProviderKind: String, Codable, Sendable, CaseIterable {
     case claudeCode = "claude_code"
 
     /// Whether requests need an API key at all.
+    /// Runs on this machine: a draft costs nothing.
+    public var isFree: Bool { self == .apple || self == .ollama }
+
     public var requiresAPIKey: Bool {
         switch self {
         case .anthropic, .openai, .gemini: true
@@ -27,6 +30,29 @@ public enum AIProviderKind: String, Codable, Sendable, CaseIterable {
 }
 
 /// One configured AI provider. `apiKey` is a secret: it is persisted in the
+/// USD per million tokens, used to price a draft when the vendor does not report a cost.
+public struct AIPricing: Codable, Equatable, Sendable {
+    public var inputPerMillion: Double
+    public var outputPerMillion: Double
+
+    enum CodingKeys: String, CodingKey {
+        case inputPerMillion = "input_per_million"
+        case outputPerMillion = "output_per_million"
+    }
+
+    public init(inputPerMillion: Double, outputPerMillion: Double) throws {
+        guard inputPerMillion >= 0, outputPerMillion >= 0, inputPerMillion.isFinite, outputPerMillion.isFinite else {
+            throw DomainError.invalidPricing
+        }
+        self.inputPerMillion = inputPerMillion
+        self.outputPerMillion = outputPerMillion
+    }
+
+    public func cost(inputTokens: Int?, outputTokens: Int?) -> Double {
+        Double(inputTokens ?? 0) / 1_000_000 * inputPerMillion + Double(outputTokens ?? 0) / 1_000_000 * outputPerMillion
+    }
+}
+
 /// config file (or supplied by the environment) and never exposed as-is.
 public struct AIProviderConfig: Codable, Equatable, Sendable {
 
@@ -37,9 +63,10 @@ public struct AIProviderConfig: Codable, Equatable, Sendable {
     public var baseURL: String?
     public var apiKey: String?
     public var maxTokens: Int?
+    public var pricing: AIPricing?
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, name, model
+        case id, kind, name, model, pricing
         case baseURL = "base_url"
         case apiKey = "api_key"
         case maxTokens = "max_tokens"
@@ -47,7 +74,7 @@ public struct AIProviderConfig: Codable, Equatable, Sendable {
 
     public init(
         id: String, kind: AIProviderKind, name: String, model: String,
-        baseURL: String? = nil, apiKey: String? = nil, maxTokens: Int? = nil
+        baseURL: String? = nil, apiKey: String? = nil, maxTokens: Int? = nil, pricing: AIPricing? = nil
     ) throws {
         guard Self.isValidId(id) else { throw DomainError.invalidProviderId(id) }
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -67,6 +94,7 @@ public struct AIProviderConfig: Codable, Equatable, Sendable {
         self.baseURL = baseURL
         self.apiKey = apiKey?.isEmpty == true ? nil : apiKey
         self.maxTokens = maxTokens
+        self.pricing = pricing
     }
 
     public var hasAPIKey: Bool { apiKey?.isEmpty == false }

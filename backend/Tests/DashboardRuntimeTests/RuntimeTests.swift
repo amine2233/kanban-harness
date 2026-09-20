@@ -23,6 +23,8 @@ import Testing
         #expect(config.registryPath == home + "/projects.sqlite")
         #expect(config.settingsPath == home + "/settings.json")
         #expect(RuntimeConfig(home: "/explicit").home == "/explicit")
+        #expect(RuntimeConfig(home: home, claudeExecutable: "/stub/claude").claudeExecutable == "/stub/claude")
+        #expect(RuntimeConfig(home: home).claudeExecutable == (ProcessInfo.processInfo.environment["MVP_DASHBOARD_CLAUDE_BIN"] ?? "claude"))
     }
 
     @Test func homeKeyReadsEnvironmentThenXDGThenHome() {

@@ -28,17 +28,28 @@ public struct DraftTicketResponse: Codable, Sendable, Equatable {
         public let inputTokens: Int?
         public let outputTokens: Int?
         public let costUSD: Double?
+        public let estimated: Bool
 
         enum CodingKeys: String, CodingKey {
             case inputTokens = "input_tokens"
             case outputTokens = "output_tokens"
             case costUSD = "cost_usd"
+            case estimated
         }
 
-        public init(inputTokens: Int?, outputTokens: Int?, costUSD: Double?) {
+        public init(inputTokens: Int?, outputTokens: Int?, costUSD: Double?, estimated: Bool = false) {
             self.inputTokens = inputTokens
             self.outputTokens = outputTokens
             self.costUSD = costUSD
+            self.estimated = estimated
+        }
+
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            inputTokens = try c.decodeIfPresent(Int.self, forKey: .inputTokens)
+            outputTokens = try c.decodeIfPresent(Int.self, forKey: .outputTokens)
+            costUSD = try c.decodeIfPresent(Double.self, forKey: .costUSD)
+            estimated = try c.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
         }
 
         public func encode(to encoder: any Encoder) throws {
@@ -46,6 +57,7 @@ public struct DraftTicketResponse: Codable, Sendable, Equatable {
             try c.encode(inputTokens, forKey: .inputTokens)
             try c.encode(outputTokens, forKey: .outputTokens)
             try c.encode(costUSD, forKey: .costUSD)
+            try c.encode(estimated, forKey: .estimated)
         }
     }
 

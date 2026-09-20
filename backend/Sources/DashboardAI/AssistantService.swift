@@ -123,8 +123,10 @@ public actor AssistantService: AssistantCommands {
                     } catch {
                         throw ServiceError.remote(code: "AI_BAD_OUTPUT", message: "\(config.name) returned an unusable draft: \(error.localizedDescription)")
                     }
+                    let priced = Self.priced(usage, for: config)
+                    if priced != usage { emit(.usage(priced)) }
                     emit(.stage("done", elapsedMs: elapsed()))
-                    emit(.result(DraftedTicket(draft: draft, providerId: config.id, model: model, usage: usage)))
+                    emit(.result(DraftedTicket(draft: draft, providerId: config.id, model: model, usage: priced)))
                     return
                 }
             }
@@ -138,6 +140,19 @@ public actor AssistantService: AssistantCommands {
             throw ServiceError.remote(code: "AI_PROVIDER", message: String(describing: error))
         }
         throw ServiceError.remote(code: "AI_PROVIDER", message: "\(config.name) ended the stream without a result")
+    }
+
+    /// Vendor-reported cost wins; otherwise the provider's pricing, or zero for local models.
+    static func priced(_ usage: CompletionUsage, for config: AIProviderConfig) -> CompletionUsage {
+        guard usage.costUSD == nil else { return usage }
+        var priced = usage
+        if let pricing = config.pricing {
+            priced.costUSD = pricing.cost(inputTokens: usage.inputTokens, outputTokens: usage.outputTokens)
+            priced.estimated = true
+        } else if config.kind.isFree {
+            priced.costUSD = 0
+        }
+        return priced
     }
 
     private func resolveProvider(_ id: String?) async throws(ServiceError) -> (any AIProvider, AIProviderConfig) {

@@ -88,7 +88,7 @@ public struct RemoteAIConfigCommands: AIConfigCommands {
     public func upsert(_ provider: AIProviderConfig) async throws(ServiceError) -> AIConfig {
         let body = UpsertAIProviderRequest(
             kind: provider.kind, name: provider.name, model: provider.model,
-            baseURL: provider.baseURL, apiKey: provider.apiKey, maxTokens: provider.maxTokens
+            baseURL: provider.baseURL, apiKey: provider.apiKey, maxTokens: provider.maxTokens, pricing: provider.pricing
         )
         return try Self.config(try await client.send("PUT", "api/settings/ai/providers/\(provider.id)", body: body, as: AIConfigDTO.self))
     }
@@ -108,7 +108,7 @@ public struct RemoteAIConfigCommands: AIConfigCommands {
                 providers: dto.providers.map { p in
                     try AIProviderConfig(
                         id: p.id, kind: p.kind, name: p.name, model: p.model, baseURL: p.baseURL,
-                        apiKey: p.hasAPIKey ? RemoteAIConfigCommands.redactedKey : nil, maxTokens: p.maxTokens
+                        apiKey: p.hasAPIKey ? RemoteAIConfigCommands.redactedKey : nil, maxTokens: p.maxTokens, pricing: p.pricing
                     )
                 },
                 defaultProviderId: dto.defaultProvider
@@ -255,6 +255,6 @@ public struct RemoteAssistantCommands: AssistantCommands {
     }
 
     private static func usage(_ dto: DraftTicketResponse.UsageDTO) -> CompletionUsage {
-        CompletionUsage(inputTokens: dto.inputTokens, outputTokens: dto.outputTokens, costUSD: dto.costUSD)
+        CompletionUsage(inputTokens: dto.inputTokens, outputTokens: dto.outputTokens, costUSD: dto.costUSD, estimated: dto.estimated)
     }
 }

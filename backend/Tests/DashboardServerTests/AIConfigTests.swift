@@ -13,6 +13,7 @@ import VaporTesting
 
             let (put, body) = try await app.json(.PUT, "/api/settings/ai/providers/claude", body: [
                 "kind": "anthropic", "name": "Claude", "model": "claude-sonnet-5", "api_key": "sk-secret", "max_tokens": 4096,
+                "pricing": ["input_per_million": 3, "output_per_million": 15],
             ])
             #expect(put == .ok)
             let config = try #require(body as? [String: Any])
@@ -21,6 +22,7 @@ import VaporTesting
             #expect(provider["has_api_key"] as? Bool == true)
             #expect(provider["api_key"] == nil, "keys never leave the server")
             #expect(provider["base_url"] is NSNull)
+            #expect((provider["pricing"] as? [String: Double])?["input_per_million"] == 3)
 
             let raw = try String(contentsOfFile: home + "/config.json", encoding: .utf8)
             #expect(raw.contains("\"api_key\" : \"sk-secret\""), "the file is the source of truth")

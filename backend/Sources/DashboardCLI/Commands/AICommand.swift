@@ -42,10 +42,11 @@ struct AICommand: AsyncParsableCommand {
             let model: String
             let baseURL: String?
             let maxTokens: Int?
+            let pricing: AIPricing?
             let hasAPIKey: Bool
 
             enum CodingKeys: String, CodingKey {
-                case id, kind, name, model
+                case id, kind, name, model, pricing
                 case baseURL = "base_url"
                 case maxTokens = "max_tokens"
                 case hasAPIKey = "has_api_key"
@@ -58,6 +59,7 @@ struct AICommand: AsyncParsableCommand {
                 model = p.model
                 baseURL = p.baseURL
                 maxTokens = p.maxTokens
+                pricing = p.pricing
                 hasAPIKey = p.hasAPIKey
             }
         }
@@ -98,10 +100,19 @@ struct AICommand: AsyncParsableCommand {
             @Option(name: .customLong("max-tokens"), help: "Response token limit.")
             var maxTokens: Int?
 
+            @Option(name: .customLong("input-price"), help: "USD per million input tokens, to price drafts when the vendor reports none.")
+            var inputPrice: Double?
+
+            @Option(name: .customLong("output-price"), help: "USD per million output tokens.")
+            var outputPrice: Double?
+
             func run() async throws {
                 try await failing {
+                    let pricing = try (inputPrice ?? outputPrice).map { _ in
+                        try AIPricing(inputPerMillion: inputPrice ?? 0, outputPerMillion: outputPrice ?? 0)
+                    }
                     let provider = try AIProviderConfig(
-                        id: id, kind: kind, name: name ?? id, model: model, baseURL: baseURL, apiKey: apiKey, maxTokens: maxTokens
+                        id: id, kind: kind, name: name ?? id, model: model, baseURL: baseURL, apiKey: apiKey, maxTokens: maxTokens, pricing: pricing
                     )
                     try Output.json(View(try await Runtime.run(global) { try await $0.make(AIConfigCommandsKey.self).upsert(provider) }))
                 }
@@ -204,7 +215,7 @@ extension AICommand {
                         Output.progress("          title: \(title)")
                     }
                 case let .usage(usage):
-                    Output.progress("          tokens: \(usage.inputTokens ?? 0) in / \(usage.outputTokens ?? 0) out" + (usage.costUSD.map { String(format: ", $%.4f", $0) } ?? ""))
+                    Output.progress("          tokens: \(usage.inputTokens ?? 0) in / \(usage.outputTokens ?? 0) out" + (usage.costUSD.map { String(format: ", %@$%.4f", usage.estimated ? "≈" : "", $0) } ?? ""))
                 case let .result(drafted):
                     return drafted
                 }
@@ -216,9 +227,8 @@ extension AICommand {
             let draft: TicketDraft
             let provider: String
             let model: String
-            let costUSD: Double?
-            enum CodingKeys: String, CodingKey { case draft, provider, model; case costUSD = "cost_usd" }
-            init(_ d: DraftedTicket) { draft = d.draft; provider = d.providerId; model = d.model; costUSD = d.usage.costUSD }
+            let usage: CompletionUsage
+            init(_ d: DraftedTicket) { draft = d.draft; provider = d.providerId; model = d.model; usage = d.usage }
         }
 
         struct CreatedView: Encodable {

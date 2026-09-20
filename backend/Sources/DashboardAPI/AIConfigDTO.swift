@@ -9,10 +9,11 @@ public struct AIProviderDTO: Codable, Equatable, Sendable {
     public let model: String
     public let baseURL: String?
     public let maxTokens: Int?
+    public let pricing: AIPricing?
     public let hasAPIKey: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, name, model
+        case id, kind, name, model, pricing
         case baseURL = "base_url"
         case maxTokens = "max_tokens"
         case hasAPIKey = "has_api_key"
@@ -25,6 +26,7 @@ public struct AIProviderDTO: Codable, Equatable, Sendable {
         model = provider.model
         baseURL = provider.baseURL
         maxTokens = provider.maxTokens
+        pricing = provider.pricing
         hasAPIKey = provider.hasAPIKey
     }
 
@@ -36,6 +38,7 @@ public struct AIProviderDTO: Codable, Equatable, Sendable {
         try c.encode(model, forKey: .model)
         try c.encode(baseURL, forKey: .baseURL)
         try c.encode(maxTokens, forKey: .maxTokens)
+        try c.encode(pricing, forKey: .pricing)
         try c.encode(hasAPIKey, forKey: .hasAPIKey)
     }
 }
@@ -70,21 +73,23 @@ public struct UpsertAIProviderRequest: Codable, Sendable {
     public var baseURL: String?
     public var apiKey: String?
     public var maxTokens: Int?
+    public var pricing: AIPricing?
 
     enum CodingKeys: String, CodingKey {
-        case kind, name, model
+        case kind, name, model, pricing
         case baseURL = "base_url"
         case apiKey = "api_key"
         case maxTokens = "max_tokens"
     }
 
-    public init(kind: AIProviderKind, name: String, model: String, baseURL: String? = nil, apiKey: String? = nil, maxTokens: Int? = nil) {
+    public init(kind: AIProviderKind, name: String, model: String, baseURL: String? = nil, apiKey: String? = nil, maxTokens: Int? = nil, pricing: AIPricing? = nil) {
         self.kind = kind
         self.name = name
         self.model = model
         self.baseURL = baseURL
         self.apiKey = apiKey
         self.maxTokens = maxTokens
+        self.pricing = pricing
     }
 
     /// Builds the domain value, carrying over a key the request did not touch.
@@ -94,7 +99,7 @@ public struct UpsertAIProviderRequest: Codable, Sendable {
         case .some(""): nil
         case let .some(value): value
         }
-        return try AIProviderConfig(id: id, kind: kind, name: name, model: model, baseURL: baseURL, apiKey: key, maxTokens: maxTokens)
+        return try AIProviderConfig(id: id, kind: kind, name: name, model: model, baseURL: baseURL, apiKey: key, maxTokens: maxTokens, pricing: pricing)
     }
 }
 

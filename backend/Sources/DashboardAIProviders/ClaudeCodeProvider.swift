@@ -13,9 +13,9 @@ public struct ClaudeCodeProvider: AIProvider {
     let executable: String
     let timeout: TimeInterval
 
-    public init(config: AIProviderConfig, executable: String? = nil, timeout: TimeInterval = 180) {
+    public init(config: AIProviderConfig, executable: String, timeout: TimeInterval = 180) {
         self.config = config
-        self.executable = executable ?? ProcessInfo.processInfo.environment["MVP_DASHBOARD_CLAUDE_BIN"] ?? "claude"
+        self.executable = executable
         self.timeout = timeout
     }
 

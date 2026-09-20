@@ -54,6 +54,6 @@ struct AssistantController: RouteCollection {
     }
 
     private static func usage(_ usage: CompletionUsage) -> DraftTicketResponse.UsageDTO {
-        .init(inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, costUSD: usage.costUSD)
+        .init(inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, costUSD: usage.costUSD, estimated: usage.estimated)
     }
 }

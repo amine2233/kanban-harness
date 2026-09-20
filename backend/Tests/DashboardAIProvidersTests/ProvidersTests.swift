@@ -68,7 +68,7 @@ import Vapor
         ]
         try await withStub(lines.joined(separator: "\n") + "\n", contentType: .init(type: "application", subType: "x-ndjson")) { base, recorder in
             let config = try AIProviderConfig(id: "l", kind: .ollama, name: "L", model: "llama3.2", baseURL: base.absoluteString)
-            let events = try await collect(try AIProviderRegistry.standard.make(config))
+            let events = try await collect(try AIProviderRegistry.standard().make(config))
             let partials = snapshots(events)
             #expect(partials.first?.title == "Lo")
             #expect(partials.last?.priority == .medium)
@@ -87,7 +87,7 @@ import Vapor
         for kind in [AIProviderKind.anthropic, .gemini] {
             let config = try AIProviderConfig(id: "a", kind: kind, name: "A", model: "m")
             await #expect(throws: AIProviderError.notConfigured("A has no API key")) {
-                _ = try await collect(try AIProviderRegistry.standard.make(config))
+                _ = try await collect(try AIProviderRegistry.standard().make(config))
             }
         }
     }
@@ -97,7 +97,7 @@ import Vapor
     @Test func badAnswersAreTyped() async throws {
         try await withStub("not json") { base, _ in
             let bad = try AIProviderConfig(id: "l", kind: .ollama, name: "L", model: "m", baseURL: base.absoluteString)
-            await #expect(throws: AIProviderError.self) { _ = try await collect(try AIProviderRegistry.standard.make(bad)) }
+            await #expect(throws: AIProviderError.self) { _ = try await collect(try AIProviderRegistry.standard().make(bad)) }
         }
     }
 
@@ -161,9 +161,9 @@ import Vapor
     }
 
     @Test func standardRegistryCoversEveryKind() throws {
-        let registry = AIProviderRegistry.standard
+        let registry = AIProviderRegistry.standard(claudeExecutable: "/stub/claude")
         #expect(Set(registry.kinds) == Set(AIProviderKind.allCases))
-        #expect(try registry.make(AIProviderConfig(id: "x", kind: .claudeCode, name: "x", model: "sonnet")) is ClaudeCodeProvider)
+        #expect((try registry.make(AIProviderConfig(id: "x", kind: .claudeCode, name: "x", model: "sonnet")) as? ClaudeCodeProvider)?.executable == "/stub/claude")
         #expect(try registry.make(AIProviderConfig(id: "x", kind: .apple, name: "x", model: "system")) is AnyLanguageModelProvider)
     }
 }

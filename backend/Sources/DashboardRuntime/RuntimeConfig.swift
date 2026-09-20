@@ -9,9 +9,12 @@ public struct RuntimeConfig: Sendable, Equatable {
     public static let configFileNames = ["config.yaml", "config.yml", "config.json"]
 
     public var home: String
+    /// The Claude Code executable used by `claude_code` providers (`MVP_DASHBOARD_CLAUDE_BIN`, else `claude` on PATH).
+    public var claudeExecutable: String
 
-    public init(home: String? = nil) {
+    public init(home: String? = nil, claudeExecutable: String? = nil) {
         self.home = home ?? DependencyValues.current.home
+        self.claudeExecutable = claudeExecutable ?? ProcessInfo.processInfo.environment["MVP_DASHBOARD_CLAUDE_BIN"] ?? "claude"
     }
 
     public var registryPath: String {

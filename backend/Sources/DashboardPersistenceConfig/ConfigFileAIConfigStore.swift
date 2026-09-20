@@ -54,7 +54,8 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
                     model: scope.string(forKey: "model", default: ""),
                     baseURL: scope.string(forKey: "base_url"),
                     apiKey: scope.string(forKey: "api_key", isSecret: true),
-                    maxTokens: scope.int(forKey: "max_tokens")
+                    maxTokens: scope.int(forKey: "max_tokens"),
+                    pricing: try Self.pricing(scope.scoped(to: "pricing"))
                 ))
             } catch {
                 throw PersistenceError.corrupt(path: path, reason: "ai.providers.\(id): \(error.localizedDescription)")
@@ -65,6 +66,14 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         } catch {
             throw PersistenceError.corrupt(path: path, reason: error.localizedDescription)
         }
+    }
+
+    private static func pricing(_ scope: ConfigReader) throws -> AIPricing? {
+        guard let input = scope.double(forKey: "input_per_million") ?? scope.double(forKey: "output_per_million") else { return nil }
+        return try AIPricing(
+            inputPerMillion: scope.double(forKey: "input_per_million", default: input),
+            outputPerMillion: scope.double(forKey: "output_per_million", default: input)
+        )
     }
 
     private func reader() async throws -> ConfigReader {
@@ -103,6 +112,9 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
                 }
             }
             if let maxTokens = provider.maxTokens { entry["max_tokens"] = maxTokens }
+            if let pricing = provider.pricing {
+                entry["pricing"] = ["input_per_million": pricing.inputPerMillion, "output_per_million": pricing.outputPerMillion]
+            }
             providers[provider.id] = entry
         }
         ai["providers"] = providers

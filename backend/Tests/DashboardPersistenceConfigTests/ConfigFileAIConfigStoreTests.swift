@@ -19,12 +19,14 @@ import Testing
 
     @Test func writesReadableJSONWithPrivatePermissions() async throws {
         let store = ConfigFileAIConfigStore(path: try path("config.json"), environment: [:])
-        try await store.save(try AIConfig(providers: [AIProviderConfig(id: "claude", kind: .anthropic, name: "Claude", model: "claude-sonnet-5", apiKey: "sk-1")]))
+        try await store.save(try AIConfig(providers: [AIProviderConfig(id: "claude", kind: .anthropic, name: "Claude", model: "claude-sonnet-5", apiKey: "sk-1", pricing: AIPricing(inputPerMillion: 3, outputPerMillion: 15))]))
         let raw = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: store.path))) as? [String: Any])
         let ai = try #require(raw["ai"] as? [String: Any])
         #expect(ai["default_provider"] as? String == "claude")
         #expect(ai["provider_ids"] as? [String] == ["claude"])
         #expect(((ai["providers"] as? [String: Any])?["claude"] as? [String: Any])?["api_key"] as? String == "sk-1")
+        #expect((((ai["providers"] as? [String: Any])?["claude"] as? [String: Any])?["pricing"] as? [String: Double])?["output_per_million"] == 15)
+        #expect(try await store.load().provider("claude")?.pricing?.inputPerMillion == 3)
         let mode = try #require(FileManager.default.attributesOfItem(atPath: store.path)[.posixPermissions] as? Int)
         #expect(mode & 0o777 == 0o600)
     }
@@ -45,6 +47,9 @@ import Testing
               kind: anthropic
               model: claude-sonnet-5
               max_tokens: 2048
+              pricing:
+                input_per_million: 3
+                output_per_million: 15
         """.write(toFile: store.path, atomically: true, encoding: .utf8)
         let config = try await store.load()
         #expect(config.defaultProviderId == "local")
@@ -52,6 +57,8 @@ import Testing
         #expect(config.provider("local")?.baseURL == "http://127.0.0.1:11434")
         #expect(config.provider("claude")?.name == "claude", "name defaults to the id")
         #expect(config.provider("claude")?.maxTokens == 2048)
+        #expect(config.provider("claude")?.pricing == (try AIPricing(inputPerMillion: 3, outputPerMillion: 15)))
+        #expect(config.provider("local")?.pricing == nil)
         #expect(config.provider("claude")?.hasAPIKey == false)
     }
 

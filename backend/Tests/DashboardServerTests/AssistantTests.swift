@@ -19,9 +19,7 @@ import VaporTesting
 
     @Test func draftsATicketThroughTheConfiguredClaudeCodeProvider() async throws {
         let stub = try stubClaude(output: #"{"is_error":false,"result":"","structured_output":{"title":"Add password reset","description":"Users forget passwords","acceptance_criteria":["Email sent","Link expires"],"priority":"high","points":5},"total_cost_usd":0.02}"#)
-        setenv("MVP_DASHBOARD_CLAUDE_BIN", stub, 1)
-        defer { unsetenv("MVP_DASHBOARD_CLAUDE_BIN") }
-        try await withServer { app, home in
+        try await withServer(claude: stub) { app, home in
             let project = try await app.createProject("Demo", at: home + "/demo")
             let id = try #require(project["id"] as? String)
             _ = try await app.json(.PUT, "/api/settings/ai/providers/cc", body: ["kind": "claude_code", "name": "Claude Code", "model": "sonnet"])
@@ -86,9 +84,7 @@ import VaporTesting
         {"type":"stream_event","event":{"delta":{"partial_json":"word reset\\",\\"priority\\":\\"high\\""}}}
         {"type":"result","is_error":false,"structured_output":{"title":"Add password reset","acceptance_criteria":["Email sent"],"priority":"high"},"total_cost_usd":0.02,"usage":{"input_tokens":3,"output_tokens":4}}
         """)
-        setenv("MVP_DASHBOARD_CLAUDE_BIN", stub, 1)
-        defer { unsetenv("MVP_DASHBOARD_CLAUDE_BIN") }
-        try await withServer { app, home in
+        try await withServer(claude: stub) { app, home in
             let project = try await app.createProject("Demo", at: home + "/demo")
             let id = try #require(project["id"] as? String)
             _ = try await app.json(.PUT, "/api/settings/ai/providers/cc", body: ["kind": "claude_code", "name": "Claude Code", "model": "sonnet"])

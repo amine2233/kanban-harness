@@ -21,17 +21,21 @@ public struct CompletionUsage: Sendable, Equatable, Codable {
     public var inputTokens: Int?
     public var outputTokens: Int?
     public var costUSD: Double?
+    /// True when `costUSD` was computed from the provider's pricing rather than reported by the vendor.
+    public var estimated: Bool
 
     enum CodingKeys: String, CodingKey {
         case inputTokens = "input_tokens"
         case outputTokens = "output_tokens"
         case costUSD = "cost_usd"
+        case estimated
     }
 
-    public init(inputTokens: Int? = nil, outputTokens: Int? = nil, costUSD: Double? = nil) {
+    public init(inputTokens: Int? = nil, outputTokens: Int? = nil, costUSD: Double? = nil, estimated: Bool = false) {
         self.inputTokens = inputTokens
         self.outputTokens = outputTokens
         self.costUSD = costUSD
+        self.estimated = estimated
     }
 }
 

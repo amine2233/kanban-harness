@@ -20,6 +20,7 @@ public enum DomainError: Error, Equatable, Sendable {
     case invalidProviderId(String)
     case emptyModel(String)
     case invalidMaxTokens(Int)
+    case invalidPricing
     case providerNotFound(String)
     case titleTooLong(Int)
     case invalidPoints(Int)
@@ -48,6 +49,7 @@ extension DomainError: LocalizedError {
         case let .invalidProviderId(id): "invalid provider id '\(id)': use a-z, 0-9 and _, starting with a letter (max 32)"
         case let .emptyModel(id): "provider '\(id)' needs a model"
         case let .invalidMaxTokens(value): "max_tokens must be positive, got \(value)"
+        case .invalidPricing: "pricing must be non-negative USD per million tokens"
         case let .providerNotFound(id): "AI provider not found: \(id)"
         case let .titleTooLong(max): "title exceeds \(max) characters"
         case let .invalidPoints(points): "points must be between 0 and 255, got \(points)"

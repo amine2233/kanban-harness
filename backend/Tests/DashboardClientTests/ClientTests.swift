@@ -9,14 +9,14 @@ import Vapor
 
 /// The client is exercised against a real running server so both ends of the wire are covered.
 @Suite(.serialized) struct ClientTests {
-    func withServer(_ body: (DashboardClient, String) async throws -> Void) async throws {
+    func withServer(claude: String? = nil, _ body: (DashboardClient, String) async throws -> Void) async throws {
         let home = NSTemporaryDirectory() + "mvp-dashboard-client-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
         var environment = Environment.testing
         environment.arguments = ["vapor"]
         let app = try await Application.make(environment)
         do {
-            try await configure(app, config: ServerConfig(home: home))
+            try await configure(app, config: ServerConfig(home: home, claudeExecutable: claude ?? "/nonexistent/claude"))
             app.http.server.configuration.hostname = "127.0.0.1"
             app.http.server.configuration.port = 0
             try await app.startup()
@@ -138,9 +138,7 @@ import Vapor
         echo '{"type":"result","is_error":false,"structured_output":{"title":"Streamed","priority":"low","acceptance_criteria":["a"]},"usage":{"input_tokens":1,"output_tokens":2}}'
         """.write(toFile: stub, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub)
-        setenv("MVP_DASHBOARD_CLAUDE_BIN", stub, 1)
-        defer { unsetenv("MVP_DASHBOARD_CLAUDE_BIN") }
-        try await withServer { client, home in
+        try await withServer(claude: stub) { client, home in
             let projects = RemoteProjectCommands(client: client)
             _ = try await projects.add(name: "Demo", path: home + "/demo", storage: nil)
             _ = try await RemoteAIConfigCommands(client: client).upsert(try AIProviderConfig(id: "cc", kind: .claudeCode, name: "CC", model: "sonnet"))

@@ -1,9 +1,12 @@
 import { vi } from 'vitest'
 
-type Handler = (body: unknown) => { status?: number; body?: unknown }
+type Handler = (body: unknown) => { status?: number; body?: unknown; sse?: [string, unknown][] }
 export type Routes = Record<string, Handler>
 
-/** Stubs global fetch with handlers keyed by `METHOD /api/path` (query string ignored). */
+/**
+ * Stubs global fetch with handlers keyed by `METHOD /api/path` (query string ignored).
+ * A handler returning `sse` answers with those `[event, data]` frames as an event stream.
+ */
 export function stubApi(routes: Routes) {
   const calls: { key: string; body: unknown }[] = []
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -21,6 +24,12 @@ export function stubApi(routes: Routes) {
       })
     }
     const result = handler(body)
+    if (result.sse) {
+      const text = result.sse
+        .map(([event, data]) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+        .join('')
+      return new Response(text, { status: 200, headers: { 'content-type': 'text/event-stream' } })
+    }
     return new Response(result.body === undefined ? null : JSON.stringify(result.body), {
       status: result.status ?? 200,
       headers: { 'content-type': 'application/json' },

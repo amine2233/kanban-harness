@@ -1,4 +1,3 @@
-import { baseApi } from '@/app/api'
 import type { CardPriority } from './kanbanApi'
 
 export interface TicketDraft {
@@ -9,6 +8,15 @@ export interface TicketDraft {
   points: number | null
 }
 
+/** What the model has produced so far; every field may still be missing. */
+export interface PartialTicketDraft {
+  title?: string | null
+  description?: string | null
+  acceptance_criteria?: string[]
+  priority?: CardPriority | null
+  points?: number | null
+}
+
 export interface DraftTicketResponse {
   draft: TicketDraft
   provider: string
@@ -17,30 +25,30 @@ export interface DraftTicketResponse {
 }
 
 /** The description that lands on the card: text plus criteria as a checklist. */
-export function draftDescription(draft: TicketDraft): string {
+export function draftDescription(draft: PartialTicketDraft): string {
   const parts: string[] = []
   if (draft.description) parts.push(draft.description)
-  if (draft.acceptance_criteria.length > 0) {
-    parts.push(
-      '**Acceptance criteria**\n' + draft.acceptance_criteria.map((c) => `- [ ] ${c}`).join('\n'),
-    )
+  const criteria = draft.acceptance_criteria ?? []
+  if (criteria.length > 0) {
+    parts.push('**Acceptance criteria**\n' + criteria.map((c) => `- [ ] ${c}`).join('\n'))
   }
   return parts.join('\n\n')
 }
 
-export const assistantApi = baseApi.injectEndpoints({
-  endpoints: (build) => ({
-    draftTicket: build.mutation<
-      DraftTicketResponse,
-      { projectId: string; boardId: string; idea: string; provider?: string }
-    >({
-      query: ({ projectId, boardId, idea, provider }) => ({
-        url: `projects/${projectId}/ai/tickets/draft`,
-        method: 'POST',
-        body: { idea, board_id: boardId, ...(provider ? { provider } : {}) },
-      }),
-    }),
-  }),
-})
+/** The card-form fields a draft (or partial draft) can fill; absent = leave as is. */
+export interface DraftPatch {
+  title?: string
+  description?: string
+  priority?: CardPriority
+  points?: number
+}
 
-export const { useDraftTicketMutation } = assistantApi
+export function draftPatch(draft: PartialTicketDraft): DraftPatch {
+  const description = draftDescription(draft)
+  return {
+    ...(draft.title ? { title: draft.title } : {}),
+    ...(description ? { description } : {}),
+    ...(draft.priority ? { priority: draft.priority } : {}),
+    ...(draft.points !== null && draft.points !== undefined ? { points: draft.points } : {}),
+  }
+}

@@ -85,22 +85,35 @@ test('draftDescription renders criteria as a checklist', () => {
 })
 
 describe('DraftWithAI', () => {
-  test('fills the card form from the draft without creating anything', async () => {
+  const draft = {
+    title: 'Add password reset',
+    description: 'Users forget passwords',
+    acceptance_criteria: ['Email sent'],
+    priority: 'high',
+    points: 5,
+  }
+
+  test('streams partials into the form, then the final draft, without creating anything', async () => {
     const api = stubApi({
       'GET /api/settings/ai': () => ({ body: providers }),
       'POST /api/projects/p1/ai/tickets/draft': (body) => ({
-        body: {
-          draft: {
-            title: 'Add password reset',
-            description: 'Users forget passwords',
-            acceptance_criteria: ['Email sent'],
-            priority: 'high',
-            points: 5,
-          },
-          provider: (body as { provider?: string }).provider ?? 'cc',
-          model: 'sonnet',
-          usage: { input_tokens: 1, output_tokens: 2, cost_usd: 0.01 },
-        },
+        sse: [
+          ['stage', { name: 'resolving provider', elapsed_ms: 1 }],
+          ['stage', { name: 'streaming', elapsed_ms: 40 }],
+          ['partial', { title: 'Add pass' }],
+          ['partial', { title: 'Add password reset', priority: 'high' }],
+          ['usage', { input_tokens: 1, output_tokens: 2, cost_usd: 0.01 }],
+          ['stage', { name: 'done', elapsed_ms: 900 }],
+          [
+            'result',
+            {
+              draft,
+              provider: (body as { provider?: string }).provider ?? 'cc',
+              model: 'sonnet',
+              usage: { input_tokens: 1, output_tokens: 2, cost_usd: 0.01 },
+            },
+          ],
+        ],
       }),
     })
     renderDialog()
@@ -122,6 +135,10 @@ describe('DraftWithAI', () => {
     )
     expect(screen.getByLabelText('Priority')).toHaveValue('high')
     expect(screen.getByText(/Drafted by local/)).toBeInTheDocument()
+    const activity = within(assist).getByRole('status', { name: 'AI activity' })
+    expect(activity).toHaveTextContent('Ollama · llama3.2 · done · 900 ms · 1 in / 2 out / $0.0100')
+    await userEvent.click(within(activity).getByText('Log (3)'))
+    expect(within(activity).getByText('streaming')).toBeInTheDocument()
     const post = api.calls.find((c) => c.key === 'POST /api/projects/p1/ai/tickets/draft')
     expect(post?.body).toEqual({
       idea: 'password reset on mobile',
@@ -131,22 +148,31 @@ describe('DraftWithAI', () => {
     expect(api.calls.some((c) => c.key.startsWith('POST /api/projects/p1/kanban'))).toBe(false)
   })
 
-  test('shows the provider error', async () => {
+  test('shows the provider error from the stream and from a plain error response', async () => {
     stubApi({
       'GET /api/settings/ai': () => ({ body: providers }),
-      'POST /api/projects/p1/ai/tickets/draft': () => ({
-        status: 502,
-        body: { code: 'AI_PROVIDER', message: 'provider unavailable: offline' },
-      }),
+      'POST /api/projects/p1/ai/tickets/draft': (body) =>
+        (body as { idea: string }).idea === 'plain'
+          ? { status: 502, body: { code: 'AI_PROVIDER', message: 'gateway said no' } }
+          : {
+              sse: [
+                ['stage', { name: 'resolving provider', elapsed_ms: 1 }],
+                ['error', { code: 'AI_PROVIDER', message: 'provider unavailable: offline' }],
+              ],
+            },
     })
     renderDialog()
     await userEvent.click(screen.getByRole('button', { name: '✨ Draft with AI' }))
-    await userEvent.type(
-      await screen.findByLabelText('Describe the ticket in a sentence or two'),
-      'x',
-    )
+    const idea = await screen.findByLabelText('Describe the ticket in a sentence or two')
+    await userEvent.type(idea, 'x')
     await userEvent.click(screen.getByRole('button', { name: 'Draft' }))
     expect(await screen.findByText('provider unavailable: offline')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'AI activity' })).toHaveTextContent('failed')
+
+    await userEvent.clear(idea)
+    await userEvent.type(idea, 'plain')
+    await userEvent.click(screen.getByRole('button', { name: 'Draft' }))
+    expect(await screen.findByText('gateway said no')).toBeInTheDocument()
   })
 
   test('points to Settings when no provider is configured', async () => {

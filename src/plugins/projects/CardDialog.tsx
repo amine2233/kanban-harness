@@ -111,11 +111,11 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
         {!card && (
           <DraftWithAI
             scope={scope}
-            onDraft={(draft, description) => {
-              setTitle(draft.title)
-              setDescription(description)
-              setPriority(draft.priority)
-              if (draft.points !== null) setPoints(String(draft.points))
+            onDraft={(patch) => {
+              if (patch.title !== undefined) setTitle(patch.title)
+              if (patch.description !== undefined) setDescription(patch.description)
+              if (patch.priority !== undefined) setPriority(patch.priority)
+              if (patch.points !== undefined) setPoints(String(patch.points))
             }}
           />
         )}

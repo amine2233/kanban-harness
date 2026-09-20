@@ -686,3 +686,23 @@ body {
   background: #f7f3fb;
   border: 1px solid #e6d9f5;
 }
+
+.ds-assist__activity {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #e6d9f5;
+}
+
+.ds-assist__log {
+  margin: 6px 0 0;
+  padding-left: 0;
+  list-style: none;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.ds-assist__log code {
+  color: #79589f;
+  margin-right: 6px;
+}

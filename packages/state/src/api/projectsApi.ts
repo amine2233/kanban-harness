@@ -1,4 +1,4 @@
-import { baseApi } from '@/app/api'
+import { baseApi } from '../api/baseApi'
 
 export type StorageKind = 'json' | 'sqlite'
 

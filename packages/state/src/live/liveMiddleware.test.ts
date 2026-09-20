@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { createStore } from '@/app/store'
-import { setServerUrl } from '@/core/settings/settingsSlice'
-import { projectsApi } from '@/plugins/projects/api/projectsApi'
-import { stubApi } from '@/test/fakeApi'
+import { createStore } from '../store'
+import { setServerUrl } from '../settings/settingsSlice'
+import { projectsApi } from '../api/projectsApi'
+import { stubApi } from '../testing/fakeApi'
 import { selectLiveEventCount, selectLiveStatus, startLive, stopLive } from './liveSlice'
 
 /** Records every socket the middleware opens and lets tests drive it. */

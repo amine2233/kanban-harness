@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router'
-import { errorMessage } from '@/app/api'
-import { Icon, Spinner } from '@mvp/design-system'
 import { AddProjectForm } from './AddProjectForm'
-import { useListProjectsQuery } from './api/projectsApi'
+import { errorMessage, useListProjectsQuery } from '@mvp/state'
+import { Icon, Spinner } from '@mvp/design-system'
 
 export function ProjectsSidebar() {
   const { data: projects = [], isLoading, error } = useListProjectsQuery()

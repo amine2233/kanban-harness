@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { createStore } from '@/app/store'
-import { stubApi } from '@/test/fakeApi'
+import { createStore } from '@mvp/state'
+import { stubApi } from '@mvp/state/testing'
 import { CARD_MIME, draggedCard, serialiseCardDrag } from './dragAndDrop'
 import { KanbanBoard } from './KanbanBoard'
 

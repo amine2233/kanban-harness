@@ -1,9 +1,7 @@
 import { Link } from 'react-router'
-import { errorMessage } from '@/app/api'
-import { Banner, Icon, PageHeader, Spinner } from '@mvp/design-system'
 import { AddProjectForm } from '@/plugins/projects/AddProjectForm'
-import { useListBoardsQuery } from '@/plugins/projects/api/kanbanApi'
-import { useListProjectsQuery, type Project } from '@/plugins/projects/api/projectsApi'
+import { errorMessage, type Project, useListBoardsQuery, useListProjectsQuery } from '@mvp/state'
+import { Banner, Icon, PageHeader, Spinner } from '@mvp/design-system'
 
 export function OverviewPage() {
   const { data: projects = [], isLoading, error } = useListProjectsQuery()

@@ -1,8 +1,8 @@
-import { createAsyncThunk, createSlice, type PayloadAction, type WithSlice } from '@reduxjs/toolkit'
-import { rootReducer, type RootState } from '@/app/reducer'
-import { apiBaseUrl, selectServerUrl } from '@/core/settings/settingsSlice'
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { RootState } from '../reducer'
+import { apiBaseUrl, selectServerUrl } from '../settings/settingsSlice'
 import type { DraftTicketResponse, PartialTicketDraft, Usage } from '@mvp/kanban-model'
-import { readEventStream } from '../api/sse'
+import { readEventStream } from './sse'
 
 export type Step = 'resolve' | 'context' | 'wait' | 'stream' | 'validate' | 'done'
 export const STEPS: Step[] = ['resolve', 'context', 'wait', 'stream', 'validate', 'done']
@@ -181,15 +181,8 @@ export const assistantSlice = createSlice({
   },
 })
 
-declare module '@/app/reducer' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- augmentation
-  export interface LazyLoadedSlices extends WithSlice<typeof assistantSlice> {}
-}
-
-const injected = assistantSlice.injectInto(rootReducer)
-
 export const { frameReceived, resetDraft } = assistantSlice.actions
-export const { selectAssistant } = injected.selectors
+export const { selectAssistant } = assistantSlice.selectors
 
 /** Wall time spent in each step, from consecutive stage timestamps. */
 export function phaseDurations(log: Stage[], nowMs: number): Partial<Record<Step, number>> {

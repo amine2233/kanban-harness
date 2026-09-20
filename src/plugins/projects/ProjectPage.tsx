@@ -1,13 +1,13 @@
 import { useNavigate, useParams } from 'react-router'
-import { errorMessage } from '@/app/api'
-import { Banner, Button, PageHeader, Select, Spinner } from '@mvp/design-system'
 import { KanbanBoard } from './board/KanbanBoard'
 import {
+  errorMessage,
+  type StorageKind,
   useDeleteProjectMutation,
   useGetProjectQuery,
   useUpdateProjectMutation,
-  type StorageKind,
-} from './api/projectsApi'
+} from '@mvp/state'
+import { Banner, Button, PageHeader, Select, Spinner } from '@mvp/design-system'
 
 export function ProjectPage() {
   const { id = '' } = useParams()

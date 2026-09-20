@@ -1,14 +1,14 @@
 import { useState, type SyntheticEvent } from 'react'
-import { errorMessage } from '@/app/api'
-import { Button, ConfirmModal, Input, Menu, Modal, Row } from '@mvp/design-system'
 import { ColumnDialog } from './ColumnDialog'
 import {
+  type Board,
+  errorMessage,
   useCloneBoardMutation,
   useCreateBoardMutation,
   useDeleteBoardMutation,
   useUpdateBoardMutation,
-  type Board,
-} from '../api/kanbanApi'
+} from '@mvp/state'
+import { Button, ConfirmModal, Input, Menu, Modal, Row } from '@mvp/design-system'
 
 interface Props {
   projectId: string

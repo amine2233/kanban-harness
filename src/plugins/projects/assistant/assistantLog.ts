@@ -1,5 +1,5 @@
 import { formatCost, formatTokens } from '@mvp/kanban-model'
-import type { AssistantState } from './assistantSlice'
+import type { AssistantState } from '@mvp/state'
 
 /** Plain-text version of the panel, for issues and support. */
 export function logText(assistant: AssistantState, providerLabel: string | null): string {

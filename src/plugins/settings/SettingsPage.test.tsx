@@ -2,10 +2,9 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { createStore } from '@/app/store'
-import { selectServerUrl, SETTINGS_STORAGE_KEY } from '@/core/settings/settingsSlice'
-import { stubApi } from '@/test/fakeApi'
 import { SettingsPage } from './SettingsPage'
+import { createStore, selectServerUrl, SETTINGS_STORAGE_KEY } from '@mvp/state'
+import { stubApi } from '@mvp/state/testing'
 
 afterEach(() => {
   localStorage.clear()

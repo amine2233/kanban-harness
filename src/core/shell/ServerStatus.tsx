@@ -1,8 +1,11 @@
-import { useAppSelector } from '@/app/hooks'
-import { selectLiveStatus } from '@/core/live/liveSlice'
-import { apiBaseUrl, selectServerUrl } from '@/core/settings/settingsSlice'
+import {
+  apiBaseUrl,
+  selectLiveStatus,
+  selectServerUrl,
+  useAppSelector,
+  useHealthQuery,
+} from '@mvp/state'
 import { cx } from '@mvp/design-system'
-import { useHealthQuery } from './healthApi'
 
 /** Live API reachability, polled; shows which server this browser talks to. */
 export function ServerStatus() {

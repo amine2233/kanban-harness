@@ -1,17 +1,18 @@
 import { useState, type SyntheticEvent } from 'react'
-import { baseApi } from '@/app/api'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { ThemePicker } from '@/core/settings/ThemePicker'
+import { AIProvidersCard } from './AIProvidersCard'
+import { ServerSettingsCard } from './ServerSettingsCard'
 import {
   apiBaseUrl,
+  baseApi,
   normaliseServerUrl,
   resetSettings,
   selectServerUrl,
   setServerUrl,
-} from '@/core/settings/settingsSlice'
-import { ThemePicker } from '@/core/settings/ThemePicker'
+  useAppDispatch,
+  useAppSelector,
+} from '@mvp/state'
 import { Banner, Button, Card, Input, PageHeader, Row, type Tone } from '@mvp/design-system'
-import { AIProvidersCard } from './AIProvidersCard'
-import { ServerSettingsCard } from './ServerSettingsCard'
 
 interface Check {
   tone: Tone

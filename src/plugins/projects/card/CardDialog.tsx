@@ -1,16 +1,5 @@
 import { useReducer, useState, type SyntheticEvent } from 'react'
-import { errorMessage } from '@/app/api'
-import { Button, ConfirmModal, Modal, Row } from '@mvp/design-system'
-import { formatCost, formatTokens, type BoardIndex } from '@mvp/kanban-model'
 import { DraftWithAI } from '../assistant/DraftWithAI'
-import {
-  useCreateCardMutation,
-  useDeleteCardMutation,
-  useUpdateCardMutation,
-  type Board,
-  type Card,
-  type Column,
-} from '../api/kanbanApi'
 import { CardFields } from './CardFields'
 import {
   cardFormReducer,
@@ -21,6 +10,17 @@ import {
 } from './cardForm'
 import { CardRelations } from './CardRelations'
 import { SubtaskRows } from './SubtaskRows'
+import {
+  type Board,
+  type Card,
+  type Column,
+  errorMessage,
+  useCreateCardMutation,
+  useDeleteCardMutation,
+  useUpdateCardMutation,
+} from '@mvp/state'
+import { Button, ConfirmModal, Modal, Row } from '@mvp/design-system'
+import { type BoardIndex, formatCost, formatTokens } from '@mvp/kanban-model'
 
 interface Props {
   scope: { projectId: string; boardId: string }

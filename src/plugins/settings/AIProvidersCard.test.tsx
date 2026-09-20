@@ -2,10 +2,9 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { createStore } from '@/app/store'
-import { stubApi } from '@/test/fakeApi'
 import { AIProvidersCard } from './AIProvidersCard'
-import type { AIConfig, AIProvider } from './aiConfigApi'
+import { type AIConfig, type AIProvider, createStore } from '@mvp/state'
+import { stubApi } from '@mvp/state/testing'
 
 afterEach(() => {
   vi.unstubAllGlobals()

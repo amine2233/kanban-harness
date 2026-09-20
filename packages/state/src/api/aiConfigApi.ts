@@ -1,4 +1,4 @@
-import { baseApi } from '@/app/api'
+import { baseApi } from '../api/baseApi'
 
 export type AIProviderKind = 'apple' | 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'claude_code'
 

@@ -1,12 +1,12 @@
 import { useState, type SyntheticEvent } from 'react'
-import { errorMessage } from '@/app/api'
-import { Button, Input, Modal, Row, Select } from '@mvp/design-system'
 import {
-  useCreateColumnMutation,
-  useUpdateColumnMutation,
   type CardStatus,
   type Column,
-} from '../api/kanbanApi'
+  errorMessage,
+  useCreateColumnMutation,
+  useUpdateColumnMutation,
+} from '@mvp/state'
+import { Button, Input, Modal, Row, Select } from '@mvp/design-system'
 
 const STATUSES: CardStatus[] = ['todo', 'in_progress', 'blocked', 'done']
 

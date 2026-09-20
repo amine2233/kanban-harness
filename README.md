@@ -174,11 +174,13 @@ Dependencies point inward everywhere: interface → service → persistence → 
 
 | Path                                         | Role                                                                                                                                                                                                |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/design-system/`                         | Reusable components over purple3 (`Button`, `Card`, `Modal`, …). The only layer that knows `hk-*` classes.                                                                                          |
+| `packages/design-system/`                    | `@mvp/design-system`: reusable components over purple3 (`Button`, `Card`, `Modal`, `Markdown`, …). The only layer that knows `hk-*` classes; no state.                                              |
+| `packages/kanban-model/`                     | `@mvp/kanban-model`: wire types and pure functions over the board (grouping, hierarchy index, colours, checklists, AI draft helpers). No React, no Redux.                                           |
+| `packages/state/`                            | `@mvp/state`: the Redux store — RTK Query endpoints, browser settings, the live socket, the AI stream. No components. `@mvp/state/testing` stubs the server for tests.                              |
 | `src/core/plugin/`                           | `DashboardPlugin` contract (`nav`, `routes`, optional `sidebar`) + registry.                                                                                                                        |
-| `src/core/shell/`, `src/core/settings/`      | App chrome and the browser-side settings slice (server URL, persisted to `localStorage`).                                                                                                           |
-| `src/app/`                                   | Composition root: store, RTK Query `baseApi` (base URL resolved per request), router, plugin list.                                                                                                  |
-| `src/plugins/projects/`                      | Sidebar project list, project page, board tabs, columns, card/column/board dialogs.                                                                                                                 |
+| `src/core/shell/`, `src/core/settings/`      | App chrome; theme hook and picker.                                                                                                                                                                  |
+| `src/app/`                                   | Composition root: router, store provider, plugin list. See [docs/frontend-architecture.md](docs/frontend-architecture.md).                                                                          |
+| `src/plugins/projects/`                      | Sidebar project list, project page; `board/` (columns, cards, drag and drop), `card/` (dialog over a pure form reducer), `assistant/` (Draft with AI + activity panel).                             |
 | `src/plugins/settings/`                      | Settings page: browser card + server card.                                                                                                                                                          |
 | `backend/Sources/DashboardDomain`            | `Project`, `ProjectRegistry`, `Settings`, and the kanban `Workspace` aggregate (numbering, WIP, status rules). Pure.                                                                                |
 | `backend/Sources/DashboardPersistence`       | `ProjectStore` / `WorkspaceStore` / `SettingsStore` protocols, in-memory stores, shared contract tests, RFC 3339 codec.                                                                             |
@@ -213,7 +215,7 @@ JSON and SQLite are interchangeable by construction: both stores implement the s
 ## Adding a web plugin
 
 1. Create `src/plugins/<name>/index.tsx` exporting a `DashboardPlugin` (`id`, `name`, `nav`, `routes`, optional `sidebar`).
-2. Server data: `baseApi.injectEndpoints(...)`. Local state: `createSlice(...).injectInto(rootReducer)` and augment `LazyLoadedSlices`.
+2. Server data and local state live in `packages/state` (`api/<resource>.ts` with `baseApi.injectEndpoints`, or a slice added to `reducer.ts`), exported from its `index.ts`.
 3. Add it to the list in `src/app/plugins.ts`.
 
 ## CI

@@ -1,11 +1,6 @@
 import { isAnyOf, type Middleware } from '@reduxjs/toolkit'
-import { baseApi } from '@/app/api'
-import {
-  apiBaseUrl,
-  resetSettings,
-  setServerUrl,
-  settingsSlice,
-} from '@/core/settings/settingsSlice'
+import { baseApi } from '../api/baseApi'
+import { apiBaseUrl, resetSettings, setServerUrl, settingsSlice } from '../settings/settingsSlice'
 import { eventsUrl, parseChangeEvent, tagsFor } from './events'
 import {
   liveClosed,

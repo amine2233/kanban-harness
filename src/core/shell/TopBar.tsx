@@ -1,8 +1,7 @@
-import { useAppDispatch } from '@/app/hooks'
 import { ThemePicker } from '@/core/settings/ThemePicker'
-import { Icon, Row } from '@mvp/design-system'
 import { ServerStatus } from './ServerStatus'
-import { toggleSidebar } from './shellSlice'
+import { toggleSidebar, useAppDispatch } from '@mvp/state'
+import { Icon, Row } from '@mvp/design-system'
 
 export function TopBar({ title }: { title: string }) {
   const dispatch = useAppDispatch()

@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { createStore } from '@/app/store'
-import { stubApi } from '@/test/fakeApi'
+import { createStore } from '@mvp/state'
+import { stubApi } from '@mvp/state/testing'
 import { OverviewPage } from './OverviewPage'
 
 const page = <T,>(items: T[]) => ({

@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react'
-import { errorMessage } from '@/app/api'
-import { Banner, Spinner } from '@mvp/design-system'
-import { buildBoardIndex, groupCardsByColumn } from '@mvp/kanban-model'
 import { BoardTabs } from './BoardTabs'
 import { ColumnActions } from './ColumnActions'
 import { KanbanColumn } from './KanbanColumn'
-import { useListBoardsQuery, useListCardsQuery, useListColumnsQuery } from '../api/kanbanApi'
+import {
+  errorMessage,
+  useListBoardsQuery,
+  useListCardsQuery,
+  useListColumnsQuery,
+} from '@mvp/state'
+import { Banner, Spinner } from '@mvp/design-system'
+import { buildBoardIndex, groupCardsByColumn } from '@mvp/kanban-model'
 
 export function KanbanBoard({ projectId }: { projectId: string }) {
   const boards = useListBoardsQuery(projectId)

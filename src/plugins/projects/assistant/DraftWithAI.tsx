@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { Button, Row, Select, Textarea } from '@mvp/design-system'
-import { useGetAIConfigQuery } from '@/plugins/settings/aiConfigApi'
-import { costOf, draftPatch, type DraftPatch } from '@mvp/kanban-model'
 import { ActivityPanel } from './ActivityPanel'
-import { resetDraft, selectAssistant, streamDraft } from './assistantSlice'
+import {
+  resetDraft,
+  selectAssistant,
+  streamDraft,
+  useAppDispatch,
+  useAppSelector,
+  useGetAIConfigQuery,
+} from '@mvp/state'
+import { Button, Row, Select, Textarea } from '@mvp/design-system'
+import { costOf, draftPatch, type DraftPatch } from '@mvp/kanban-model'
 
 interface Props {
   scope: { projectId: string; boardId: string }

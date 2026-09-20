@@ -2,10 +2,9 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { createStore } from '@/app/store'
-import { stubApi } from '@/test/fakeApi'
 import { KanbanBoard } from './KanbanBoard'
-import type { CardStatus } from '../api/kanbanApi'
+import { type CardStatus, createStore } from '@mvp/state'
+import { stubApi } from '@mvp/state/testing'
 
 const projectId = 'p1'
 const base = `/api/projects/${projectId}/kanban/v1`

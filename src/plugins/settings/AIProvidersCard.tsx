@@ -1,5 +1,16 @@
 import { useState, type SyntheticEvent } from 'react'
-import { errorMessage } from '@/app/api'
+import {
+  type AIProvider,
+  type AIProviderKind,
+  errorMessage,
+  KEYED_KINDS,
+  KIND_BASE_URL,
+  KIND_LABELS,
+  useGetAIConfigQuery,
+  useRemoveAIProviderMutation,
+  useSetDefaultAIProviderMutation,
+  useUpsertAIProviderMutation,
+} from '@mvp/state'
 import {
   Badge,
   Banner,
@@ -13,17 +24,6 @@ import {
   Select,
   Spinner,
 } from '@mvp/design-system'
-import {
-  KEYED_KINDS,
-  KIND_BASE_URL,
-  KIND_LABELS,
-  useGetAIConfigQuery,
-  useRemoveAIProviderMutation,
-  useSetDefaultAIProviderMutation,
-  useUpsertAIProviderMutation,
-  type AIProvider,
-  type AIProviderKind,
-} from './aiConfigApi'
 
 type Dialog =
   | { kind: 'add' }

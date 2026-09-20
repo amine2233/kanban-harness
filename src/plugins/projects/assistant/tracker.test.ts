@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import type { AssistantState, Stage } from './assistantSlice'
+import type { AssistantState, Stage } from '@mvp/state'
 import { seconds, trackerState } from './tracker'
 
 const base: AssistantState = {

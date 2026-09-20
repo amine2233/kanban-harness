@@ -4,7 +4,7 @@ import type { BoardIndex } from '@mvp/kanban-model'
 import { CardDialog } from '../card/CardDialog'
 import { CARD_MIME, draggedCard, serialiseCardDrag } from './dragAndDrop'
 import { KanbanCard } from './KanbanCard'
-import { useMoveCardMutation, type Board, type Card, type Column } from '../api/kanbanApi'
+import { useMoveCardMutation, type Board, type Card, type Column } from '@mvp/state'
 
 interface Props {
   scope: { projectId: string; boardId: string }

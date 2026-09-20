@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { expect, test } from 'vitest'
-import { createStore } from '@/app/store'
+import { createStore } from '@mvp/state'
 import { buildRegistry } from '@/core/plugin/registry'
 import { AppShell } from './AppShell'
 

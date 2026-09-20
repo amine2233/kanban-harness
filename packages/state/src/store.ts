@@ -1,7 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
-import { liveMiddleware } from '@/core/live/liveMiddleware'
-import { saveSettings, settingsSlice } from '@/core/settings/settingsSlice'
-import { baseApi } from './api'
+import { liveMiddleware } from './live/liveMiddleware'
+import { saveSettings, settingsSlice } from './settings/settingsSlice'
+import { baseApi } from './api/baseApi'
 import { rootReducer } from './reducer'
 
 export const createStore = () => {

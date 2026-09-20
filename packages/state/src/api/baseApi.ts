@@ -5,7 +5,7 @@ import {
   type FetchArgs,
   type FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react'
-import { apiBaseUrl, selectServerUrl } from '@/core/settings/settingsSlice'
+import { apiBaseUrl, selectServerUrl } from '../settings/settingsSlice'
 
 /** Resolves the base URL per request so a settings change applies immediately. */
 const dynamicBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = (

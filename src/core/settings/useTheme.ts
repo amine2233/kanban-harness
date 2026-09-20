@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
-import { useAppSelector } from '@/app/hooks'
-import { selectTheme, type Theme } from './settingsSlice'
+import { selectTheme, type Theme, useAppSelector } from '@mvp/state'
 
 const query = () =>
   typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null

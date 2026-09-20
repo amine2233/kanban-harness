@@ -1,5 +1,5 @@
 import { formatCost, formatTokens } from '@mvp/kanban-model'
-import { phaseDurations, type AssistantState, type Step } from './assistantSlice'
+import { phaseDurations, type AssistantState, type Step } from '@mvp/state'
 
 export const STEP_LABELS: Record<Step, string> = {
   resolve: 'Prepare',

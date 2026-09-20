@@ -1,7 +1,7 @@
 import { Button, cx, Row, Spinner } from '@mvp/design-system'
 import { formatCost } from '@mvp/kanban-model'
 import { logText } from './assistantLog'
-import { STEPS, type AssistantState } from './assistantSlice'
+import { STEPS, type AssistantState } from '@mvp/state'
 import { seconds, STEP_LABELS, trackerState } from './tracker'
 
 /** What the assistant is doing, at three levels: tracker, summary, details. */

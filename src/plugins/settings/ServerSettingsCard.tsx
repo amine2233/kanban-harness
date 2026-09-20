@@ -1,13 +1,13 @@
 import { useState, type SyntheticEvent } from 'react'
-import { errorMessage } from '@/app/api'
-import { Banner, Button, Card, Select, Spinner, Textarea } from '@mvp/design-system'
-import type { StorageKind } from '@/plugins/projects/api/projectsApi'
 import { splitOrigins } from './origins'
 import {
+  errorMessage,
+  type ServerSettings,
+  type StorageKind,
   useGetServerSettingsQuery,
   useUpdateServerSettingsMutation,
-  type ServerSettings,
-} from './settingsApi'
+} from '@mvp/state'
+import { Banner, Button, Card, Select, Spinner, Textarea } from '@mvp/design-system'
 
 /** Edits settings.json on the server; the server applies them without a restart. */
 export function ServerSettingsCard() {

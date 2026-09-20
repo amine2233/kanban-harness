@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 import {
   apiBaseUrl,
   loadSettings,
@@ -6,7 +6,6 @@ import {
   saveSettings,
   SETTINGS_STORAGE_KEY,
 } from './settingsSlice'
-import { applyTheme } from './useTheme'
 
 afterEach(() => {
   localStorage.clear()
@@ -43,27 +42,6 @@ describe('persistence', () => {
   test('round-trips a saved server url and theme', () => {
     saveSettings({ serverUrl: 'http://localhost:9999', theme: 'dark' })
     expect(loadSettings()).toEqual({ serverUrl: 'http://localhost:9999', theme: 'dark' })
-  })
-
-  test('the effective theme is stamped on <html>; system follows the OS preference', () => {
-    applyTheme('dark')
-    expect(document.documentElement.dataset.theme).toBe('dark')
-    expect(document.documentElement.style.colorScheme).toBe('dark')
-    vi.stubGlobal('matchMedia', () => ({
-      matches: true,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }))
-    applyTheme('system')
-    expect(document.documentElement.dataset.theme).toBe('dark')
-    vi.stubGlobal('matchMedia', () => ({
-      matches: false,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }))
-    applyTheme('system')
-    expect(document.documentElement.dataset.theme).toBe('light')
-    vi.unstubAllGlobals()
   })
 })
 

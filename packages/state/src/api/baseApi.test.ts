@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { setServerUrl } from '@/core/settings/settingsSlice'
-import { projectsApi } from '@/plugins/projects/api/projectsApi'
-import { createStore } from './store'
+import { setServerUrl } from '../settings/settingsSlice'
+import { projectsApi } from './projectsApi'
+import { createStore } from '../store'
 
 afterEach(() => {
   localStorage.clear()

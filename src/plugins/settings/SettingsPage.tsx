@@ -8,6 +8,7 @@ import {
   selectServerUrl,
   setServerUrl,
 } from '@/core/settings/settingsSlice'
+import { ThemePicker } from '@/core/settings/ThemePicker'
 import { Banner, Button, Card, Input, PageHeader, type Tone } from '@/design-system'
 import { AIProvidersCard } from './AIProvidersCard'
 import { ServerSettingsCard } from './ServerSettingsCard'
@@ -114,6 +115,13 @@ export function SettingsPage() {
             {check.detail}
           </Banner>
         )}
+      </Card>
+      <Card title="Appearance" className="mw7 mt3">
+        <p className="f6 gray mt0 mb2">
+          <em>System</em> follows your OS setting and switches automatically; pick Light or Dark to
+          force one. Stored in this browser.
+        </p>
+        <ThemePicker />
       </Card>
       <ServerSettingsCard />
       <AIProvidersCard />

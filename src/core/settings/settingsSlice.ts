@@ -1,13 +1,18 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
+export type Theme = 'system' | 'light' | 'dark'
+export const THEMES: Theme[] = ['system', 'light', 'dark']
+
 export interface SettingsState {
   /** Origin of the API server (e.g. `http://127.0.0.1:5175`); empty = same origin as the page. */
   serverUrl: string
+  /** `system` follows the OS; light and dark force a look. */
+  theme: Theme
 }
 
 export const SETTINGS_STORAGE_KEY = 'mvp-dashboard.settings'
 
-const defaults: SettingsState = { serverUrl: '' }
+const defaults: SettingsState = { serverUrl: '', theme: 'system' }
 
 /** Accepts an empty string (same origin) or an absolute http(s) URL; returns the normalised origin. */
 export function normaliseServerUrl(input: string): string | null {
@@ -29,7 +34,8 @@ export function loadSettings(): SettingsState {
     const parsed = JSON.parse(raw) as Partial<SettingsState>
     const serverUrl =
       typeof parsed.serverUrl === 'string' ? normaliseServerUrl(parsed.serverUrl) : null
-    return { ...defaults, serverUrl: serverUrl ?? '' }
+    const theme = THEMES.find((t) => t === parsed.theme) ?? 'system'
+    return { ...defaults, serverUrl: serverUrl ?? '', theme }
   } catch {
     return defaults
   }
@@ -50,15 +56,19 @@ export const settingsSlice = createSlice({
     setServerUrl(state, action: PayloadAction<string>) {
       state.serverUrl = action.payload
     },
-    resetSettings: () => defaults,
+    setTheme(state, action: PayloadAction<Theme>) {
+      state.theme = action.payload
+    },
+    resetSettings: (state) => ({ ...defaults, theme: state.theme }),
   },
   selectors: {
     selectServerUrl: (state) => state.serverUrl,
+    selectTheme: (state) => state.theme,
   },
 })
 
-export const { setServerUrl, resetSettings } = settingsSlice.actions
-export const { selectServerUrl } = settingsSlice.selectors
+export const { setServerUrl, setTheme, resetSettings } = settingsSlice.actions
+export const { selectServerUrl, selectTheme } = settingsSlice.selectors
 
 /** `/api` on the configured server, or on the page's own origin. */
 export function apiBaseUrl(serverUrl: string): string {

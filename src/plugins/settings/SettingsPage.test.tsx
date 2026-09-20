@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { afterEach, describe, expect, test, vi } from 'vitest'
@@ -35,6 +35,7 @@ describe('SettingsPage', () => {
     expect(selectServerUrl(store.getState())).toBe('http://127.0.0.1:5175')
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toEqual({
       serverUrl: 'http://127.0.0.1:5175',
+      theme: 'system',
     })
     expect(screen.getByText('Saved')).toBeInTheDocument()
     expect(screen.getByText('API requests now go to http://127.0.0.1:5175/api')).toBeInTheDocument()
@@ -70,5 +71,18 @@ describe('SettingsPage', () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
     await userEvent.click(screen.getByRole('button', { name: 'Test connection' }))
     expect(await screen.findByText('Server unreachable')).toBeInTheDocument()
+  })
+
+  test('the theme picker persists the choice and stamps <html>', async () => {
+    renderPage()
+    const picker = screen.getByRole('radiogroup', { name: 'Theme' })
+    await userEvent.click(within(picker).getByRole('radio', { name: 'Dark' }))
+    expect(within(picker).getByRole('radio', { name: 'Dark' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    expect(
+      (JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}') as { theme: string }).theme,
+    ).toBe('dark')
   })
 })

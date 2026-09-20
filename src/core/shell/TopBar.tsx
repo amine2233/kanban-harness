@@ -1,4 +1,5 @@
 import { useAppDispatch } from '@/app/hooks'
+import { ThemePicker } from '@/core/settings/ThemePicker'
 import { Icon } from '@/design-system'
 import { ServerStatus } from './ServerStatus'
 import { toggleSidebar } from './shellSlice'
@@ -23,7 +24,8 @@ export function TopBar({ title }: { title: string }) {
         </span>
         {title}
       </span>
-      <span className="ml-auto">
+      <span className="ml-auto flex items-center" style={{ gap: 12 }}>
+        <ThemePicker compact />
         <ServerStatus />
       </span>
     </header>

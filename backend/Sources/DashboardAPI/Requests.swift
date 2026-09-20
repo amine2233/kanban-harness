@@ -150,17 +150,64 @@ public struct CreateCardRequest: Codable, Sendable {
     public var priority: PriorityDTO?
     /// Set by clients that created the card from an AI draft.
     public var aiCost: AICost?
+    /// Children created in the same column and linked to the card, atomically.
+    public var subtasks: [SubtaskRequest]?
 
     enum CodingKeys: String, CodingKey {
-        case title, description, priority
+        case title, description, priority, subtasks
         case aiCost = "ai_cost"
     }
 
-    public init(title: String, description: String? = nil, priority: PriorityDTO? = nil, aiCost: AICost? = nil) {
+    public init(title: String, description: String? = nil, priority: PriorityDTO? = nil, aiCost: AICost? = nil, subtasks: [SubtaskRequest]? = nil) {
         self.title = title
         self.description = description
         self.priority = priority
         self.aiCost = aiCost
+        self.subtasks = subtasks
+    }
+}
+
+public struct SubtaskRequest: Codable, Sendable, Equatable {
+    public var title: String
+    public var description: String?
+    public var priority: PriorityDTO?
+    public var points: Int?
+
+    public init(title: String, description: String? = nil, priority: PriorityDTO? = nil, points: Int? = nil) {
+        self.title = title
+        self.description = description
+        self.priority = priority
+        self.points = points
+    }
+
+    public init(_ spec: SubtaskSpec) {
+        self.init(title: spec.title, description: spec.description, priority: spec.priority.map(PriorityDTO.init), points: spec.points)
+    }
+
+    public func spec() throws -> SubtaskSpec {
+        let priority = try priority.map { dto -> CardPriority in
+            guard let value = dto.domain else { throw DomainError.invalidPriority(dto.rawValue) }
+            return value
+        }
+        return SubtaskSpec(title: title, description: description, priority: priority, points: points)
+    }
+}
+
+/// `{"parent_id": uuid}` links the card under a parent; `{"parent_id": null}` detaches it.
+public struct SetParentRequest: Codable, Sendable {
+    public var parentId: UUID?
+
+    enum CodingKeys: String, CodingKey {
+        case parentId = "parent_id"
+    }
+
+    public init(parentId: UUID?) {
+        self.parentId = parentId
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        parentId = try c.decodeIfPresent(UUID.self, forKey: .parentId)
     }
 }
 

@@ -38,7 +38,7 @@ import Testing
         let boards = LocalBoardCommands(projects: projects)
         let board = try await boards.boards(.name("Demo"))[0]
         let column = try await boards.columns(.name("Demo"), boardId: board.id)[0]
-        _ = try await boards.createCard(.name("Demo"), columnId: column.id, title: "Existing card", description: nil, priority: .low, aiCost: nil)
+        _ = try await boards.createCard(.name("Demo"), columnId: column.id, title: "Existing card", description: nil, priority: .low, aiCost: nil, subtasks: [])
 
         let aiConfig = AIConfigService(store: InMemoryAIConfigStore())
         let fakeConfig = try AIProviderConfig(id: "fake", kind: .ollama, name: "Fake", model: "fake-1", maxTokens: 512)

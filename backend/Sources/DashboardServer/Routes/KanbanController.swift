@@ -20,6 +20,8 @@ struct KanbanController: RouteCollection {
         routes.post("columns", ":column", "cards", use: createCard)
         routes.patch("boards", ":board", "cards", ":card", use: updateCard)
         routes.delete("boards", ":board", "cards", ":card", use: deleteCard)
+        routes.get("boards", ":board", "cards", ":card", "children", use: listChildren)
+        routes.put("boards", ":board", "cards", ":card", "parent", use: setParent)
     }
 
     // MARK: Boards
@@ -126,19 +128,46 @@ struct KanbanController: RouteCollection {
     func listCards(req: Request) async throws -> Page<CardResponse> {
         let workspace = try await req.projects.workspace(req.projectRef)
         let board = try workspace.board(req.uuid("board"))
-        return try req.query.decode(PageParams.self).paginate(workspace.cards(of: board.id).map(CardResponse.init))
+        return try req.query.decode(PageParams.self).paginate(workspace.cards(of: board.id).map { CardResponse($0, in: workspace) })
+    }
+
+    func listChildren(req: Request) async throws -> Page<CardResponse> {
+        let workspace = try await req.projects.workspace(req.projectRef)
+        let cardId = try req.uuid("card")
+        try Self.requireCard(cardId, in: try req.uuid("board"), workspace)
+        return try req.query.decode(PageParams.self).paginate(workspace.children(of: cardId).map { CardResponse($0, in: workspace) })
+    }
+
+    func setParent(req: Request) async throws -> CardResponse {
+        let body = try req.content.decode(SetParentRequest.self)
+        let boardId = try req.uuid("board")
+        let cardId = try req.uuid("card")
+        let (card, workspace) = try await req.projects.mutate(req.projectRef) { workspace, now in
+            try Self.requireCard(cardId, in: boardId, workspace)
+            if let parentId = body.parentId {
+                if workspace.parent(of: cardId) != parentId { try workspace.detach(cardId, now: now) }
+                try workspace.attach(cardId, to: parentId, now: now)
+            } else {
+                try workspace.detach(cardId, now: now)
+            }
+            return (try workspace.card(cardId), workspace)
+        }
+        return CardResponse(card, in: workspace)
     }
 
     func createCard(req: Request) async throws -> Response {
         let body = try req.content.decode(CreateCardRequest.self)
         let columnId = try req.uuid("column")
         let priority = try body.priority.map(Self.priority)
-        let card = try await req.projects.mutate(req.projectRef) { workspace, now in
-            try workspace.createCard(
+        let subtasks = try (body.subtasks ?? []).map { try $0.spec() }
+        let (card, workspace) = try await req.projects.mutate(req.projectRef) { workspace, now in
+            let card = try workspace.createCard(
                 columnId: columnId, title: body.title, description: body.description, priority: priority ?? .medium, aiCost: body.aiCost, now: now
             )
+            try workspace.createSubtasks(of: card.id, subtasks, now: now)
+            return (card, workspace)
         }
-        return try created(CardResponse(card))
+        return try created(CardResponse(card, in: workspace))
     }
 
     func updateCard(req: Request) async throws -> CardResponse {
@@ -147,19 +176,20 @@ struct KanbanController: RouteCollection {
         let cardId = try req.uuid("card")
         let priority = try body.priority.map(Self.priority)
         let status = try body.status.map(Self.status)
-        let card = try await req.projects.mutate(req.projectRef) { workspace, now in
+        let (card, workspace) = try await req.projects.mutate(req.projectRef) { workspace, now in
             try Self.requireCard(cardId, in: boardId, workspace)
             if let targetBoard = body.boardId, targetBoard != boardId {
                 try workspace.moveCardToBoard(cardId, boardId: targetBoard, columnId: body.columnId, now: now)
             } else if let columnId = body.columnId {
                 try workspace.moveCard(cardId, toColumn: columnId, now: now)
             }
-            return try workspace.updateCard(
+            let card = try workspace.updateCard(
                 cardId, title: body.title, description: body.description.value, priority: priority,
                 status: status, dueDate: body.dueDate.value, points: body.points.value, now: now
             )
+            return (card, workspace)
         }
-        return CardResponse(card)
+        return CardResponse(card, in: workspace)
     }
 
     func deleteCard(req: Request) async throws -> HTTPStatus {

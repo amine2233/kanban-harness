@@ -156,9 +156,20 @@ public struct RemoteBoardCommands: BoardCommands {
         return page.items.compactMap(Self.card)
     }
 
-    public func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?) async throws(ServiceError) -> Card {
-        let body = CreateCardRequest(title: title, description: description, priority: PriorityDTO(priority), aiCost: aiCost)
+    public func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?, subtasks: [SubtaskSpec]) async throws(ServiceError) -> Card {
+        let body = CreateCardRequest(title: title, description: description, priority: PriorityDTO(priority), aiCost: aiCost, subtasks: subtasks.isEmpty ? nil : subtasks.map(SubtaskRequest.init))
         let response = try await client.send("POST", "\(try await base(project))/columns/\(columnId.uuidString)/cards", body: body, as: CardResponse.self)
+        guard let card = Self.card(response) else { throw .remote(code: "BAD_RESPONSE", message: "unknown card enum values") }
+        return card
+    }
+
+    public func children(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError) -> [Card] {
+        let page = try await client.send("GET", "\(try await base(project))/boards/\(boardId.uuidString)/cards/\(cardId.uuidString)/children?page_size=500", body: Empty?.none, as: Page<CardResponse>.self)
+        return page.items.compactMap(Self.card)
+    }
+
+    public func setParent(_ project: ProjectRef, boardId: UUID, cardId: UUID, parentId: UUID?) async throws(ServiceError) -> Card {
+        let response = try await client.send("PUT", "\(try await base(project))/boards/\(boardId.uuidString)/cards/\(cardId.uuidString)/parent", body: SetParentRequest(parentId: parentId), as: CardResponse.self)
         guard let card = Self.card(response) else { throw .remote(code: "BAD_RESPONSE", message: "unknown card enum values") }
         return card
     }

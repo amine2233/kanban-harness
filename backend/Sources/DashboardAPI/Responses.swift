@@ -154,6 +154,8 @@ public struct CardResponse: Codable, Sendable, Equatable {
     public let cardNumber: Int
     public let sprintId: UUID?
     public let aiCost: AICost?
+    public let parentId: UUID?
+    public let children: ChildrenDTO
     public let createdAt: Date
     public let updatedAt: Date
     public let completedAt: Date?
@@ -166,9 +168,21 @@ public struct CardResponse: Codable, Sendable, Equatable {
         case cardNumber = "card_number"
         case sprintId = "sprint_id"
         case aiCost = "ai_cost"
+        case parentId = "parent_id"
+        case children
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case completedAt = "completed_at"
+    }
+
+    public struct ChildrenDTO: Codable, Sendable, Equatable {
+        public let total: Int
+        public let done: Int
+
+        public init(total: Int, done: Int) {
+            self.total = total
+            self.done = done
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -187,12 +201,17 @@ public struct CardResponse: Codable, Sendable, Equatable {
         try c.encode(cardNumber, forKey: .cardNumber)
         try c.encode(sprintId, forKey: .sprintId)
         try c.encode(aiCost, forKey: .aiCost)
+        try c.encode(parentId, forKey: .parentId)
+        try c.encode(children, forKey: .children)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(updatedAt, forKey: .updatedAt)
         try c.encode(completedAt, forKey: .completedAt)
     }
 
-    public init(_ card: Card) {
+    public init(_ card: Card, in workspace: Workspace) {
+        parentId = workspace.parent(of: card.id)
+        let progress = workspace.progress(of: card.id)
+        children = ChildrenDTO(total: progress.total, done: progress.done)
         id = card.id
         columnId = card.columnId
         boardId = card.boardId

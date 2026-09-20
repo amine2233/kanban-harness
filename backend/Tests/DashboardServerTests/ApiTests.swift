@@ -236,6 +236,57 @@ extension TestingApplicationTester {
         }
     }
 
+    @Test func cardsCanBeCreatedWithSubtasksAndReparented() async throws {
+        try await withServer { app, home in
+            let project = try await app.createProject("Demo", at: home + "/demo")
+            let base = "/api/projects/\(try #require(project["id"] as? String))/kanban/v1"
+            let (boardId, columns) = try await app.firstBoardAndColumns(base)
+            let todo = try #require(columns[0]["id"] as? String)
+            let done = try #require(columns[3]["id"] as? String)
+
+            let (status, parentBody) = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: [
+                "title": "Epic", "priority": "high",
+                "subtasks": [["title": "One", "points": 3], ["title": "Two", "priority": "low", "description": "d"]],
+            ])
+            #expect(status == .created)
+            let parent = try #require(parentBody as? [String: Any])
+            #expect((parent["children"] as? [String: Any])?["total"] as? Int == 2)
+            #expect(parent["parent_id"] is NSNull)
+            let parentId = try #require(parent["id"] as? String)
+
+            let (_, childrenBody) = try await app.json(.GET, "\(base)/boards/\(boardId)/cards/\(parentId)/children")
+            let children = try #require((childrenBody as? [String: Any])?["items"] as? [[String: Any]])
+            #expect(children.map { $0["title"] as? String } == ["One", "Two"])
+            #expect(children[0]["points"] as? Int == 3 && children[0]["priority"] as? String == "high")
+            #expect(children[1]["priority"] as? String == "low")
+            #expect(children.allSatisfy { $0["parent_id"] as? String == parentId && $0["column_id"] as? String == todo })
+
+            let oneId = try #require(children[0]["id"] as? String)
+            _ = try await app.json(.PATCH, "\(base)/boards/\(boardId)/cards/\(oneId)", body: ["column_id": done])
+            let (_, listed) = try await app.json(.GET, "\(base)/boards/\(boardId)/cards")
+            let epic = try #require(((listed as? [String: Any])?["items"] as? [[String: Any]])?.first { $0["id"] as? String == parentId })
+            #expect((epic["children"] as? [String: Any])?["done"] as? Int == 1)
+
+            let (detached, detachedBody) = try await app.json(.PUT, "\(base)/boards/\(boardId)/cards/\(oneId)/parent", body: ["parent_id": NSNull()])
+            #expect(detached == .ok)
+            #expect((detachedBody as? [String: Any])?["parent_id"] is NSNull)
+            let (reattached, reattachedBody) = try await app.json(.PUT, "\(base)/boards/\(boardId)/cards/\(oneId)/parent", body: ["parent_id": parentId])
+            #expect(reattached == .ok)
+            #expect((reattachedBody as? [String: Any])?["parent_id"] as? String == parentId)
+            let (cycle, cycleBody) = try await app.json(.PUT, "\(base)/boards/\(boardId)/cards/\(parentId)/parent", body: ["parent_id": oneId])
+            #expect(cycle == .badRequest)
+            #expect((cycleBody as? [String: Any])?["code"] as? String == "VALIDATION_FAILED")
+
+            let (partial, _) = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "Bad", "subtasks": [["title": "ok"], ["title": " "]]])
+            #expect(partial == .badRequest)
+            let (_, after) = try await app.json(.GET, "\(base)/boards/\(boardId)/cards")
+            #expect((after as? [String: Any])?["total"] as? Int == 3, "an invalid sub-task creates nothing at all")
+
+            let raw = try String(contentsOfFile: home + "/demo/kanban.json", encoding: .utf8)
+            #expect(raw.contains("\"spawns\"") && raw.contains("\"archived_at\""), "links are kanban-rs graph edges")
+        }
+    }
+
     @Test func kanbanRejectsBadPriorityAndUnknownCards() async throws {
         try await withServer { app, home in
             let id = try #require(try await app.createProject("Demo", at: home + "/demo")["id"] as? String)

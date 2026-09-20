@@ -57,7 +57,7 @@ import Testing
     @Test func listsAllToolsWithSchemas() async throws {
         let (client, server, _) = try await connectedClient()
         let (tools, _) = try await client.listTools()
-        #expect(tools.map(\.name).sorted() == ["create_board", "create_card", "delete_card", "list_boards", "list_cards", "list_columns", "list_projects", "move_card", "update_card"])
+        #expect(tools.map(\.name).sorted() == ["create_board", "create_card", "create_subtasks", "delete_card", "list_boards", "list_card_children", "list_cards", "list_columns", "list_projects", "move_card", "remove_card_parent", "set_card_parent", "update_card"])
         let create = try #require(tools.first { $0.name == "create_card" })
         #expect(create.inputSchema.objectValue?["required"]?.arrayValue?.map(\.stringValue) == ["project", "board", "title"])
         await server.stop()
@@ -102,6 +102,29 @@ import Testing
         #expect(deleted["key"] as? String == "task-1")
         let remaining = try #require(try text(await client.callTool(name: "list_cards", arguments: ["project": "Demo", "board": "Demo"])) as? [[String: Any]])
         #expect(remaining.isEmpty)
+        await server.stop()
+    }
+
+    @Test func subtaskToolsBuildAndWalkTheHierarchy() async throws {
+        let (client, server, _) = try await connectedClient()
+        let parent = try #require(try text(await client.callTool(name: "create_card", arguments: ["project": "Demo", "board": "Demo", "title": "Epic"])) as? [String: Any])
+        let children = try #require(try text(await client.callTool(name: "create_subtasks", arguments: [
+            "project": "Demo", "board": "Demo", "card": "task-1",
+            "subtasks": [["title": "One", "points": 2], ["title": "Two", "priority": "low"]],
+        ])) as? [[String: Any]])
+        #expect(children.map { $0["title"] as? String } == ["One", "Two"])
+        #expect(children[0]["points"] as? Int == 2)
+        #expect(children.allSatisfy { $0["column"] as? String == "Backlog" })
+
+        #expect(parent["key"] as? String == "task-1")
+        let listed = try #require(try text(await client.callTool(name: "list_card_children", arguments: ["project": "Demo", "board": "Demo", "card": "task-1"])) as? [[String: Any]])
+        #expect(listed.count == 2)
+        _ = try await client.callTool(name: "remove_card_parent", arguments: ["project": "Demo", "board": "Demo", "card": "task-2"])
+        #expect(try #require(try text(await client.callTool(name: "list_card_children", arguments: ["project": "Demo", "board": "Demo", "card": "task-1"])) as? [[String: Any]]).count == 1)
+        _ = try await client.callTool(name: "set_card_parent", arguments: ["project": "Demo", "board": "Demo", "card": "task-2", "parent": "task-1"])
+        #expect(try #require(try text(await client.callTool(name: "list_card_children", arguments: ["project": "Demo", "board": "Demo", "card": "task-1"])) as? [[String: Any]]).count == 2)
+        let cycle = try await client.callTool(name: "set_card_parent", arguments: ["project": "Demo", "board": "Demo", "card": "task-1", "parent": "task-2"])
+        #expect(cycle.isError == true)
         await server.stop()
     }
 

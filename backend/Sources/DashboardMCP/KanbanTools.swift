@@ -73,6 +73,32 @@ public enum KanbanTools {
             name: "delete_card", description: "Delete a card permanently.",
             inputSchema: schema(["project": project, "board": board, "card": prop("string", "Card id, number or key")], required: ["project", "board", "card"])
         ),
+        Tool(
+            name: "create_subtasks", description: "Break a card down: create child cards in the parent's column, linked to it.",
+            inputSchema: schema([
+                "project": project, "board": board, "card": prop("string", "Parent card id, number or key"),
+                "subtasks": .object([
+                    "type": .string("array"), "description": .string("Children to create, in order"),
+                    "items": schema([
+                        "title": prop("string", "Title"), "description": prop("string", "Description (markdown)"),
+                        "priority": prop("string", "Priority (default: the parent's)", enumValues: priorities),
+                        "points": prop("integer", "Story points"),
+                    ], required: ["title"]),
+                ]),
+            ], required: ["project", "board", "card", "subtasks"])
+        ),
+        Tool(
+            name: "list_card_children", description: "List a card's sub-tasks with their column and status.",
+            inputSchema: schema(["project": project, "board": board, "card": prop("string", "Parent card id, number or key")], required: ["project", "board", "card"])
+        ),
+        Tool(
+            name: "set_card_parent", description: "Make a card a sub-task of another card on the same board (one parent per card, no cycles).",
+            inputSchema: schema(["project": project, "board": board, "card": prop("string", "Child card id, number or key"), "parent": prop("string", "Parent card id, number or key")], required: ["project", "board", "card", "parent"])
+        ),
+        Tool(
+            name: "remove_card_parent", description: "Detach a sub-task from its parent.",
+            inputSchema: schema(["project": project, "board": board, "card": prop("string", "Child card id, number or key")], required: ["project", "board", "card"])
+        ),
     ]
 }
 
@@ -139,7 +165,7 @@ public struct KanbanToolDispatcher: Sendable {
                 guard let value = CardPriority(wireValue: raw) else { throw ToolError("unknown priority '\(raw)'") }
                 return value
             } ?? .medium
-            let card = try await boards.createCard(project, columnId: column.id, title: try args.string("title"), description: args.optionalString("description"), priority: priority, aiCost: nil)
+            let card = try await boards.createCard(project, columnId: column.id, title: try args.string("title"), description: args.optionalString("description"), priority: priority, aiCost: nil, subtasks: [])
             return try Value(CardView(card, columns: columns))
         case "update_card":
             let (project, board) = try await resolveBoard(args)
@@ -171,6 +197,40 @@ public struct KanbanToolDispatcher: Sendable {
             let card = try Self.findCard(try await boards.cards(project, boardId: board.id), try args.string("card"))
             try await boards.deleteCard(project, boardId: board.id, cardId: card.id)
             return .object(["deleted": .string(card.id.uuidString.lowercased()), "key": .string("\(card.prefix)-\(card.cardNumber)")])
+        case "create_subtasks":
+            let (project, board) = try await resolveBoard(args)
+            let columns = try await boards.columns(project, boardId: board.id)
+            let parent = try Self.findCard(try await boards.cards(project, boardId: board.id), try args.string("card"))
+            guard case let .array(items)? = args.values["subtasks"] else { throw ToolError("subtasks must be an array") }
+            let specs = try items.map { item -> SubtaskSpec in
+                let fields = Arguments(item.objectValue ?? [:])
+                let priority = try fields.optionalString("priority").map { raw -> CardPriority in
+                    guard let value = CardPriority(wireValue: raw) else { throw ToolError("unknown priority '\(raw)'") }
+                    return value
+                }
+                return SubtaskSpec(title: try fields.string("title"), description: fields.optionalString("description"), priority: priority, points: fields.int("points"))
+            }
+            for spec in specs {
+                let child = try await boards.createCard(project, columnId: parent.columnId, title: spec.title, description: spec.description, priority: spec.priority ?? parent.priority, aiCost: nil, subtasks: [])
+                if let points = spec.points {
+                    _ = try await boards.updateCard(project, boardId: board.id, cardId: child.id, changes: CardChanges(points: .some(points)))
+                }
+                _ = try await boards.setParent(project, boardId: board.id, cardId: child.id, parentId: parent.id)
+            }
+            return try Self.items(try await boards.children(project, boardId: board.id, cardId: parent.id).map { CardView($0, columns: columns) })
+        case "list_card_children":
+            let (project, board) = try await resolveBoard(args)
+            let columns = try await boards.columns(project, boardId: board.id)
+            let parent = try Self.findCard(try await boards.cards(project, boardId: board.id), try args.string("card"))
+            return try Self.items(try await boards.children(project, boardId: board.id, cardId: parent.id).map { CardView($0, columns: columns) })
+        case "set_card_parent", "remove_card_parent":
+            let (project, board) = try await resolveBoard(args)
+            let columns = try await boards.columns(project, boardId: board.id)
+            let cards = try await boards.cards(project, boardId: board.id)
+            let child = try Self.findCard(cards, try args.string("card"))
+            let parent = name == "set_card_parent" ? try Self.findCard(cards, try args.string("parent")) : nil
+            let updated = try await boards.setParent(project, boardId: board.id, cardId: child.id, parentId: parent?.id)
+            return try Value(CardView(updated, columns: columns))
         default:
             throw ToolError("unknown tool '\(name)'")
         }

@@ -130,9 +130,13 @@ public protocol BoardCommands: Sendable {
     func createBoard(_ project: ProjectRef, name: String, withDefaultColumns: Bool) async throws(ServiceError) -> Board
     func columns(_ project: ProjectRef, boardId: UUID) async throws(ServiceError) -> [Column]
     func cards(_ project: ProjectRef, boardId: UUID) async throws(ServiceError) -> [Card]
-    func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?) async throws(ServiceError) -> Card
+    /// Creates the card and, in the same step, its `subtasks` as linked children.
+    func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?, subtasks: [SubtaskSpec]) async throws(ServiceError) -> Card
     func updateCard(_ project: ProjectRef, boardId: UUID, cardId: UUID, changes: CardChanges) async throws(ServiceError) -> Card
     func deleteCard(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError)
+    func children(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError) -> [Card]
+    /// `parentId` nil detaches the card from its parent.
+    func setParent(_ project: ProjectRef, boardId: UUID, cardId: UUID, parentId: UUID?) async throws(ServiceError) -> Card
 }
 
 public struct LocalBoardCommands: BoardCommands {
@@ -176,9 +180,34 @@ public struct LocalBoardCommands: BoardCommands {
         return workspace.cards(of: boardId)
     }
 
-    public func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?) async throws(ServiceError) -> Card {
+    public func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?, subtasks: [SubtaskSpec]) async throws(ServiceError) -> Card {
         try await projects.mutate(project) { workspace, now in
-            try workspace.createCard(columnId: columnId, title: title, description: description, priority: priority, aiCost: aiCost, now: now)
+            let card = try workspace.createCard(columnId: columnId, title: title, description: description, priority: priority, aiCost: aiCost, now: now)
+            try workspace.createSubtasks(of: card.id, subtasks, now: now)
+            return card
+        }
+    }
+
+    public func children(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError) -> [Card] {
+        let workspace = try await projects.workspace(project)
+        do {
+            guard try workspace.card(cardId).boardId == boardId else { throw DomainError.cardNotFound(cardId) }
+        } catch {
+            throw ServiceError.wrap(error)
+        }
+        return workspace.children(of: cardId)
+    }
+
+    public func setParent(_ project: ProjectRef, boardId: UUID, cardId: UUID, parentId: UUID?) async throws(ServiceError) -> Card {
+        try await projects.mutate(project) { workspace, now in
+            guard try workspace.card(cardId).boardId == boardId else { throw DomainError.cardNotFound(cardId) }
+            if let parentId {
+                if workspace.parent(of: cardId) != parentId { try workspace.detach(cardId, now: now) }
+                try workspace.attach(cardId, to: parentId, now: now)
+            } else {
+                try workspace.detach(cardId, now: now)
+            }
+            return try workspace.card(cardId)
         }
     }
 

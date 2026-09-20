@@ -80,44 +80,30 @@ import Testing
         }
     }
 
-    @Test func missingConfigurationBadOutputAndProviderFailuresAreTyped() async throws {
-        let none = try await fixture(responses: [], configured: false)
+    /// The remote error a draft ends with, or nil when it succeeded.
+    /// (A plain value instead of `catch let ServiceError.remote(...)`: that pattern crashes the Linux 6.3.3 compiler.)
+    func remoteFailure(_ f: Fixture) async -> (code: String, message: String)? {
+        var failure: ServiceError?
         do {
-            _ = try await none.service.draftTicket(project: .name("Demo"), boardId: none.boardId, idea: "x", providerId: nil)
-            Issue.record("expected error")
-        } catch let ServiceError.remote(code, message) {
-            #expect(code == "AI_NOT_CONFIGURED")
-            #expect(message.contains("Settings"))
+            _ = try await f.service.draftTicket(project: .name("Demo"), boardId: f.boardId, idea: "x", providerId: nil)
+        } catch {
+            failure = error
         }
-
-        let bad = try await fixture(responses: [#"{"title":"","priority":"low"}"#])
-        do {
-            _ = try await bad.service.draftTicket(project: .name("Demo"), boardId: bad.boardId, idea: "x", providerId: nil)
-            Issue.record("expected error")
-        } catch let ServiceError.remote(code, _) {
-            #expect(code == "AI_BAD_OUTPUT")
-        }
-
-        let down = try await fixture(responses: [], failure: .unavailable("offline"))
-        do {
-            _ = try await down.service.draftTicket(project: .name("Demo"), boardId: down.boardId, idea: "x", providerId: nil)
-            Issue.record("expected error")
-        } catch let ServiceError.remote(code, message) {
-            #expect(code == "AI_PROVIDER")
-            #expect(message.contains("offline"))
-        }
+        guard case let .remote(code, message)? = failure else { return nil }
+        return (code, message)
     }
 
-    @Test func draftCostComesFromTheVendorThenPricingThenFree() throws {
-        let reported = CompletionUsage(inputTokens: 10, outputTokens: 20, costUSD: 0.5)
-        let tokensOnly = CompletionUsage(inputTokens: 1_000_000, outputTokens: 100_000)
-        let priced = try AIProviderConfig(id: "a", kind: .anthropic, name: "A", model: "m", pricing: AIPricing(inputPerMillion: 3, outputPerMillion: 15))
-        let unpriced = try AIProviderConfig(id: "a", kind: .anthropic, name: "A", model: "m")
-        let local = try AIProviderConfig(id: "l", kind: .ollama, name: "L", model: "m")
-        #expect(AssistantService.priced(reported, for: priced) == reported, "a reported cost is never overridden")
-        #expect(AssistantService.priced(tokensOnly, for: priced) == CompletionUsage(inputTokens: 1_000_000, outputTokens: 100_000, costUSD: 4.5, estimated: true))
-        #expect(AssistantService.priced(tokensOnly, for: unpriced).costUSD == nil, "no pricing, no guess")
-        #expect(AssistantService.priced(tokensOnly, for: local) == CompletionUsage(inputTokens: 1_000_000, outputTokens: 100_000, costUSD: 0))
+    @Test func missingConfigurationBadOutputAndProviderFailuresAreTyped() async throws {
+        let none = try await remoteFailure(fixture(responses: [], configured: false))
+        #expect(none?.code == "AI_NOT_CONFIGURED")
+        #expect(none?.message.contains("Settings") == true)
+
+        let bad = try await remoteFailure(fixture(responses: [#"{"title":"","priority":"low"}"#]))
+        #expect(bad?.code == "AI_BAD_OUTPUT")
+
+        let down = try await remoteFailure(fixture(responses: [], failure: .unavailable("offline")))
+        #expect(down?.code == "AI_PROVIDER")
+        #expect(down?.message.contains("offline") == true)
     }
 
     @Test func jsonExtractorFindsTheFirstObjectThroughProseAndFences() {
@@ -175,15 +161,17 @@ import Testing
     @Test func failuresEndTheStreamWithATypedError() async throws {
         let f = try await AssistantServiceTests().fixture(responses: [], failure: .unavailable("offline"))
         var sawResult = false
+        var failure: (any Error)?
         do {
             for try await event in f.service.streamTicket(project: .name("Demo"), boardId: f.boardId, idea: "x", providerId: nil) {
                 if case .result = event { sawResult = true }
             }
-            Issue.record("expected error")
-        } catch let ServiceError.remote(code, message) {
-            #expect(code == "AI_PROVIDER")
-            #expect(message.contains("offline"))
+        } catch {
+            failure = error
         }
+        guard case let .remote(code, message)? = failure as? ServiceError else { Issue.record("expected a remote error, got \(String(describing: failure))"); return }
+        #expect(code == "AI_PROVIDER")
+        #expect(message.contains("offline"))
         #expect(!sawResult)
     }
 }

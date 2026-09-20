@@ -7,7 +7,7 @@ extension Workspace {
         name: String? = nil,
         description: String?? = nil,
         cardPrefix: String?? = nil,
-        now: Date = Date()
+        now: Date = .timestamp()
     ) throws -> Board {
         let index = try boardIndex(id)
         var board = boards[index]
@@ -25,7 +25,7 @@ extension Workspace {
 
     /// Removes the board with everything it owns: columns, cards (and their
     /// graph edges) and, in the unmodelled sections, its sprints.
-    public mutating func deleteBoard(_ id: UUID, now: Date = Date()) throws {
+    public mutating func deleteBoard(_ id: UUID, now: Date = .timestamp()) throws {
         let index = try boardIndex(id)
         let doomedCards = cards.filter { $0.boardId == id }.map(\.id)
         boards.remove(at: index)
@@ -46,7 +46,7 @@ extension Workspace {
 
     /// Reorders boards so `id` ends up at `position` (clamped), others shift.
     @discardableResult
-    public mutating func moveBoard(_ id: UUID, toPosition position: Int, now: Date = Date()) throws -> Board {
+    public mutating func moveBoard(_ id: UUID, toPosition position: Int, now: Date = .timestamp()) throws -> Board {
         _ = try boardIndex(id)
         var ordered = boards.sorted { $0.position < $1.position }
         let from = ordered.firstIndex { $0.id == id }!
@@ -63,7 +63,7 @@ extension Workspace {
     /// Deep copy: columns keep order, WIP limits and default statuses; cards keep
     /// their column, order, status and priority but get fresh ids and numbers.
     @discardableResult
-    public mutating func cloneBoard(_ id: UUID, name: String? = nil, now: Date = Date()) throws -> Board {
+    public mutating func cloneBoard(_ id: UUID, name: String? = nil, now: Date = .timestamp()) throws -> Board {
         let source = try board(id)
         var copy = createBoard(name: name ?? "\(source.name) copy", now: now)
         copy.description = source.description

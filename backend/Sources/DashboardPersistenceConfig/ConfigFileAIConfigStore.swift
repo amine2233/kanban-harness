@@ -127,7 +127,7 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
     }
 
     private func readDocument() throws -> [String: Any] {
-        guard let data = try ConfigFile.read(path) else { return [:] }
+        guard let data = try AtomicFile.read(path) else { return [:] }
         do {
             if isYAML {
                 return try Yams.load(yaml: String(decoding: data, as: UTF8.self)) as? [String: Any] ?? [:]
@@ -149,31 +149,8 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         } catch {
             throw PersistenceError.corrupt(path: path, reason: String(describing: error))
         }
-        try ConfigFile.write(data, to: path, mode: 0o600)
+        try AtomicFile.write(data, to: path, mode: 0o600)
     }
 }
 
 /// Atomic file helpers; the config file is created private (0600) because it can hold API keys.
-enum ConfigFile {
-    static func read(_ path: String) throws -> Data? {
-        guard FileManager.default.fileExists(atPath: path) else { return nil }
-        do {
-            return try Data(contentsOf: URL(fileURLWithPath: path))
-        } catch {
-            throw PersistenceError.io(path: path, underlying: error.localizedDescription)
-        }
-    }
-
-    static func write(_ data: Data, to path: String, mode: Int) throws {
-        let directory = (path as NSString).deletingLastPathComponent
-        let temp = path + ".tmp"
-        do {
-            try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
-            try data.write(to: URL(fileURLWithPath: temp))
-            try FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: temp)
-            _ = try FileManager.default.replaceItemAt(URL(fileURLWithPath: path), withItemAt: URL(fileURLWithPath: temp))
-        } catch {
-            throw PersistenceError.io(path: path, underlying: error.localizedDescription)
-        }
-    }
-}

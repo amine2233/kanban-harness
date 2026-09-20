@@ -38,7 +38,8 @@ public final class ProjectModel: Model, @unchecked Sendable {
         guard let id, let storage = StorageKind(rawValue: storage) else {
             throw PersistenceError.corrupt(path: Self.schema, reason: "row \(String(describing: self.id)) has unknown storage '\(self.storage)'")
         }
-        return try Project(name: name, path: path, storage: storage, id: id, createdAt: createdAt)
+        // SQLite keeps the date as a REAL; snap the float noise back to the microsecond the domain wrote.
+        return try Project(name: name, path: path, storage: storage, id: id, createdAt: createdAt.quantizedToMicroseconds)
     }
 }
 

@@ -26,7 +26,7 @@ public struct Column: Codable, Hashable, Sendable, Identifiable {
         wipLimit: Int? = nil,
         defaultStatus: CardStatus? = nil,
         id: UUID = UUID(),
-        now: Date = Date()
+        now: Date = .timestamp()
     ) {
         self.id = id
         self.boardId = boardId

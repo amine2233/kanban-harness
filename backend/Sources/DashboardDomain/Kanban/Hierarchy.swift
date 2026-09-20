@@ -102,7 +102,7 @@ extension Workspace {
 
     /// Links `childId` under `parentId`: same board, one parent per card, no cycles.
     @discardableResult
-    public mutating func attach(_ childId: UUID, to parentId: UUID, now: Date = Date()) throws -> SpawnsEdge {
+    public mutating func attach(_ childId: UUID, to parentId: UUID, now: Date = .timestamp()) throws -> SpawnsEdge {
         let child = try card(childId)
         let parent = try card(parentId)
         guard childId != parentId else { throw DomainError.selfRelation }
@@ -117,14 +117,14 @@ extension Workspace {
         return edge
     }
 
-    public mutating func detach(_ childId: UUID, now: Date = Date()) throws {
+    public mutating func detach(_ childId: UUID, now: Date = .timestamp()) throws {
         _ = try card(childId)
         archiveSpawns(now: now) { $0.target == childId }
     }
 
     /// Creates the children in the parent's column and links them, atomically.
     @discardableResult
-    public mutating func createSubtasks(of parentId: UUID, _ specs: [SubtaskSpec], now: Date = Date()) throws -> [Card] {
+    public mutating func createSubtasks(of parentId: UUID, _ specs: [SubtaskSpec], now: Date = .timestamp()) throws -> [Card] {
         let parent = try card(parentId)
         let column = try column(parent.columnId)
         try checkWipLimit(column, adding: specs.count)

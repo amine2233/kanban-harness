@@ -120,7 +120,7 @@ public struct Card: Codable, Hashable, Sendable, Identifiable {
         status: CardStatus = .todo,
         position: Int,
         id: UUID = UUID(),
-        now: Date = Date()
+        now: Date = .timestamp()
     ) {
         self.id = id
         self.boardId = boardId

@@ -20,8 +20,9 @@ public struct DashboardClient: Sendable {
         self.timeout = timeout
     }
 
-    /// True when `/api/health` answers within `timeout`.
-    public func isReachable(timeout: TimeInterval = 0.5) async -> Bool {
+    /// True when `/api/health` answers within `timeout`. Whole seconds only:
+    /// Linux's URLSession (libcurl) truncates sub-second timeouts to zero and fails at once.
+    public func isReachable(timeout: TimeInterval = 1) async -> Bool {
         var request = URLRequest(url: baseURL.appending(path: "api/health"))
         request.timeoutInterval = timeout
         guard let (_, response) = try? await session.data(for: request) else { return false }

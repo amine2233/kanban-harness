@@ -36,7 +36,7 @@ public struct Board: Codable, Hashable, Sendable, Identifiable {
         case updatedAt = "updated_at"
     }
 
-    public init(name: String, position: Int, id: UUID = UUID(), now: Date = Date()) {
+    public init(name: String, position: Int, id: UUID = UUID(), now: Date = .timestamp()) {
         self.id = id
         self.name = name
         description = nil

@@ -88,7 +88,7 @@ public struct Workspace: Equatable, Sendable {
     // MARK: Commands
 
     @discardableResult
-    public mutating func createBoard(name: String, id: UUID = UUID(), now: Date = Date()) -> Board {
+    public mutating func createBoard(name: String, id: UUID = UUID(), now: Date = .timestamp()) -> Board {
         let board = Board(name: name.trimmingCharacters(in: .whitespacesAndNewlines), position: boards.count, id: id, now: now)
         boards.append(board)
         return board
@@ -96,7 +96,7 @@ public struct Workspace: Equatable, Sendable {
 
     /// A board seeded with kanban-rs' default template columns.
     @discardableResult
-    public mutating func createBoardWithTemplateColumns(name: String, now: Date = Date()) -> Board {
+    public mutating func createBoardWithTemplateColumns(name: String, now: Date = .timestamp()) -> Board {
         let board = createBoard(name: name, now: now)
         for template in Self.defaultTemplateColumns {
             columns.append(
@@ -119,7 +119,7 @@ public struct Workspace: Equatable, Sendable {
         wipLimit: Int? = nil,
         defaultStatus: CardStatus? = nil,
         id: UUID = UUID(),
-        now: Date = Date()
+        now: Date = .timestamp()
     ) throws -> Column {
         _ = try board(boardId)
         let column = Column(
@@ -143,7 +143,7 @@ public struct Workspace: Equatable, Sendable {
         priority: CardPriority = .medium,
         aiCost: AICost? = nil,
         id: UUID = UUID(),
-        now: Date = Date()
+        now: Date = .timestamp()
     ) throws -> Card {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw DomainError.emptyTitle }
@@ -170,7 +170,7 @@ public struct Workspace: Equatable, Sendable {
     }
 
     @discardableResult
-    public mutating func moveCard(_ id: UUID, toColumn destinationId: UUID, now: Date = Date()) throws -> Card {
+    public mutating func moveCard(_ id: UUID, toColumn destinationId: UUID, now: Date = .timestamp()) throws -> Card {
         let index = try cardIndex(id)
         let destination = try column(destinationId)
         var card = cards[index]
@@ -199,7 +199,7 @@ public struct Workspace: Equatable, Sendable {
         status: CardStatus? = nil,
         dueDate: Date?? = nil,
         points: Int?? = nil,
-        now: Date = Date()
+        now: Date = .timestamp()
     ) throws -> Card {
         let index = try cardIndex(id)
         var card = cards[index]
@@ -226,7 +226,7 @@ public struct Workspace: Equatable, Sendable {
         _ id: UUID,
         boardId destinationBoardId: UUID,
         columnId: UUID? = nil,
-        now: Date = Date()
+        now: Date = .timestamp()
     ) throws -> Card {
         let index = try cardIndex(id)
         var card = cards[index]
@@ -261,7 +261,7 @@ public struct Workspace: Equatable, Sendable {
         return card
     }
 
-    public mutating func deleteCard(_ id: UUID, now: Date = Date()) throws {
+    public mutating func deleteCard(_ id: UUID, now: Date = .timestamp()) throws {
         let index = try cardIndex(id)
         let columnId = cards[index].columnId
         cards.remove(at: index)

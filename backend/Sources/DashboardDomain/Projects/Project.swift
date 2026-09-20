@@ -34,7 +34,7 @@ public struct Project: Codable, Hashable, Sendable {
         path: String,
         storage: StorageKind = .json,
         id: UUID = UUID(),
-        createdAt: Date = Date()
+        createdAt: Date = .timestamp()
     ) throws {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw DomainError.emptyName }

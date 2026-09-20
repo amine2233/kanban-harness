@@ -7,7 +7,7 @@ extension Workspace {
         name: String? = nil,
         wipLimit: Int?? = nil,
         defaultStatus: CardStatus?? = nil,
-        now: Date = Date()
+        now: Date = .timestamp()
     ) throws -> Column {
         let index = try columnIndex(id)
         var column = columns[index]
@@ -24,7 +24,7 @@ extension Workspace {
     }
 
     /// Removes a column and the cards in it. A board keeps at least one column.
-    public mutating func deleteColumn(_ id: UUID, now: Date = Date()) throws {
+    public mutating func deleteColumn(_ id: UUID, now: Date = .timestamp()) throws {
         let index = try columnIndex(id)
         let column = columns[index]
         guard columns(of: column.boardId).count > 1 else {
@@ -40,7 +40,7 @@ extension Workspace {
     }
 
     @discardableResult
-    public mutating func moveColumn(_ id: UUID, toPosition position: Int, now: Date = Date()) throws -> Column {
+    public mutating func moveColumn(_ id: UUID, toPosition position: Int, now: Date = .timestamp()) throws -> Column {
         let boardId = try column(id).boardId
         var ordered = columns(of: boardId)
         let from = ordered.firstIndex { $0.id == id }!

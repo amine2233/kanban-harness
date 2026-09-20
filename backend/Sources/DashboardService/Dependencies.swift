@@ -5,7 +5,7 @@ import Logging
 /// Cross-cutting values resolved through cascade-kit so tests can pin time,
 /// ids, the data directory and logging with `withTestDependencies`.
 public enum NowKey: DependencyKey {
-    public static let liveValue: @Sendable () -> Date = { Date() }
+    public static let liveValue: @Sendable () -> Date = { .timestamp() }
 }
 
 public enum UUIDKey: DependencyKey {

@@ -1,7 +1,8 @@
 import Foundation
 
 /// kanban-rs (chrono) timestamps: `2026-09-19T08:56:45.318377Z`. Parses any
-/// number of fractional digits, writes six so nothing is lost on round-trip.
+/// number of fractional digits, writes six; dates the domain creates are
+/// quantized to microseconds (`Date.timestamp()`) so they round-trip exactly.
 public enum RFC3339 {
     private static let base = Date.ISO8601FormatStyle(includingFractionalSeconds: false)
 
@@ -12,7 +13,8 @@ public enum RFC3339 {
         guard let whole = try? base.parse(String(text[..<dot]) + rest),
               let digits = Double("0." + fraction)
         else { return nil }
-        return whole.addingTimeInterval(digits)
+        // Whole seconds + fraction, the same arithmetic as `Date.quantizedToMicroseconds`.
+        return Date(timeIntervalSince1970: whole.timeIntervalSince1970 + digits)
     }
 
     public static func format(_ date: Date) -> String {

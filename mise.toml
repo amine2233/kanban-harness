@@ -129,3 +129,7 @@ run = "scripts/doctor.sh"
 [tasks.clean]
 description = "Remove build outputs (keeps .local dev data)"
 run = ["rm -rf dist coverage backend/.build"]
+
+[tasks."backend:test:linux"]
+description = "Run the Swift tests in the swift:6.3.3 Linux container (needs docker/colima)"
+run = 'docker run --rm -v "$PWD/backend:/src" -v mvp-dashboard-linux-build:/src/.build-linux -w /src swift:6.3.3-noble swift test --scratch-path /src/.build-linux'

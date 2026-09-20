@@ -52,13 +52,13 @@ export function KanbanColumn({ scope, column, columns, boards, cards, header }: 
               <span className="near-black">{card.title}</span>
               <Badge variant={PRIORITY_BADGE[card.priority]}>{card.priority}</Badge>
             </button>
-            <div className="flex items-center justify-between mt2">
-              <span className="f7 gray">
+            <div className="flex items-center justify-between mt2" style={{ gap: 4 }}>
+              <span className="f7 gray truncate">
                 {card.prefix}-{card.card_number}
                 {card.due_date && ` · due ${card.due_date.slice(0, 10)}`}
                 {card.points !== null && ` · ${String(card.points)} pt`}
               </span>
-              <span className="flex" style={{ gap: 4 }}>
+              <span className="flex flex-none" style={{ gap: 4 }}>
                 {previous && (
                   <Button
                     size="sm"

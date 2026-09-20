@@ -123,15 +123,17 @@ describe('BoardTabs', () => {
     renderBoard()
     await screen.findByRole('tab', { name: 'Alpha' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Board actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
     const dialog = screen.getByRole('dialog', { name: 'Rename board' })
     await userEvent.clear(within(dialog).getByLabelText('Name'))
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Alpha 2')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
     expect(await screen.findByRole('tab', { name: 'Alpha 2' })).toBeInTheDocument()
 
-    expect(screen.getByRole('button', { name: 'Move board left' })).toBeDisabled()
-    await userEvent.click(screen.getByRole('button', { name: 'Move board right' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Board actions' }))
+    expect(screen.getByRole('menuitem', { name: 'Move left' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Move right' }))
     await waitFor(() => {
       expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Beta', 'Alpha 2'])
     })
@@ -142,7 +144,8 @@ describe('BoardTabs', () => {
       ),
     ).toBeTruthy()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Duplicate' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Board actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }))
     await waitFor(() => {
       expect(screen.getByRole('tab', { name: 'Alpha copy' })).toHaveAttribute(
         'aria-selected',
@@ -150,7 +153,8 @@ describe('BoardTabs', () => {
       )
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete board' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Board actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete board' }))
     await userEvent.click(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }),
     )

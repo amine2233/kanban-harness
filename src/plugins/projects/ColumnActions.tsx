@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, ConfirmModal } from '@/design-system'
+import { ConfirmModal, Menu } from '@/design-system'
 import { ColumnDialog } from './ColumnDialog'
 import { useDeleteColumnMutation, useUpdateColumnMutation, type Column } from './kanbanApi'
 
@@ -29,50 +29,41 @@ export function ColumnActions({ scope, column, columns }: Props) {
   }
 
   return (
-    <span className="flex" style={{ gap: 2 }}>
-      <Button
-        size="sm"
-        variant="tertiary"
-        aria-label={`Move column ${column.name} left`}
-        disabled={index <= 0}
-        onClick={() => {
-          move(-1)
-        }}
-      >
-        ←
-      </Button>
-      <Button
-        size="sm"
-        variant="tertiary"
-        aria-label={`Move column ${column.name} right`}
-        disabled={index >= columns.length - 1}
-        onClick={() => {
-          move(1)
-        }}
-      >
-        →
-      </Button>
-      <Button
-        size="sm"
-        variant="tertiary"
-        aria-label={`Edit column ${column.name}`}
-        onClick={() => {
-          setDialog('edit')
-        }}
-      >
-        ✎
-      </Button>
-      <Button
-        size="sm"
-        variant="tertiary"
-        aria-label={`Delete column ${column.name}`}
-        disabled={columns.length <= 1}
-        onClick={() => {
-          setDialog('delete')
-        }}
-      >
-        ×
-      </Button>
+    <>
+      <Menu
+        label={`Column ${column.name} actions`}
+        items={[
+          {
+            label: 'Edit column',
+            onSelect: () => {
+              setDialog('edit')
+            },
+          },
+          {
+            label: 'Move left',
+            disabled: index <= 0,
+            onSelect: () => {
+              move(-1)
+            },
+          },
+          {
+            label: 'Move right',
+            disabled: index >= columns.length - 1,
+            onSelect: () => {
+              move(1)
+            },
+          },
+          {
+            label: 'Delete column',
+            danger: true,
+            separated: true,
+            disabled: columns.length <= 1,
+            onSelect: () => {
+              setDialog('delete')
+            },
+          },
+        ]}
+      />
       {dialog === 'edit' && <ColumnDialog scope={scope} column={column} onClose={close} />}
       {dialog === 'delete' && (
         <ConfirmModal
@@ -85,6 +76,6 @@ export function ColumnActions({ scope, column, columns }: Props) {
           onClose={close}
         />
       )}
-    </span>
+    </>
   )
 }

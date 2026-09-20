@@ -111,8 +111,8 @@ body {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid #eef1f6;
-  margin-bottom: 16px;
   overflow-x: auto;
+  min-width: 0;
 }
 
 .ds-tab {

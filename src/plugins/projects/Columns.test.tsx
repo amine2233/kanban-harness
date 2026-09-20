@@ -103,7 +103,8 @@ describe('column management', () => {
     renderBoard()
     await screen.findByRole('region', { name: 'Doing' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit column Doing' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Column Doing actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Edit column' }))
     const dialog = screen.getByRole('dialog', { name: 'Edit column' })
     expect(within(dialog).getByLabelText('WIP limit')).toHaveValue(1)
     await userEvent.clear(within(dialog).getByLabelText('Name'))
@@ -117,8 +118,9 @@ describe('column management', () => {
       default_status: null,
     })
 
-    expect(screen.getByRole('button', { name: 'Move column In progress right' })).toBeDisabled()
-    await userEvent.click(screen.getByRole('button', { name: 'Move column In progress left' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Column In progress actions' }))
+    expect(screen.getByRole('menuitem', { name: 'Move right' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Move left' }))
     await waitFor(() => {
       expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual([
         'In progress',
@@ -126,13 +128,15 @@ describe('column management', () => {
       ])
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete column TODO' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Column TODO actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete column' }))
     await userEvent.click(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }),
     )
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: 'TODO' })).not.toBeInTheDocument()
     })
-    expect(screen.getByRole('button', { name: 'Delete column In progress' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Column In progress actions' }))
+    expect(screen.getByRole('menuitem', { name: 'Delete column' })).toBeDisabled()
   })
 })

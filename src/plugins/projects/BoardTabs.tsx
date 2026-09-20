@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
-import { Button, ConfirmModal, Input, Modal } from '@/design-system'
+import { Button, ConfirmModal, Input, Menu, Modal } from '@/design-system'
 import {
   useCloneBoardMutation,
   useCreateBoardMutation,
@@ -54,85 +54,77 @@ export function BoardTabs({ projectId, boards, selectedId, onSelect }: Props) {
 
   return (
     <>
-      <div className="ds-tabs" role="tablist" aria-label="Boards">
-        {boards.map((board) => (
+      <div className="ds-tabs-row flex items-center mb3" style={{ gap: 8 }}>
+        <div className="ds-tabs flex-auto" role="tablist" aria-label="Boards">
+          {boards.map((board) => (
+            <button
+              key={board.id}
+              type="button"
+              role="tab"
+              aria-selected={board.id === selectedId}
+              className="ds-tab"
+              onClick={() => {
+                onSelect(board.id)
+              }}
+            >
+              {board.name}
+            </button>
+          ))}
           <button
-            key={board.id}
             type="button"
-            role="tab"
-            aria-selected={board.id === selectedId}
             className="ds-tab"
             onClick={() => {
-              onSelect(board.id)
+              setDialog({ kind: 'create' })
             }}
           >
-            {board.name}
+            + New board
           </button>
-        ))}
-        <button
-          type="button"
-          className="ds-tab"
-          onClick={() => {
-            setDialog({ kind: 'create' })
-          }}
-        >
-          + New board
-        </button>
-      </div>
-      {selected && (
-        <div className="flex items-center mb3" style={{ gap: 8 }}>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setDialog({ kind: 'rename', board: selected })
-            }}
-          >
-            Rename
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={clone.isLoading}
-            onClick={() => {
-              void duplicate()
-            }}
-          >
-            Duplicate
-          </Button>
-          <Button
-            variant="tertiary"
-            size="sm"
-            aria-label="Move board left"
-            disabled={index <= 0}
-            onClick={() => {
-              move(-1)
-            }}
-          >
-            ←
-          </Button>
-          <Button
-            variant="tertiary"
-            size="sm"
-            aria-label="Move board right"
-            disabled={index >= boards.length - 1}
-            onClick={() => {
-              move(1)
-            }}
-          >
-            →
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => {
-              setDialog({ kind: 'delete', board: selected })
-            }}
-          >
-            Delete board
-          </Button>
         </div>
-      )}
+        {selected && (
+          <span className="flex-none">
+            <Menu
+              label="Board actions"
+              items={[
+                {
+                  label: 'Rename',
+                  onSelect: () => {
+                    setDialog({ kind: 'rename', board: selected })
+                  },
+                },
+                {
+                  label: 'Duplicate',
+                  disabled: clone.isLoading,
+                  onSelect: () => {
+                    void duplicate()
+                  },
+                },
+                {
+                  label: 'Move left',
+                  disabled: index <= 0,
+                  onSelect: () => {
+                    move(-1)
+                  },
+                },
+                {
+                  label: 'Move right',
+                  disabled: index >= boards.length - 1,
+                  onSelect: () => {
+                    move(1)
+                  },
+                },
+                {
+                  label: 'Delete board',
+                  danger: true,
+                  separated: true,
+                  onSelect: () => {
+                    setDialog({ kind: 'delete', board: selected })
+                  },
+                },
+              ]}
+            />
+          </span>
+        )}
+      </div>
       {dialog?.kind === 'create' && (
         <BoardForm projectId={projectId} onClose={close} onCreated={onSelect} />
       )}

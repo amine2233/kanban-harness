@@ -48,6 +48,14 @@ run = ["pnpm format:check", "pnpm lint", "pnpm typecheck"]
 description = "Production build into dist/"
 run = "pnpm build"
 
+[tasks.docs]
+description = "Documentation site with live reload (http://localhost:3000)"
+run = "pnpm --filter website start"
+
+[tasks."docs:build"]
+description = "Build the documentation site into website/build/ (fails on broken links)"
+run = "pnpm --filter website build"
+
 # --- Backend -----------------------------------------------------------------
 
 [tasks."backend:build"]

@@ -1,5 +1,10 @@
 packages:
   - packages/*
+  - website
+
+allowBuilds:
+  '@swc/core': false
+  core-js: false
 
 minimumReleaseAgeExclude:
   - eslint@10.11.0

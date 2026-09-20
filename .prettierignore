@@ -5,3 +5,6 @@ packages/design-system/src/purple3.min.css
 backend/.build
 backend/target
 backend/Tests/**/Fixtures
+website/build
+website/.docusaurus
+website/static

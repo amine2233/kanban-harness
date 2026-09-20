@@ -25,6 +25,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:coverage
       - run: pnpm build
+      - run: pnpm --filter website build
 
   backend:
     strategy:

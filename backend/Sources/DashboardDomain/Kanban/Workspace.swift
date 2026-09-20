@@ -10,8 +10,8 @@ public struct Workspace: Equatable, Sendable {
     public var prefixes: [Prefix]
     public var extra: [String: JSONValue]
 
-    public static let defaultTemplateColumns: [(name: String, status: CardStatus)] = [
-        ("TODO", .todo), ("Doing", .inProgress), ("Complete", .done),
+    public static let defaultTemplateColumns: [(name: String, status: CardStatus?)] = [
+        ("Backlog", nil), ("To do", .todo), ("In progress", .inProgress), ("Done", .done),
     ]
 
     public init(

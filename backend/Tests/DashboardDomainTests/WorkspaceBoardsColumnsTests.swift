@@ -10,7 +10,7 @@ import Testing
         let board = workspace.createBoardWithTemplateColumns(name: "Demo", now: now)
         let columns = workspace.columns(of: board.id)
         try workspace.createCard(columnId: columns[0].id, title: "a", now: now)
-        try workspace.createCard(columnId: columns[1].id, title: "b", priority: .high, now: now)
+        try workspace.createCard(columnId: columns[2].id, title: "b", priority: .high, now: now)
         return (workspace, board, columns)
     }
 
@@ -67,7 +67,7 @@ import Testing
 
     @Test func cloneBoardDeepCopiesWithFreshIdsAndNumbers() throws {
         var (workspace, board, columns) = try seeded()
-        workspace.columns[1].wipLimit = 3
+        workspace.columns[2].wipLimit = 3
         let clone = try workspace.cloneBoard(board.id, now: now)
         #expect(clone.name == "Demo copy")
         #expect(clone.position == 1)
@@ -75,13 +75,13 @@ import Testing
         let clonedColumns = workspace.columns(of: clone.id)
         #expect(clonedColumns.map(\.name) == columns.map(\.name))
         #expect(clonedColumns.map(\.defaultStatus) == columns.map(\.defaultStatus))
-        #expect(clonedColumns[1].wipLimit == 3)
+        #expect(clonedColumns[2].wipLimit == 3)
         #expect(Set(clonedColumns.map(\.id)).isDisjoint(with: columns.map(\.id)))
         let clonedCards = workspace.cards(of: clone.id)
         #expect(clonedCards.map(\.title) == ["a", "b"])
         #expect(clonedCards.map(\.cardNumber) == [3, 4] as [Int])
         #expect(clonedCards[1].priority == .high)
-        #expect(clonedCards[1].columnId == clonedColumns[1].id)
+        #expect(clonedCards[1].columnId == clonedColumns[2].id)
         #expect(workspace.cards(of: board.id).count == 2, "source untouched")
         let named = try workspace.cloneBoard(board.id, name: "Explicit")
         #expect(named.name == "Explicit")
@@ -106,8 +106,8 @@ import Testing
     @Test func deleteColumnRemovesItsCardsAndCompacts() throws {
         var (workspace, board, columns) = try seeded()
         try workspace.deleteColumn(columns[0].id)
-        #expect(workspace.columns(of: board.id).map(\.name) == ["Doing", "Complete"])
-        #expect(workspace.columns(of: board.id).map(\.position) == [0, 1] as [Int])
+        #expect(workspace.columns(of: board.id).map(\.name) == ["To do", "In progress", "Done"])
+        #expect(workspace.columns(of: board.id).map(\.position) == [0, 1, 2] as [Int])
         #expect(workspace.cards.map(\.title) == ["b"])
     }
 
@@ -124,8 +124,8 @@ import Testing
         var (workspace, board, columns) = try seeded()
         let other = workspace.createBoardWithTemplateColumns(name: "Other")
         try workspace.moveColumn(columns[2].id, toPosition: 0)
-        #expect(workspace.columns(of: board.id).map(\.name) == ["Complete", "TODO", "Doing"])
-        #expect(workspace.columns(of: other.id).map(\.name) == ["TODO", "Doing", "Complete"])
+        #expect(workspace.columns(of: board.id).map(\.name) == ["In progress", "Backlog", "To do", "Done"])
+        #expect(workspace.columns(of: other.id).map(\.name) == ["Backlog", "To do", "In progress", "Done"])
     }
 
     // MARK: Cards across boards
@@ -142,7 +142,7 @@ import Testing
         #expect(moved.cardNumber == 1)
         #expect(moved.status == .inProgress, "same status rules as an in-board move")
         #expect(workspace.cards(of: board.id).map(\.title) == ["a"])
-        let explicit = try workspace.moveCardToBoard(workspace.cards[0].id, boardId: other.id, columnId: workspace.columns(of: other.id)[2].id, now: now)
+        let explicit = try workspace.moveCardToBoard(workspace.cards[0].id, boardId: other.id, columnId: workspace.columns(of: other.id)[3].id, now: now)
         #expect(explicit.status == .done)
     }
 

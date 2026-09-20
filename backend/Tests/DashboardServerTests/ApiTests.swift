@@ -188,8 +188,9 @@ extension TestingApplicationTester {
             #expect(board["name"] as? String == "Demo")
             #expect(board["task_list_view"] as? String == "flat")
             let (_, columns) = try await app.firstBoardAndColumns(base)
-            #expect(columns.map { $0["name"] as? String } == ["TODO", "Doing", "Complete"])
-            #expect(columns.map { $0["default_status"] as? String } == ["todo", "in_progress", "done"])
+            #expect(columns.map { $0["name"] as? String } == ["Backlog", "To do", "In progress", "Done"])
+            #expect(columns[0]["default_status"] is NSNull)
+            #expect(columns.dropFirst().map { $0["default_status"] as? String } == ["todo", "in_progress", "done"])
             #expect(columns[0]["wip_limit"] is NSNull, "nullable fields are explicit nulls, like kanban-api")
             #expect(board["description"] is NSNull)
         }
@@ -201,7 +202,7 @@ extension TestingApplicationTester {
             let base = "/api/projects/\(id)/kanban/v1"
             let (boardId, columns) = try await app.firstBoardAndColumns(base)
             let todo = try #require(columns[0]["id"] as? String)
-            let done = try #require(columns[2]["id"] as? String)
+            let done = try #require(columns[3]["id"] as? String)
 
             let (created, card) = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "Ship it", "priority": "high"])
             #expect(created == .created)

@@ -79,7 +79,7 @@ import Testing
         try await database.migrate()
         var workspace = Workspace()
         let board = workspace.createBoardWithTemplateColumns(name: "Readable", now: Date(timeIntervalSince1970: 1.5))
-        try workspace.createCard(columnId: workspace.columns(of: board.id)[1].id, title: "x", now: Date(timeIntervalSince1970: 2))
+        try workspace.createCard(columnId: workspace.columns(of: board.id)[2].id, title: "x", now: Date(timeIntervalSince1970: 2))
         try await FluentWorkspaceStore(database: database.database).save(workspace)
         let card = try #require(try await CardModel.query(on: database.database).first())
         #expect(card.status == "InProgress")

@@ -103,7 +103,7 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         try await svc.add(name: "Demo", path: try tempDir())
         let workspace = try await svc.workspace(.name("demo"))
         #expect(workspace.boards.map(\.name) == ["Demo"])
-        #expect(workspace.columns(of: workspace.boards[0].id).map(\.name) == ["TODO", "Doing", "Complete"])
+        #expect(workspace.columns(of: workspace.boards[0].id).map(\.name) == ["Backlog", "To do", "In progress", "Done"])
     }
 
     @Test func addExistingWorkspaceIsNotReseeded() async throws {
@@ -232,7 +232,7 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         #expect(try await svc.workspace(.id(project.id)) == before)
 
         try await svc.mutate(.id(project.id)) { workspace, now in
-            try workspace.moveCard(card.id, toColumn: workspace.columns(of: workspace.boards[0].id)[2].id, now: now)
+            try workspace.moveCard(card.id, toColumn: workspace.columns(of: workspace.boards[0].id)[3].id, now: now)
         }
         let json = try await svc.changeStorage(.id(project.id), to: .json)
         #expect(json.storage == .json)

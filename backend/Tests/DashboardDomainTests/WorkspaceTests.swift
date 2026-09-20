@@ -14,9 +14,9 @@ import Testing
     @Test func createBoardWithTemplateColumnsSeedsThreeOrderedColumns() {
         let (workspace, board, columns) = seeded()
         #expect(board.position == 0)
-        #expect(columns.map(\.name) == ["TODO", "Doing", "Complete"])
-        #expect(columns.map(\.position) == [0, 1, 2])
-        #expect(columns.map(\.defaultStatus) == [.todo, .inProgress, .done])
+        #expect(columns.map(\.name) == ["Backlog", "To do", "In progress", "Done"])
+        #expect(columns.map(\.position) == [0, 1, 2, 3])
+        #expect(columns.map(\.defaultStatus) == [nil, .todo, .inProgress, .done])
         #expect(workspace.boards.count == 1)
     }
 
@@ -57,10 +57,10 @@ import Testing
 
     @Test func createCardTakesColumnDefaultStatusAndTrimsTitle() throws {
         var (workspace, _, columns) = seeded()
-        let doing = try workspace.createCard(columnId: columns[1].id, title: "  Ship  ", now: now)
+        let doing = try workspace.createCard(columnId: columns[2].id, title: "  Ship  ", now: now)
         #expect(doing.status == .inProgress)
         #expect(doing.title == "Ship")
-        let done = try workspace.createCard(columnId: columns[2].id, title: "Old", now: now)
+        let done = try workspace.createCard(columnId: columns[3].id, title: "Old", now: now)
         #expect(done.status == .done)
         #expect(done.completedAt == now)
     }
@@ -74,10 +74,10 @@ import Testing
 
     @Test func createCardRespectsWipLimit() throws {
         var (workspace, _, columns) = seeded()
-        workspace.columns[1].wipLimit = 1
-        try workspace.createCard(columnId: columns[1].id, title: "one")
-        #expect(throws: DomainError.wipLimitExceeded(column: "Doing", limit: 1)) {
-            try workspace.createCard(columnId: columns[1].id, title: "two")
+        workspace.columns[2].wipLimit = 1
+        try workspace.createCard(columnId: columns[2].id, title: "one")
+        #expect(throws: DomainError.wipLimitExceeded(column: "In progress", limit: 1)) {
+            try workspace.createCard(columnId: columns[2].id, title: "two")
         }
     }
 
@@ -87,14 +87,14 @@ import Testing
         let b = try workspace.createCard(columnId: columns[0].id, title: "b", now: now)
         let later = now.addingTimeInterval(60)
 
-        let moved = try workspace.moveCard(a.id, toColumn: columns[2].id, now: later)
-        #expect(moved.columnId == columns[2].id)
+        let moved = try workspace.moveCard(a.id, toColumn: columns[3].id, now: later)
+        #expect(moved.columnId == columns[3].id)
         #expect(moved.status == .done)
         #expect(moved.completedAt == later)
         #expect(moved.position == 0)
         #expect(try workspace.card(b.id).position == 0, "origin column is compacted")
 
-        let back = try workspace.moveCard(a.id, toColumn: columns[1].id, now: later)
+        let back = try workspace.moveCard(a.id, toColumn: columns[2].id, now: later)
         #expect(back.status == .inProgress)
         #expect(back.completedAt == nil)
     }
@@ -118,10 +118,10 @@ import Testing
 
     @Test func moveCardRespectsDestinationWipLimit() throws {
         var (workspace, _, columns) = seeded()
-        workspace.columns[1].wipLimit = 0
+        workspace.columns[2].wipLimit = 0
         let card = try workspace.createCard(columnId: columns[0].id, title: "a")
-        #expect(throws: DomainError.wipLimitExceeded(column: "Doing", limit: 0)) {
-            try workspace.moveCard(card.id, toColumn: columns[1].id)
+        #expect(throws: DomainError.wipLimitExceeded(column: "In progress", limit: 0)) {
+            try workspace.moveCard(card.id, toColumn: columns[2].id)
         }
     }
 
@@ -164,10 +164,10 @@ import Testing
     @Test func queriesReturnEntitiesSortedByPosition() throws {
         var (workspace, board, columns) = seeded()
         let first = try workspace.createCard(columnId: columns[0].id, title: "1")
-        let second = try workspace.createCard(columnId: columns[1].id, title: "2")
+        let second = try workspace.createCard(columnId: columns[2].id, title: "2")
         workspace.cards.swapAt(0, 1)
         #expect(workspace.cards(of: board.id).map(\.id) == [first.id, second.id])
-        #expect(workspace.cards(in: columns[1].id).map(\.id) == [second.id])
+        #expect(workspace.cards(in: columns[2].id).map(\.id) == [second.id])
         let missing = UUID()
         #expect(throws: DomainError.cardNotFound(missing)) {
             try workspace.card(missing)

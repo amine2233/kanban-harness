@@ -19,7 +19,7 @@ import VaporTesting
             #expect(second["card_prefix"] as? String == "SEC")
             let secondId = try #require(second["id"] as? String)
             let (_, columns) = try await app.json(.GET, "\(base)/boards/\(secondId)/columns")
-            #expect(((columns as? [String: Any])?["items"] as? [Any])?.count == 3, "default columns seeded")
+            #expect(((columns as? [String: Any])?["items"] as? [Any])?.count == 4, "default columns seeded")
 
             let (_, bare) = try await app.json(.POST, "\(base)/boards", body: ["name": "Bare", "with_default_columns": false])
             let bareId = try #require((bare as? [String: Any])?["id"] as? String)
@@ -69,7 +69,7 @@ import VaporTesting
             let (status, created) = try await app.json(.POST, "\(base)/boards/\(boardId)/columns", body: ["name": "Review", "wip_limit": 2, "default_status": "blocked"])
             #expect(status == .created)
             let review = try #require(created as? [String: Any])
-            #expect(review["position"] as? Int == 3)
+            #expect(review["position"] as? Int == 4)
             #expect(review["default_status"] as? String == "blocked")
             let reviewId = try #require(review["id"] as? String)
 
@@ -83,7 +83,7 @@ import VaporTesting
 
             let (_, list) = try await app.json(.GET, "\(base)/boards/\(boardId)/columns")
             let names = ((list as? [String: Any])?["items"] as? [[String: Any]])?.map { $0["name"] as? String }
-            #expect(names == ["TODO", "QA", "Doing", "Complete"])
+            #expect(names == ["Backlog", "QA", "To do", "In progress", "Done"])
 
             let todo = try #require(columns[0]["id"] as? String)
             _ = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "doomed"])

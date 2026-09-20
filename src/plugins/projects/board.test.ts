@@ -24,6 +24,7 @@ const card = (id: string, column_id: string, position: number, card_number = 1):
   position,
   due_date: null,
   points: null,
+  ai_cost: null,
 })
 
 const columns = [column('todo', 0), column('doing', 1), column('done', 2)]

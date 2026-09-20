@@ -34,6 +34,7 @@ const cardOf = (id: string, column_id: string, title: string, priority = 'medium
   position: 0,
   due_date: null as string | null,
   points: null as number | null,
+  ai_cost: null,
 })
 const page = <T,>(items: T[]) => ({
   items,

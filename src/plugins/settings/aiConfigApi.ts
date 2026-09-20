@@ -2,6 +2,12 @@ import { baseApi } from '@/app/api'
 
 export type AIProviderKind = 'apple' | 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'claude_code'
 
+/** USD per million tokens; prices a draft when the vendor reports no cost. */
+export interface AIPricing {
+  input_per_million: number
+  output_per_million: number
+}
+
 export interface AIProvider {
   id: string
   kind: AIProviderKind
@@ -9,6 +15,7 @@ export interface AIProvider {
   model: string
   base_url: string | null
   max_tokens: number | null
+  pricing: AIPricing | null
   has_api_key: boolean
 }
 
@@ -25,6 +32,7 @@ export interface UpsertAIProvider {
   base_url?: string | null
   api_key?: string
   max_tokens?: number | null
+  pricing?: AIPricing | null
 }
 
 export const KIND_LABELS: Record<AIProviderKind, string> = {

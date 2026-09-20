@@ -706,3 +706,114 @@ body {
   color: #79589f;
   margin-right: 6px;
 }
+
+.ds-tracker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: #8a97ad;
+}
+
+.ds-tracker__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ds-tracker__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d9dfe8;
+}
+
+.ds-tracker__step--done {
+  color: #4a5568;
+}
+
+.ds-tracker__step--done .ds-tracker__dot {
+  background: #79589f;
+}
+
+.ds-tracker__step--active {
+  color: #79589f;
+  font-weight: 600;
+}
+
+.ds-tracker__step--active .ds-tracker__dot {
+  background: #79589f;
+  animation: ds-pulse 1s ease-in-out infinite;
+}
+
+.ds-tracker__step--failed {
+  color: #c0392b;
+}
+
+.ds-tracker__step--failed .ds-tracker__dot {
+  background: #c0392b;
+}
+
+@keyframes ds-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.ds-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: #8a97ad;
+}
+
+.ds-fields__item--ok {
+  color: #2f855a;
+}
+
+.ds-phases {
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.ds-phases th {
+  text-align: left;
+  font-weight: 500;
+  color: #4a5568;
+  padding: 2px 10px 2px 0;
+}
+
+.ds-phases__time {
+  color: #79589f;
+  font-variant-numeric: tabular-nums;
+  padding-right: 10px;
+  white-space: nowrap;
+}
+
+.ds-phases__detail {
+  color: #62738d;
+}
+
+.ds-raw {
+  max-height: 200px;
+  overflow: auto;
+  margin: 4px 0 0;
+  padding: 8px;
+  font-size: 11px;
+  background: #f7f3fb;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ds-card__cost {
+  color: #79589f;
+}

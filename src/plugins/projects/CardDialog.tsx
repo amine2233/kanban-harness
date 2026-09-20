@@ -1,11 +1,13 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
 import { Button, ConfirmModal, Input, Modal, Select, Textarea } from '@/design-system'
+import { formatCost, formatTokens } from './assistantApi'
 import { DraftWithAI } from './DraftWithAI'
 import {
   useCreateCardMutation,
   useDeleteCardMutation,
   useUpdateCardMutation,
+  type AICost,
   type Board,
   type Card,
   type CardPatch,
@@ -39,6 +41,7 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
   const [points, setPoints] = useState(
     card?.points === null || card === undefined ? '' : String(card.points),
   )
+  const [aiCost, setAiCost] = useState<AICost>()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [createCard, create] = useCreateCardMutation()
   const [updateCard, update] = useUpdateCardMutation()
@@ -58,6 +61,7 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
         title: trimmed,
         priority,
         description: desc,
+        aiCost,
       })
       if (result.data) onClose()
       return
@@ -108,6 +112,13 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
           void submit(event)
         }}
       >
+        {card?.ai_cost && (
+          <p className="f6 gray mt0 mb2" aria-label="AI cost">
+            ✨ Drafted by {card.ai_cost.provider} ({card.ai_cost.model}) ·{' '}
+            {formatTokens(card.ai_cost)} ·{' '}
+            {formatCost(card.ai_cost.cost_usd, card.ai_cost.estimated)}
+          </p>
+        )}
         {!card && (
           <DraftWithAI
             scope={scope}
@@ -116,6 +127,7 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
               if (patch.description !== undefined) setDescription(patch.description)
               if (patch.priority !== undefined) setPriority(patch.priority)
               if (patch.points !== undefined) setPoints(String(patch.points))
+              if (patch.aiCost !== undefined) setAiCost(patch.aiCost)
             }}
           />
         )}

@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { Button, Select, Spinner, Textarea } from '@/design-system'
+import { Button, cx, Select, Spinner, Textarea } from '@/design-system'
 import { useGetAIConfigQuery } from '@/plugins/settings/aiConfigApi'
-import { draftPatch, type DraftPatch } from './assistantApi'
-import { resetDraft, selectAssistant, streamDraft } from './assistantSlice'
+import { costOf, draftPatch, formatCost, formatTokens, type DraftPatch } from './assistantApi'
+import { logText } from './assistantLog'
+import {
+  phaseDurations,
+  resetDraft,
+  selectAssistant,
+  STEPS,
+  streamDraft,
+  type AssistantState,
+  type Step,
+} from './assistantSlice'
 
 interface Props {
   scope: { projectId: string; boardId: string }
@@ -27,12 +36,18 @@ export function DraftWithAI({ scope, onDraft }: Props) {
   const chosen = providers.find((p) => p.id === (provider || ai?.default_provider))
   const [now, setNow] = useState(0)
 
+  const draftSink = useRef(onDraft)
   useEffect(() => {
-    if (assistant.partial) onDraft(draftPatch(assistant.partial))
-  }, [assistant.partial, onDraft])
+    draftSink.current = onDraft
+  })
   useEffect(() => {
-    if (assistant.result) onDraft(draftPatch(assistant.result.draft))
-  }, [assistant.result, onDraft])
+    if (assistant.partial) draftSink.current(draftPatch(assistant.partial))
+  }, [assistant.partial])
+  useEffect(() => {
+    if (assistant.result) {
+      draftSink.current({ ...draftPatch(assistant.result.draft), aiCost: costOf(assistant.result) })
+    }
+  }, [assistant.result])
   useEffect(
     () => () => {
       abort.current()
@@ -153,40 +168,11 @@ export function DraftWithAI({ scope, onDraft }: Props) {
             </Button>
           </div>
           {assistant.status !== 'idle' && (
-            <div className="ds-assist__activity mt2" role="status" aria-label="AI activity">
-              <div className="flex items-center f6" style={{ gap: 8 }}>
-                {running && <Spinner label="Drafting" />}
-                <span className="truncate">
-                  {[
-                    chosen && `${chosen.name} · ${chosen.model}`,
-                    assistant.status === 'error' ? 'failed' : assistant.stage,
-                    `${String(elapsedMs)} ms`,
-                    assistant.usage && tokens(assistant.usage),
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </span>
-              </div>
-              {assistant.error && <p className="f6 red mt1 mb0">{assistant.error}</p>}
-              {assistant.status === 'done' && (
-                <p className="f6 gray mt1 mb0">
-                  Drafted by {assistant.result?.provider} ({assistant.result?.model}) — review
-                  below, then Create.
-                </p>
-              )}
-              {assistant.log.length > 0 && (
-                <details className="f6 gray mt1">
-                  <summary>Log ({String(assistant.log.length)})</summary>
-                  <ol className="ds-assist__log">
-                    {assistant.log.map((entry, i) => (
-                      <li key={i}>
-                        <code>{String(entry.elapsed_ms)} ms</code> {entry.name}
-                      </li>
-                    ))}
-                  </ol>
-                </details>
-              )}
-            </div>
+            <Activity
+              assistant={assistant}
+              elapsedMs={elapsedMs}
+              providerLabel={chosen ? `${chosen.name} · ${chosen.model}` : null}
+            />
           )}
         </>
       )}
@@ -194,15 +180,157 @@ export function DraftWithAI({ scope, onDraft }: Props) {
   )
 }
 
-function tokens(usage: {
-  input_tokens: number | null
-  output_tokens: number | null
-  cost_usd: number | null
+const STEP_LABELS: Record<Step, string> = {
+  resolve: 'Prepare',
+  context: 'Context',
+  wait: 'Wait for model',
+  stream: 'Streaming',
+  validate: 'Validate',
+  done: 'Done',
+}
+
+/** The steps shown as a tracker; `context` folds into Prepare, `done` completes Validate. */
+const TRACKER: Step[] = ['resolve', 'wait', 'stream', 'validate']
+
+function Activity({
+  assistant,
+  elapsedMs,
+  providerLabel,
+}: {
+  assistant: AssistantState
+  elapsedMs: number
+  providerLabel: string | null
 }) {
-  const parts = [
-    usage.input_tokens !== null && `${String(usage.input_tokens)} in`,
-    usage.output_tokens !== null && `${String(usage.output_tokens)} out`,
-    usage.cost_usd !== null && `$${usage.cost_usd.toFixed(4)}`,
+  const running = assistant.status === 'running'
+  const failed = assistant.status === 'error'
+  const durations = phaseDurations(assistant.log, elapsedMs)
+  const position = (step: Step | null) =>
+    step === null
+      ? -1
+      : step === 'context'
+        ? 0
+        : step === 'done'
+          ? TRACKER.length
+          : TRACKER.indexOf(step)
+  const cursor = assistant.status === 'done' ? TRACKER.length : position(assistant.step)
+  const current = TRACKER[Math.min(Math.max(cursor, 0), TRACKER.length - 1)] ?? 'resolve'
+  const stateOf = (step: Step) => {
+    const index = TRACKER.indexOf(step)
+    if (index < cursor) return 'done'
+    if (index === cursor) return failed ? 'failed' : 'active'
+    return 'todo'
+  }
+  const firstToken = durations.wait
+  const summary = [
+    providerLabel,
+    running
+      ? `${STEP_LABELS[current]}… ${seconds(elapsedMs)}`
+      : failed
+        ? 'failed'
+        : seconds(elapsedMs) +
+          (firstToken !== undefined ? ` (first token ${seconds(firstToken)})` : ''),
+    assistant.usage && formatTokens(assistant.usage),
+    assistant.usage && assistant.usage.cost_usd !== null
+      ? formatCost(assistant.usage.cost_usd, assistant.usage.estimated)
+      : null,
   ].filter(Boolean)
-  return parts.length > 0 ? parts.join(' / ') : null
+  const details = assistant.log.filter((s) => s.detail)
+  const partial = assistant.result?.draft ?? assistant.partial
+
+  return (
+    <div className="ds-assist__activity mt2" role="status" aria-label="AI activity">
+      <ol className="ds-tracker" aria-label="Steps">
+        {TRACKER.map((step) => (
+          <li key={step} className={cx('ds-tracker__step', `ds-tracker__step--${stateOf(step)}`)}>
+            <span className="ds-tracker__dot" aria-hidden="true" />
+            {STEP_LABELS[step]}
+          </li>
+        ))}
+      </ol>
+      <div className="flex items-center f6 mt1" style={{ gap: 8 }}>
+        {running && <Spinner label="Drafting" />}
+        <span className="truncate">{summary.join(' · ')}</span>
+      </div>
+      {partial && (
+        <ul className="ds-fields" aria-label="Draft fields">
+          <Field name="title" ok={!!partial.title} />
+          <Field name="description" ok={!!partial.description} />
+          <Field
+            name="criteria"
+            ok={(partial.acceptance_criteria?.length ?? 0) > 0}
+            count={partial.acceptance_criteria?.length}
+          />
+          <Field name="priority" ok={!!partial.priority} />
+          <Field name="points" ok={partial.points !== null && partial.points !== undefined} />
+        </ul>
+      )}
+      {assistant.error && (
+        <p className="f6 red mt1 mb0">
+          <code>{assistant.error.code}</code> {assistant.error.message}
+        </p>
+      )}
+      {assistant.status === 'done' && assistant.result && (
+        <p className="f6 gray mt1 mb0">
+          Drafted by {assistant.result.provider} ({assistant.result.model}) — review below, then
+          Create.
+          {assistant.sessionDrafts > 1 &&
+            ` This session: ${String(assistant.sessionDrafts)} drafts, ${formatCost(assistant.sessionCostUSD)}.`}
+        </p>
+      )}
+      {assistant.log.length > 0 && (
+        <details className="f6 mt1">
+          <summary className="gray">Details</summary>
+          <table className="ds-phases">
+            <tbody>
+              {STEPS.filter((step) => durations[step] !== undefined && step !== 'done').map(
+                (step) => (
+                  <tr key={step}>
+                    <th scope="row">{STEP_LABELS[step]}</th>
+                    <td className="ds-phases__time">{seconds(durations[step] ?? 0)}</td>
+                    <td className="ds-phases__detail">
+                      {details
+                        .filter((s) => s.step === step)
+                        .map((s) => s.detail)
+                        .join(' · ')}
+                    </td>
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+          <div className="flex mt1" style={{ gap: 8 }}>
+            <Button
+              type="button"
+              size="sm"
+              variant="tertiary"
+              onClick={() => {
+                void navigator.clipboard.writeText(logText(assistant, providerLabel))
+              }}
+            >
+              Copy log
+            </Button>
+          </div>
+          {assistant.text && (
+            <details className="mt1">
+              <summary className="gray">Raw output</summary>
+              <pre className="ds-raw">{assistant.text}</pre>
+            </details>
+          )}
+        </details>
+      )}
+    </div>
+  )
+}
+
+function Field({ name, ok, count }: { name: string; ok: boolean; count?: number | undefined }) {
+  return (
+    <li className={cx('ds-fields__item', ok && 'ds-fields__item--ok')}>
+      <span aria-hidden="true">{ok ? '✓' : '–'}</span> {name}
+      {count !== undefined && count > 0 && ` ${String(count)}`}
+    </li>
+  )
+}
+
+function seconds(ms: number): string {
+  return ms < 1000 ? `${String(ms)} ms` : `${(ms / 1000).toFixed(1)} s`
 }

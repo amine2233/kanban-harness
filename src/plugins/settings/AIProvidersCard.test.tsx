@@ -18,6 +18,7 @@ const claude: AIProvider = {
   model: 'claude-sonnet-5',
   base_url: null,
   max_tokens: null,
+  pricing: null,
   has_api_key: true,
 }
 
@@ -52,6 +53,8 @@ describe('AIProvidersCard', () => {
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Claude')
     await userEvent.type(within(dialog).getByLabelText('Model'), 'claude-sonnet-5')
     await userEvent.type(within(dialog).getByLabelText('API key'), 'sk-secret')
+    await userEvent.type(within(dialog).getByLabelText('Input $/M tokens'), '3')
+    await userEvent.type(within(dialog).getByLabelText('Output $/M tokens'), '15')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Add' }))
 
     expect(await screen.findByRole('listitem', { name: 'Claude' })).toBeInTheDocument()
@@ -63,6 +66,7 @@ describe('AIProvidersCard', () => {
       model: 'claude-sonnet-5',
       base_url: null,
       max_tokens: null,
+      pricing: { input_per_million: 3, output_per_million: 15 },
       api_key: 'sk-secret',
     })
   })

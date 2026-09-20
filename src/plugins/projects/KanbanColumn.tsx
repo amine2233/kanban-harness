@@ -1,5 +1,6 @@
 import { useState, type DragEvent } from 'react'
 import { Button, cx, Icon } from '@/design-system'
+import { formatCost } from './assistantApi'
 import { neighbourColumns } from './board'
 import { CardDialog } from './CardDialog'
 import { CARD_MIME, draggedCard, serialiseCardDrag } from './dragAndDrop'
@@ -96,6 +97,15 @@ export function KanbanColumn({ scope, column, columns, boards, cards, header }: 
                 {card.prefix}-{card.card_number}
                 {card.due_date && ` · ${card.due_date.slice(0, 10)}`}
                 {card.points !== null && ` · ${String(card.points)} pt`}
+                {card.ai_cost && (
+                  <span
+                    className="ds-card__cost"
+                    title={`Drafted by ${card.ai_cost.provider} (${card.ai_cost.model})`}
+                  >
+                    {' '}
+                    · ✨ {formatCost(card.ai_cost.cost_usd, card.ai_cost.estimated)}
+                  </span>
+                )}
               </span>
               <span className="ds-card__moves">
                 {previous && (

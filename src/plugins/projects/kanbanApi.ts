@@ -41,6 +41,17 @@ export interface Card {
   position: number
   due_date: string | null
   points: number | null
+  ai_cost: AICost | null
+}
+
+/** What drafting the card with AI cost; absent on hand-written cards. */
+export interface AICost {
+  provider: string
+  model: string
+  input_tokens: number | null
+  output_tokens: number | null
+  cost_usd: number | null
+  estimated: boolean
 }
 
 interface BoardScope {
@@ -179,12 +190,18 @@ export const kanbanApi = baseApi.injectEndpoints({
         title: string
         priority: CardPriority
         description?: string | null
+        aiCost?: AICost | undefined
       }
     >({
-      query: ({ projectId, columnId, title, priority, description }) => ({
+      query: ({ projectId, columnId, title, priority, description, aiCost }) => ({
         url: `${kanban(projectId)}/columns/${columnId}/cards`,
         method: 'POST',
-        body: { title, priority, description: description ?? null },
+        body: {
+          title,
+          priority,
+          description: description ?? null,
+          ...(aiCost ? { ai_cost: aiCost } : {}),
+        },
       }),
       invalidatesTags: (_result, _error, { boardId }) => [{ type: 'Card', id: boardId }],
     }),

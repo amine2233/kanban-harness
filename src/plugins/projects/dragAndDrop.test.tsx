@@ -33,6 +33,7 @@ const card = {
   position: 0,
   due_date: null,
   points: null,
+  ai_cost: null,
 }
 const page = <T,>(items: T[]) => ({
   items,

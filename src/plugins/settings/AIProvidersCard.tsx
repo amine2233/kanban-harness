@@ -86,6 +86,8 @@ export function AIProvidersCard() {
                 <span className="db f6 gray truncate">
                   {KIND_LABELS[provider.kind]} · {provider.model}
                   {provider.base_url && ` · ${provider.base_url}`}
+                  {provider.pricing &&
+                    ` · $${String(provider.pricing.input_per_million)} / $${String(provider.pricing.output_per_million)} per M tokens`}
                 </span>
               </span>
               <Badge
@@ -177,6 +179,12 @@ function ProviderDialog({
   const [maxTokens, setMaxTokens] = useState(
     provider?.max_tokens === null || !provider ? '' : String(provider.max_tokens),
   )
+  const [inputPrice, setInputPrice] = useState(
+    provider?.pricing ? String(provider.pricing.input_per_million) : '',
+  )
+  const [outputPrice, setOutputPrice] = useState(
+    provider?.pricing ? String(provider.pricing.output_per_million) : '',
+  )
   const [upsert, result] = useUpsertAIProviderMutation()
   const idValid = /^[a-z][a-z0-9_]{0,31}$/.test(id)
   const needsKey = KEYED_KINDS.has(kind)
@@ -191,6 +199,13 @@ function ProviderDialog({
       model: model.trim(),
       base_url: defaultBaseUrl && baseUrl.trim() !== '' ? baseUrl.trim() : null,
       max_tokens: maxTokens === '' ? null : Number(maxTokens),
+      pricing:
+        inputPrice === '' && outputPrice === ''
+          ? null
+          : {
+              input_per_million: Number(inputPrice || 0),
+              output_per_million: Number(outputPrice || 0),
+            },
       ...(clearKey ? { api_key: '' } : apiKey ? { api_key: apiKey } : {}),
     }
     const outcome = await upsert({ id, body })
@@ -301,17 +316,53 @@ function ProviderDialog({
             )}
           </>
         )}
-        <Input
-          name="provider-max-tokens"
-          label="Max tokens (optional)"
-          type="number"
-          min={1}
-          value={maxTokens}
-          className="mb2 mw5"
-          onChange={(e) => {
-            setMaxTokens(e.target.value)
-          }}
-        />
+        <div className="flex mb2" style={{ gap: 8 }}>
+          <Input
+            name="provider-max-tokens"
+            label="Max tokens (optional)"
+            type="number"
+            min={1}
+            value={maxTokens}
+            className="flex-auto"
+            onChange={(e) => {
+              setMaxTokens(e.target.value)
+            }}
+          />
+          <Input
+            name="provider-input-price"
+            label="Input $/M tokens"
+            type="number"
+            min={0}
+            step="any"
+            placeholder={
+              kind === 'claude_code' ? 'reported by claude' : KEYED_KINDS.has(kind) ? '3' : 'free'
+            }
+            value={inputPrice}
+            className="flex-auto"
+            onChange={(e) => {
+              setInputPrice(e.target.value)
+            }}
+          />
+          <Input
+            name="provider-output-price"
+            label="Output $/M tokens"
+            type="number"
+            min={0}
+            step="any"
+            placeholder={
+              kind === 'claude_code' ? 'reported by claude' : KEYED_KINDS.has(kind) ? '15' : 'free'
+            }
+            value={outputPrice}
+            className="flex-auto"
+            onChange={(e) => {
+              setOutputPrice(e.target.value)
+            }}
+          />
+        </div>
+        <p className="f6 gray mt0 mb2">
+          Pricing is used to estimate a draft&apos;s cost when the vendor does not report one; local
+          models are free without it.
+        </p>
         {result.error && <p className="f6 red mt0 mb2">{errorMessage(result.error)}</p>}
         <div className="flex justify-end" style={{ gap: 8 }}>
           <Button type="button" variant="secondary" onClick={onClose}>

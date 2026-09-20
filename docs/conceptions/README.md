@@ -1,0 +1,17 @@
+# Conceptions
+
+Design notes written before the code. Each one states the scope that is built first,
+what is deliberately left for later, and how the later part is meant to work so it can be
+picked up without re-deciding anything.
+
+| Document                                | Status                                  |
+| --------------------------------------- | --------------------------------------- |
+| [AI agents](ai-agents.md)               | Global scope planned; per project later |
+| [MCP servers and tools](mcp-servers.md) | Global scope planned; per project later |
+
+Conventions used in these notes:
+
+- **Global** = the dashboard home (`MVP_DASHBOARD_HOME`, default `~/.config/mvp-dashboard`).
+- **Project** = the registered folder holding `kanban.json` / `kanban.sqlite`.
+- Files are the source of truth. The web and the CLI edit files; hand edits always win and
+  apply on the next request, no restart.

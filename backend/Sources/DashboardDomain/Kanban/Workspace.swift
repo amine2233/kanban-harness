@@ -1,14 +1,32 @@
 import Foundation
 
 /// The `data` section of a kanban-rs file as one aggregate. Boards, columns,
-/// cards and prefixes are modelled; every other key (sprints, archives, graph,
-/// anything newer) is carried in `extra` so it round-trips untouched.
+/// cards, prefixes and the parent/child graph (`graph.spawns`) are modelled;
+/// every other key (sprints, archives, other graph kinds, anything newer) is
+/// carried in `extra` so it round-trips untouched.
 public struct Workspace: Equatable, Sendable {
     public var boards: [Board]
     public var columns: [Column]
     public var cards: [Card]
     public var prefixes: [Prefix]
-    public var extra: [String: JSONValue]
+    /// Parent → child links, including archived ones (kept as history like kanban-rs does).
+    public var spawns: [SpawnsEdge]
+    private var otherExtra: [String: JSONValue]
+
+    /// The unmodelled sections, with `graph.spawns` rebuilt from `spawns` so
+    /// stores keep reading and writing one dictionary.
+    public var extra: [String: JSONValue] {
+        get {
+            var extra = otherExtra
+            var graph = extra["graph"]?.objectValue ?? [:]
+            graph["spawns"] = .object(["edges": .array(spawns.map(\.json))])
+            extra["graph"] = .object(graph)
+            return extra
+        }
+        set {
+            (otherExtra, spawns) = Self.split(newValue)
+        }
+    }
 
     public static let defaultTemplateColumns: [(name: String, status: CardStatus?)] = [
         ("Backlog", nil), ("To do", .todo), ("In progress", .inProgress), ("Done", .done),
@@ -25,7 +43,15 @@ public struct Workspace: Equatable, Sendable {
         self.columns = columns
         self.cards = cards
         self.prefixes = prefixes
-        self.extra = extra
+        (otherExtra, spawns) = Self.split(extra)
+    }
+
+    private static func split(_ extra: [String: JSONValue]) -> ([String: JSONValue], [SpawnsEdge]) {
+        var other = extra
+        var graph = extra["graph"]?.objectValue ?? [:]
+        let edges = (graph.removeValue(forKey: "spawns")?.objectValue?["edges"]?.arrayValue ?? []).compactMap(SpawnsEdge.init(json:))
+        if extra["graph"] != nil { other["graph"] = .object(graph) }
+        return (other, edges)
     }
 
     // MARK: Queries
@@ -231,16 +257,16 @@ public struct Workspace: Equatable, Sendable {
         }
         cards[index] = card
         compactPositions(in: originColumnId)
-        removeGraphEdges(mentioning: id)
+        removeGraphEdges(mentioning: id, now: now)
         return card
     }
 
-    public mutating func deleteCard(_ id: UUID) throws {
+    public mutating func deleteCard(_ id: UUID, now: Date = Date()) throws {
         let index = try cardIndex(id)
         let columnId = cards[index].columnId
         cards.remove(at: index)
         compactPositions(in: columnId)
-        removeGraphEdges(mentioning: id)
+        removeGraphEdges(mentioning: id, now: now)
     }
 
     // MARK: Internals
@@ -276,15 +302,17 @@ public struct Workspace: Equatable, Sendable {
         }
     }
 
-    /// Drops every edge in `graph.{spawns,blocks,relates}.edges` that names the card.
-    mutating func removeGraphEdges(mentioning cardId: UUID) {
-        guard var graph = extra["graph"]?.objectValue else { return }
+    /// Archives the card's parent/child links and drops it from the other
+    /// graph kinds (`blocks`, `relates`), which are not modelled.
+    mutating func removeGraphEdges(mentioning cardId: UUID, now: Date) {
+        archiveSpawns(now: now) { $0.source == cardId || $0.target == cardId }
+        guard var graph = otherExtra["graph"]?.objectValue else { return }
         let needle = cardId.uuidString
         for (kind, value) in graph {
             guard var bucket = value.objectValue, let edges = bucket["edges"]?.arrayValue else { continue }
             bucket["edges"] = .array(edges.filter { !$0.containsString(needle) })
             graph[kind] = .object(bucket)
         }
-        extra["graph"] = .object(graph)
+        otherExtra["graph"] = .object(graph)
     }
 }

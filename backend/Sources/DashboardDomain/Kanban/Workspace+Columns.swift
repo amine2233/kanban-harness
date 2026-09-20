@@ -24,7 +24,7 @@ extension Workspace {
     }
 
     /// Removes a column and the cards in it. A board keeps at least one column.
-    public mutating func deleteColumn(_ id: UUID) throws {
+    public mutating func deleteColumn(_ id: UUID, now: Date = Date()) throws {
         let index = try columnIndex(id)
         let column = columns[index]
         guard columns(of: column.boardId).count > 1 else {
@@ -34,7 +34,7 @@ extension Workspace {
         columns.remove(at: index)
         cards.removeAll { $0.columnId == id }
         for cardId in doomed {
-            removeGraphEdges(mentioning: cardId)
+            removeGraphEdges(mentioning: cardId, now: now)
         }
         compactColumnPositions(in: column.boardId)
     }

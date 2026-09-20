@@ -39,8 +39,11 @@ public enum StoreContract {
             columnId: column.id, title: "Drafted",
             aiCost: AICost(provider: "cc", model: "sonnet", inputTokens: 2, outputTokens: 400, costUSD: 0.03, estimated: true)
         )
+        let parent = try workspace.createCard(columnId: column.id, title: "Parent")
+        try workspace.createSubtasks(of: parent.id, [SubtaskSpec(title: "Child", points: 2)])
         try await store.save(workspace)
         let loaded = try await store.load()
+        try require(loaded.spawns == workspace.spawns, "parent/child links must round-trip")
         try require(loaded.boards == workspace.boards, "boards must round-trip")
         try require(loaded.columns == workspace.columns, "columns must round-trip")
         try require(loaded.cards == workspace.cards, "cards must round-trip")

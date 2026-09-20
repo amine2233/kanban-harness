@@ -25,6 +25,10 @@ public enum DomainError: Error, Equatable, Sendable {
     case titleTooLong(Int)
     case invalidPoints(Int)
     case invalidPriority(String)
+    case selfRelation
+    case crossBoardRelation
+    case alreadyHasParent(UUID)
+    case relationCycle
 }
 
 extension DomainError: LocalizedError {
@@ -54,6 +58,10 @@ extension DomainError: LocalizedError {
         case let .titleTooLong(max): "title exceeds \(max) characters"
         case let .invalidPoints(points): "points must be between 0 and 255, got \(points)"
         case let .invalidPriority(raw): "unknown priority '\(raw)'"
+        case .selfRelation: "a card cannot be its own parent"
+        case .crossBoardRelation: "parent and child must be on the same board"
+        case let .alreadyHasParent(id): "card \(id) already has a parent"
+        case .relationCycle: "that would make a card its own ancestor"
         }
     }
 }

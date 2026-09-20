@@ -25,14 +25,14 @@ extension Workspace {
 
     /// Removes the board with everything it owns: columns, cards (and their
     /// graph edges) and, in the unmodelled sections, its sprints.
-    public mutating func deleteBoard(_ id: UUID) throws {
+    public mutating func deleteBoard(_ id: UUID, now: Date = Date()) throws {
         let index = try boardIndex(id)
         let doomedCards = cards.filter { $0.boardId == id }.map(\.id)
         boards.remove(at: index)
         columns.removeAll { $0.boardId == id }
         cards.removeAll { $0.boardId == id }
         for cardId in doomedCards {
-            removeGraphEdges(mentioning: cardId)
+            removeGraphEdges(mentioning: cardId, now: now)
         }
         if let sprints = extra["sprints"]?.arrayValue {
             let needle = id.uuidString

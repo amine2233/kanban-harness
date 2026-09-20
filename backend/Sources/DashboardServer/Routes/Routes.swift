@@ -29,6 +29,7 @@ func routes(_ app: Vapor.Application, config: ServerConfig) throws {
     api.get("health") { _ in Health() }
     try api.register(collection: ProjectsController())
     try api.register(collection: SettingsController())
+    try api.register(collection: EventsController())
     try api.grouped("projects", ":project", "kanban", "v1").register(collection: KanbanController())
 
     if let staticDir = config.staticDir {

@@ -44,11 +44,16 @@ public enum DashboardRuntime {
         container.register(WorkspaceStoreFactoryKey.self) { c in
             WorkspaceStores.factory(pool: c.make(WorkspacePoolKey.self))
         }
+        container.register(ChangeBroadcasterKey.self) { _ in ChangeBroadcaster() }
         container.register(ProjectServiceKey.self) { c in
-            ProjectService(store: c.make(ProjectStoreKey.self), workspaces: c.make(WorkspaceStoreFactoryKey.self))
+            ProjectService(
+                store: c.make(ProjectStoreKey.self),
+                workspaces: c.make(WorkspaceStoreFactoryKey.self),
+                changes: c.make(ChangeBroadcasterKey.self)
+            )
         }
         container.register(SettingsServiceKey.self) { c in
-            SettingsService(store: c.make(SettingsStoreKey.self))
+            SettingsService(store: c.make(SettingsStoreKey.self), changes: c.make(ChangeBroadcasterKey.self))
         }
     }
 

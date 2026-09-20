@@ -38,6 +38,10 @@ public enum SettingsServiceKey: ServiceKey {
     public typealias Value = SettingsService
 }
 
+public enum ChangeBroadcasterKey: ServiceKey {
+    public typealias Value = ChangeBroadcaster
+}
+
 public enum ShutdownHooksKey: ServiceKey {
     public typealias Value = ShutdownHooks
 }

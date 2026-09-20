@@ -9,13 +9,15 @@ import Foundation
 public actor ProjectService {
     private let store: any ProjectStore
     private let workspaces: WorkspaceStoreFactory
+    private let changes: ChangeBroadcaster
 
     @Dependency(\.now) private var now
     @Dependency(\.uuid) private var uuid
 
-    public init(store: any ProjectStore, workspaces: WorkspaceStoreFactory) {
+    public init(store: any ProjectStore, workspaces: WorkspaceStoreFactory, changes: ChangeBroadcaster = ChangeBroadcaster()) {
         self.store = store
         self.workspaces = workspaces
+        self.changes = changes
     }
 
     // MARK: Registry
@@ -36,6 +38,7 @@ public actor ProjectService {
             try prepareFolder(project)
             try await seed(project)
             try await store.save(registry.projects)
+            await changes.publish(.projectsChanged)
             return project
         }
     }
@@ -45,6 +48,7 @@ public actor ProjectService {
             var registry = try await registry()
             let removed = try registry.remove(reference)
             try await store.save(registry.projects)
+            await changes.publish(.projectsChanged)
             return removed
         }
     }
@@ -62,6 +66,7 @@ public actor ProjectService {
             try await workspaces.make(converted).save(workspace)
             try registry.update(converted)
             try await store.save(registry.projects)
+            await changes.publish(.projectsChanged)
             return converted
         }
     }
@@ -86,6 +91,7 @@ public actor ProjectService {
             var workspace = try await store.load()
             let result = try body(&workspace, now())
             try await store.save(workspace)
+            await changes.publish(.workspaceChanged(projectId: project.id))
             return result
         }
     }

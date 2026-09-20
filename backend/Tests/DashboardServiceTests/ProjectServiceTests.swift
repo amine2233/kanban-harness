@@ -39,11 +39,12 @@ func tempDir() throws -> String {
     return path
 }
 
-func memoryService() -> ProjectService {
+func memoryService(changes: ChangeBroadcaster = ChangeBroadcaster()) -> ProjectService {
     let workspaces = MemoryWorkspaces()
     return ProjectService(
         store: InMemoryProjectStore(),
-        workspaces: WorkspaceStoreFactory { LazyWorkspaceStore(project: $0, workspaces: workspaces) }
+        workspaces: WorkspaceStoreFactory { LazyWorkspaceStore(project: $0, workspaces: workspaces) },
+        changes: changes
     )
 }
 

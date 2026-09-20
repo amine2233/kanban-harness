@@ -4,9 +4,11 @@ import DashboardPersistence
 /// Reads settings fresh on every call (no cache) so file edits apply live.
 public actor SettingsService {
     private let store: any SettingsStore
+    private let changes: ChangeBroadcaster
 
-    public init(store: any SettingsStore) {
+    public init(store: any SettingsStore, changes: ChangeBroadcaster = ChangeBroadcaster()) {
         self.store = store
+        self.changes = changes
     }
 
     public func current() async throws(ServiceError) -> Settings {
@@ -25,6 +27,7 @@ public actor SettingsService {
             if let corsOrigins { settings.corsOrigins = corsOrigins }
             let validated = try settings.validated()
             try await store.save(validated)
+            await changes.publish(.settingsChanged)
             return validated
         } catch {
             throw ServiceError.wrap(error)

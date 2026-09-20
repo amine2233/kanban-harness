@@ -36,6 +36,14 @@ Rule of thumb when adding code: _does it need the DOM or React?_ No → `kanban-
 (if it is about board data) or `state` (if it is about fetching/remembering). Yes, and it is
 reusable and knows nothing about kanban → `design-system`. Otherwise → the plugin.
 
+The layering is **enforced by ESLint** (`no-restricted-imports` blocks in `eslint.config.js`):
+`kanban-model` cannot import React or Redux, `design-system` cannot import the store or the
+domain, `state` cannot import React components, and the app must import packages by name,
+never by path. A wrong import fails `pnpm lint` (and CI) with a one-line explanation.
+
+Each package has its own `tsconfig.json` (extending `tsconfig.base.json`) so it type-checks
+alone: `pnpm exec tsc -p packages/state/tsconfig.json --noEmit`.
+
 ## The app (`src/`)
 
 ```

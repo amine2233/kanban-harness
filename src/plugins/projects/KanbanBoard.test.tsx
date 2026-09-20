@@ -28,7 +28,7 @@ const cardOf = (id: string, column_id: string, title: string, priority = 'medium
   prefix: 'task',
   card_number: Number(id.replace(/\D/g, '')),
   title,
-  description: null,
+  description: null as string | null,
   priority,
   status: 'todo',
   position: 0,
@@ -148,7 +148,7 @@ describe('KanbanBoard', () => {
       points: 3,
       column_id: 'done',
     })
-    expect(screen.getByText('task-1 · 3 pt')).toBeInTheDocument()
+    expect(screen.getByText('3 pt')).toBeInTheDocument()
   })
 
   test('moves a card to another board from the modal', async () => {
@@ -233,7 +233,7 @@ describe('KanbanBoard', () => {
     })
     renderBoard()
     const todo = await screen.findByRole('region', { name: 'TODO' })
-    const tree = within(todo).getByRole('list', { name: 'Sub-tasks of Epic' })
+    const tree = within(todo).getByRole('region', { name: 'Sub-tasks of Epic' })
     expect(
       within(tree)
         .getAllByRole('listitem')
@@ -280,6 +280,38 @@ describe('KanbanBoard', () => {
     expect(
       api.calls.find((c) => c.key === `POST ${base}/columns/todo/cards`)?.body,
     ).not.toHaveProperty('subtasks')
+  })
+
+  test('shows checklist progress on the card and ticks criteria from the preview', async () => {
+    const card = {
+      ...cardOf('c1', 'todo', 'Reset flow'),
+      description: 'Why\n\n**Acceptance criteria**\n- [ ] Email sent\n- [x] Link expires',
+    }
+    const api = boardRoutes([card], {
+      [`PATCH ${base}/boards/b1/cards/c1`]: (body) => ({
+        body: { ...card, description: (body as { description: string }).description },
+      }),
+    })
+    renderBoard()
+    const tile = await screen.findByRole('listitem', { name: 'Reset flow (medium)' })
+    expect(within(tile).getByLabelText('1 of 2 criteria done')).toHaveTextContent('1/2')
+    expect(within(tile).queryByText(/Acceptance/)).not.toBeInTheDocument()
+
+    await userEvent.click(within(tile).getByRole('button', { name: 'Open Reset flow' }))
+    const dialog = screen.getByRole('dialog', { name: 'task-1' })
+    expect(within(dialog).getByRole('tab', { name: 'Preview' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(within(dialog).getByText('Acceptance criteria').tagName).toBe('STRONG')
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Email sent' }))
+    expect(api.calls.find((c) => c.key === `PATCH ${base}/boards/b1/cards/c1`)?.body).toEqual({
+      description: 'Why\n\n**Acceptance criteria**\n- [x] Email sent\n- [x] Link expires',
+    })
+    await userEvent.click(within(dialog).getByRole('tab', { name: 'Write' }))
+    expect(within(dialog).getByRole('textbox', { name: 'Description' })).toHaveValue(
+      'Why\n\n**Acceptance criteria**\n- [x] Email sent\n- [x] Link expires',
+    )
   })
 
   test('shows an info banner when the project has no board', async () => {

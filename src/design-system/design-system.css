@@ -304,6 +304,8 @@ body {
 
 .ds-column {
   flex: 0 0 300px;
+  width: 300px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   max-height: 100%;
@@ -433,15 +435,13 @@ body {
   line-height: 1.35;
 }
 
-.ds-card__snippet {
+.ds-card__title,
+.ds-mini__title {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-top: 4px;
-  color: #62738d;
-  font-size: 12px;
-  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .ds-card__footer {
@@ -455,7 +455,8 @@ body {
 .ds-card__meta {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   font-size: 11px;
   color: #62738d;
   min-width: 0;
@@ -814,11 +815,54 @@ body {
   word-break: break-word;
 }
 
-.ds-card__cost {
-  color: #79589f;
+/* --- Card facts ------------------------------------------------------------- */
+
+.ds-card,
+.ds-mini {
+  min-width: 0;
+  border-left: 3px solid transparent;
 }
 
-/* --- Sub-tasks ------------------------------------------------------------ */
+.ds-priority-edge--low {
+  border-left-color: #cfd7e6;
+}
+
+.ds-priority-edge--medium {
+  border-left-color: #8fbdf5;
+}
+
+.ds-priority-edge--high {
+  border-left-color: #f0a06a;
+}
+
+.ds-priority-edge--critical {
+  border-left-color: #ef6b6b;
+}
+
+.ds-card__key {
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.ds-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.ds-fact--overdue {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.ds-fact--done {
+  color: #2f855a;
+}
+
+.ds-fact--ai {
+  color: #79589f;
+}
 
 .ds-chip {
   display: inline-flex;
@@ -839,55 +883,97 @@ body {
   color: #2f855a;
 }
 
+/* --- Sub-tasks inside a parent ------------------------------------------- */
+
 .ds-subtree {
-  margin: 0 8px 8px 12px;
-  padding-left: 10px;
-  border-left: 2px solid #e6d9f5;
+  margin: 0 8px 8px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #f4f1f8;
 }
 
-.ds-subtree__item {
+.ds-subtree__header {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 4px 4px 0;
-  font-size: 12px;
-  color: #4a5568;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #62738d;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ds-subtree__bar {
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: 2px;
+  background: #e1d8ee;
+  overflow: hidden;
+}
+
+.ds-subtree__bar > span {
+  display: block;
+  height: 100%;
+  background: #79589f;
+  transition: width 0.2s ease;
+}
+
+.ds-mini {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(50, 59, 73, 0.08);
   cursor: grab;
 }
 
-.ds-subtree__item + .ds-subtree__item {
-  border-top: 1px solid #f0f2f5;
+.ds-mini + .ds-mini {
+  margin-top: 6px;
 }
 
-.ds-subtree__item--done .ds-subtree__title {
-  text-decoration: line-through;
-  color: #8a97ad;
+.ds-mini:active {
+  cursor: grabbing;
 }
 
-.ds-subtree__title {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 0;
+.ds-mini__body {
+  display: block;
+  width: 100%;
+  padding: 6px 8px 2px;
   background: transparent;
   border: 0;
   text-align: left;
   font: inherit;
-  color: inherit;
   cursor: pointer;
 }
 
-.ds-subtree__key {
-  flex: none;
-  color: #8a97ad;
-  font-size: 11px;
+.ds-mini__title {
+  display: -webkit-box;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #323b49;
 }
 
-.ds-subtree__item .ds-card__moves {
+.ds-mini__footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 4px 8px;
+}
+
+.ds-mini__footer .ds-card__meta {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+}
+
+.ds-mini__footer .ds-card__moves {
+  margin-left: 0;
+}
+
+.ds-mini .ds-card__moves {
   opacity: 0;
 }
 
-.ds-subtree__item:hover .ds-card__moves,
-.ds-subtree__item:focus-within .ds-card__moves {
+.ds-mini:hover .ds-card__moves,
+.ds-mini:focus-within .ds-card__moves {
   opacity: 1;
 }
 
@@ -910,4 +996,152 @@ body {
 
 .ds-link:hover {
   text-decoration: underline;
+}
+
+/* --- Markdown --------------------------------------------------------------- */
+
+.ds-md {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #323b49;
+  overflow-wrap: anywhere;
+}
+
+.ds-md > :first-child {
+  margin-top: 0;
+}
+
+.ds-md > :last-child {
+  margin-bottom: 0;
+}
+
+.ds-md p,
+.ds-md ul,
+.ds-md ol,
+.ds-md pre,
+.ds-md blockquote,
+.ds-md table {
+  margin: 0 0 10px;
+}
+
+.ds-md h1,
+.ds-md h2,
+.ds-md h3,
+.ds-md h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ds-md ul,
+.ds-md ol {
+  padding-left: 22px;
+}
+
+.ds-md ul.contains-task-list {
+  list-style: none;
+  padding-left: 2px;
+}
+
+.ds-md__task label {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.ds-md__task input {
+  margin-top: 4px;
+}
+
+.ds-md__task--done > label > span {
+  color: #8a97ad;
+  text-decoration: line-through;
+}
+
+.ds-md code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: #f0f2f5;
+  font-size: 12px;
+}
+
+.ds-md pre {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #f0f2f5;
+  overflow-x: auto;
+}
+
+.ds-md pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.ds-md blockquote {
+  padding-left: 10px;
+  border-left: 3px solid #e1d8ee;
+  color: #62738d;
+}
+
+.ds-md table {
+  border-collapse: collapse;
+}
+
+.ds-md th,
+.ds-md td {
+  padding: 4px 8px;
+  border: 1px solid #e4e8ef;
+}
+
+.ds-md a {
+  color: #79589f;
+}
+
+.ds-desc {
+  border: 1px solid #cfd7e6;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.ds-desc__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid #e4e8ef;
+  background: #f7f8fa;
+  border-radius: 4px 4px 0 0;
+}
+
+.ds-desc__tab {
+  padding: 4px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: #62738d;
+  cursor: pointer;
+}
+
+.ds-desc__tab[aria-selected='true'] {
+  color: #79589f;
+  border-bottom-color: #79589f;
+  font-weight: 600;
+}
+
+.ds-desc__preview {
+  padding: 10px 12px;
+  min-height: 96px;
+}
+
+.ds-desc__preview--empty {
+  color: #8a97ad;
+  font-style: italic;
+}
+
+.ds-desc textarea.hk-input {
+  border: 0;
+  border-radius: 0 0 4px 4px;
+  box-shadow: none;
 }

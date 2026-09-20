@@ -1,7 +1,8 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
-import { Button, ConfirmModal, cx, Input, Modal, Select, Textarea } from '@/design-system'
+import { Button, ConfirmModal, cx, Input, Modal, Select } from '@/design-system'
 import { formatCost, formatTokens } from './assistantApi'
+import { DescriptionField } from './DescriptionField'
 import { DraftWithAI } from './DraftWithAI'
 import {
   useCreateCardMutation,
@@ -193,14 +194,16 @@ export function CardDialog({
           }}
           className="mb2"
         />
-        <Textarea
-          name="card-description"
-          label="Description"
+        <DescriptionField
           value={description}
-          onChange={(e) => {
-            setDescription(e.target.value)
-          }}
-          className="mb2"
+          onChange={setDescription}
+          onToggle={
+            card
+              ? (next) => {
+                  void updateCard({ ...scope, cardId: card.id, patch: { description: next } })
+                }
+              : undefined
+          }
         />
         <div className="flex mb2" style={{ gap: 8 }}>
           <Select

@@ -13,6 +13,9 @@ const PATHS = {
   arrowLeft: 'M19 12H5M11 18l-6-6 6-6',
   arrowRight: 'M5 12h14M13 6l6 6-6 6',
   dots: 'M5 12h.01M12 12h.01M19 12h.01',
+  calendar:
+    'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 10h16M8 2v4M16 2v4',
+  subtasks: 'M6 4h6M6 12h6M6 20h6M15 6l2 2 4-4M15 14l2 2 4-4',
 } as const
 
 export type IconName = keyof typeof PATHS

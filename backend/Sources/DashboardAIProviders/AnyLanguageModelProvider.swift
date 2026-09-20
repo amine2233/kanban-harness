@@ -63,7 +63,11 @@ public struct AnyLanguageModelProvider: AIProvider {
                             typed = text
                         }
                         if let json = Self.json(snapshot.rawContent) { continuation.yield(.snapshot(json)) }
-                        usage = CompletionUsage(inputTokens: snapshot.usage.input.totalTokenCount, outputTokens: snapshot.usage.output.totalTokenCount)
+                        let reported = snapshot.usage
+                        usage = CompletionUsage(
+                            inputTokens: reported.input.totalTokenCount > 0 ? reported.input.totalTokenCount : nil,
+                            outputTokens: reported.output.totalTokenCount > 0 ? reported.output.totalTokenCount : nil
+                        )
                     }
                     guard let final = last, let json = Self.json(final) else { throw AIProviderError.badResponse("\(config.name) produced no content") }
                     continuation.yield(.usage(usage))

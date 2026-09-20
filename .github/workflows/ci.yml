@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       # The same toolchain mise pins locally (mise.toml), on both platforms.
-      - uses: swift-actions/setup-swift@v2
+      - uses: swift-actions/setup-swift@v3
         with:
           swift-version: '6.3.3'
       - run: swift --version

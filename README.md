@@ -67,7 +67,23 @@ Set in `mise.toml` (override in a git-ignored `.env.local`):
 3. **Columns** — `+ Add column`; each column header has ✎ (name, WIP limit, default status), ← → and × (a board keeps at least one column).
 4. **Cards** — `+ Add card` opens the card dialog; click a card to edit title, description, priority, status, column, due date, points, move it to another board, or delete it. ← → on a card moves it one column.
 5. **Project page header** — switch the project's storage (JSON ⇄ SQLite, converted in place, old file kept) or **Unregister** it (files on disk are never deleted).
-6. **Settings** — _This browser_: the API server URL this browser talks to (stored in `localStorage`; empty = same origin, with a Test connection button). _Server_: `settings.json` on the server — default storage for new projects and allowed browser origins (CORS) — applied live, no restart.
+6. **Settings** — _This browser_: the API server URL this browser talks to (stored in `localStorage`; empty = same origin, with a Test connection button). _Server_: `settings.json` on the server — default storage for new projects and allowed browser origins (CORS) — applied live, no restart. _AI providers_: `config.json`/`config.yaml` on the server, see below.
+7. **Draft with AI** — in the new-card dialog, describe the ticket in a sentence; the title and description fill in as the model types, an activity strip shows provider · model · stage · elapsed · tokens (expandable log), Cancel stops it. Nothing is created until you press Create.
+
+### AI providers
+
+Providers live in `config.json` (or `config.yaml`) under the dashboard home; the web settings, the CLI and a hand edit all land in the same file, applied live. Kinds:
+
+| Kind          | Backed by                                                                               | Needs             |
+| ------------- | --------------------------------------------------------------------------------------- | ----------------- |
+| `claude_code` | Claude Code CLI in headless mode (`claude -p`), streaming partial messages              | `claude` login    |
+| `apple`       | Apple's on-device model (`SystemLanguageModel`)                                         | macOS 26          |
+| `anthropic`   | Anthropic Messages API                                                                  | API key           |
+| `openai`      | Any OpenAI-compatible `/v1` endpoint (OpenAI, Mistral, Groq, LM Studio…) via `base_url` | API key (or none) |
+| `gemini`      | Google Gemini                                                                           | API key           |
+| `ollama`      | Local Ollama (`http://127.0.0.1:11434` by default)                                      | Ollama running    |
+
+Everything but `claude_code` goes through [AnyLanguageModel](https://github.com/mattt/AnyLanguageModel), so adding a vendor is one line in `AIProviderRegistry.standard`. Keys are write-only (the API only reports `has_api_key`), the file is written `0600`, and `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` keeps a key out of the file entirely. Card text is passed to the model as data, never as instructions.
 
 ### CLI
 
@@ -86,7 +102,8 @@ dashboard project remove <name|id>                  # unregister only
 dashboard settings show
 dashboard settings set [--default-storage sqlite] [--cors-origin URL ...] [--clear-cors]
 
-dashboard ai ticket <project> "idea" [--board B] [--provider P] [--create [--column C]]   # draft (and create) a card with AI
+dashboard ai providers list | add <id> --kind K --model M [--base-url URL] [--api-key KEY] | remove <id> | default <id>
+dashboard ai ticket <project> "idea" [--board B] [--provider P] [--stream] [--create [--column C]]   # draft (and create) a card; --stream narrates on stderr
 dashboard mcp                                       # MCP server over stdio (boards & cards as tools)
 dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...]
 dashboard --home <dir> …                            # registry/settings location (or MVP_DASHBOARD_HOME), local mode only
@@ -97,20 +114,23 @@ dashboard --server http://host:5175 … | --remote | --local
 
 Base path `/api`; JSON in and out; errors are `{"code": "NOT_FOUND" | "ALREADY_EXISTS" | "VALIDATION_FAILED" | "INTERNAL", "message": …}`.
 
-| Method  | Path                                                   | Purpose                                                 |
-| ------- | ------------------------------------------------------ | ------------------------------------------------------- |
-| `GET`   | `/health`                                              | Liveness                                                |
-| `GET`   | `/settings` · `PATCH /settings`                        | Server settings (`default_storage`, `cors_origins`)     |
-| `GET`   | `/projects` · `POST /projects`                         | List / register (`{name, path, storage?}`)              |
-| `GET`   | `/projects/{id}` · `PATCH` (`{storage}`) · `DELETE`    | Show / switch storage / unregister                      |
-| `GET`   | `/projects/{id}/kanban/v1/boards` · `POST`             | Boards (`{name, card_prefix?, with_default_columns?}`)  |
-| `PATCH` | `/projects/{id}/kanban/v1/boards/{b}` · `DELETE`       | Rename / reorder (`position`) / delete                  |
-| `POST`  | `/projects/{id}/kanban/v1/boards/{b}/clone`            | Deep copy (`{name?}`)                                   |
-| `GET`   | `/projects/{id}/kanban/v1/boards/{b}/columns` · `POST` | Columns (`{name, wip_limit?, default_status?}`)         |
-| `PATCH` | `…/boards/{b}/columns/{c}` · `DELETE`                  | Edit / reorder / delete                                 |
-| `GET`   | `/projects/{id}/kanban/v1/boards/{b}/cards`            | Cards of a board                                        |
-| `POST`  | `/projects/{id}/kanban/v1/columns/{c}/cards`           | Create (`{title, description?, priority?}`)             |
-| `PATCH` | `…/boards/{b}/cards/{card}` · `DELETE`                 | Edit; `column_id` moves, `board_id` moves across boards |
+| Method  | Path                                                                                       | Purpose                                                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`   | `/health`                                                                                  | Liveness                                                                                                                           |
+| `GET`   | `/settings` · `PATCH /settings`                                                            | Server settings (`default_storage`, `cors_origins`)                                                                                |
+| `GET`   | `/projects` · `POST /projects`                                                             | List / register (`{name, path, storage?}`)                                                                                         |
+| `GET`   | `/projects/{id}` · `PATCH` (`{storage}`) · `DELETE`                                        | Show / switch storage / unregister                                                                                                 |
+| `GET`   | `/projects/{id}/kanban/v1/boards` · `POST`                                                 | Boards (`{name, card_prefix?, with_default_columns?}`)                                                                             |
+| `PATCH` | `/projects/{id}/kanban/v1/boards/{b}` · `DELETE`                                           | Rename / reorder (`position`) / delete                                                                                             |
+| `POST`  | `/projects/{id}/kanban/v1/boards/{b}/clone`                                                | Deep copy (`{name?}`)                                                                                                              |
+| `GET`   | `/projects/{id}/kanban/v1/boards/{b}/columns` · `POST`                                     | Columns (`{name, wip_limit?, default_status?}`)                                                                                    |
+| `PATCH` | `…/boards/{b}/columns/{c}` · `DELETE`                                                      | Edit / reorder / delete                                                                                                            |
+| `GET`   | `/projects/{id}/kanban/v1/boards/{b}/cards`                                                | Cards of a board                                                                                                                   |
+| `POST`  | `/projects/{id}/kanban/v1/columns/{c}/cards`                                               | Create (`{title, description?, priority?}`)                                                                                        |
+| `PATCH` | `…/boards/{b}/cards/{card}` · `DELETE`                                                     | Edit; `column_id` moves, `board_id` moves across boards                                                                            |
+| `GET`   | `/settings/ai` · `PUT /settings/ai/providers/{id}` · `DELETE` · `PUT /settings/ai/default` | AI providers (keys write-only)                                                                                                     |
+| `POST`  | `/projects/{id}/ai/tickets/draft`                                                          | `{idea, board_id, provider?}` → draft; with `Accept: text/event-stream`, frames `stage` / `partial` / `usage` / `result` / `error` |
+| `GET`   | `/events` (WebSocket)                                                                      | Change events (`projects_changed`, `board_changed`, …)                                                                             |
 
 Shapes follow kanban-api's wire format (snake_case, explicit nulls, paginated lists as `{items, total, page, page_size, total_pages}`).
 
@@ -163,7 +183,11 @@ Dependencies point inward everywhere: interface → service → persistence → 
 | `backend/Sources/DashboardPersistenceConfig` | `config.json`/`config.yaml` AI provider store: swift-configuration reads (file + env), atomic private writes.                                                                                       |
 | `backend/Sources/DashboardPersistenceFluent` | Fluent SQLite stores for the registry and workspaces; `SQLiteDatabasePool`.                                                                                                                         |
 | `backend/Sources/DashboardService`           | `ProjectService`, `SettingsService` actors; clock/ids via cascade-kit `@Dependency`.                                                                                                                |
-| `backend/Sources/DashboardAPI`               | Wire DTOs (kanban-api shapes, `Page`, `ApiError`).                                                                                                                                                  |
+| `backend/Sources/DashboardAI`                | `AIProvider` streaming contract, `AssistantService` (board context → prompt → partial drafts → validated `TicketDraft`), `JSONCompleter` for half-typed JSON.                                       |
+| `backend/Sources/DashboardAIProviders`       | `AnyLanguageModelProvider` (apple/anthropic/openai/gemini/ollama) and `ClaudeCodeProvider` (headless `claude -p`, stream-json).                                                                     |
+| `backend/Sources/DashboardAPI`               | Wire DTOs (kanban-api shapes, `Page`, `ApiError`, `AssistantFrame` + `SSEParser`).                                                                                                                  |
+| `backend/Sources/DashboardClient`            | HTTP implementations of the command protocols (what the CLI uses when a server is running), including the event-stream client.                                                                      |
+| `backend/Sources/DashboardMCP`               | MCP tool catalogue and dispatcher over the same command protocols.                                                                                                                                  |
 | `backend/Sources/DashboardRuntime`           | Composition root shared by CLI and server: cascade-kit `ServiceKey`s, `DashboardRuntime.register/shutdown`, `RuntimeConfig`; `WorkspaceStores.factory` is the single `StorageKind` → store mapping. |
 | `backend/Sources/DashboardServer`            | Vapor app: routes, error envelope (+ `X-Request-Id`), live CORS, app and per-request cascade-kit containers.                                                                                        |
 | `backend/Sources/DashboardCLI`               | `dashboard` executable; one runtime container per invocation, `--verbose` bound through `\.logger`.                                                                                                 |

@@ -2,14 +2,28 @@ import Foundation
 
 /// Which wire protocol a provider speaks. One implementation per kind covers many vendors.
 public enum AIProviderKind: String, Codable, Sendable, CaseIterable {
+    /// Apple's on-device Foundation Model (macOS 26+): free, private, no key.
+    case apple
     case anthropic
-    case openaiCompatible = "openai_compatible"
+    /// OpenAI and every OpenAI-compatible endpoint (Mistral, Groq, LM Studio, LiteLLM…) via `base_url`.
+    case openai
+    case gemini
     case ollama
     /// The Claude Code CLI in headless mode: uses the machine's Claude login, no API key.
     case claudeCode = "claude_code"
 
     /// Whether requests need an API key at all.
-    public var requiresAPIKey: Bool { self == .anthropic || self == .openaiCompatible }
+    public var requiresAPIKey: Bool {
+        switch self {
+        case .anthropic, .openai, .gemini: true
+        case .apple, .ollama, .claudeCode: false
+        }
+    }
+
+    /// Accepts the pre-0.2 spelling from existing config files.
+    public init?(configValue: String) {
+        if let kind = AIProviderKind(rawValue: configValue) { self = kind } else if configValue == "openai_compatible" { self = .openai } else { return nil }
+    }
 }
 
 /// One configured AI provider. `apiKey` is a secret: it is persisted in the

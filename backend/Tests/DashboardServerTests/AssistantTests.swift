@@ -53,7 +53,7 @@ import VaporTesting
             #expect(none == .badRequest)
             #expect((err as? [String: Any])?["code"] as? String == "AI_NOT_CONFIGURED")
 
-            _ = try await app.json(.PUT, "/api/settings/ai/providers/local", body: ["kind": "ollama", "name": "Ollama", "model": "llama3.2", "base_url": "http://127.0.0.1:1"])
+            _ = try await app.json(.PUT, "/api/settings/ai/providers/keyless", body: ["kind": "anthropic", "name": "Keyless", "model": "claude-sonnet-5"])
             let (down, downErr) = try await app.json(.POST, "/api/projects/\(id)/ai/tickets/draft", body: ["idea": "x", "board_id": boardId])
             #expect(down == .badGateway)
             #expect((downErr as? [String: Any])?["code"] as? String == "AI_PROVIDER")

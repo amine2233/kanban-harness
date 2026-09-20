@@ -90,3 +90,57 @@ public struct TicketDraft: Codable, Equatable, Sendable {
         )
     }
 }
+
+/// A draft while the model is still writing it: every field optional, criteria
+/// only complete items. Decoded from best-effort-completed JSON, never fails on shape.
+public struct PartialTicketDraft: Codable, Equatable, Sendable {
+    public var title: String?
+    public var description: String?
+    public var acceptanceCriteria: [String]
+    public var priority: CardPriority?
+    public var points: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case title, description, priority, points
+        case acceptanceCriteria = "acceptance_criteria"
+    }
+
+    public init(title: String? = nil, description: String? = nil, acceptanceCriteria: [String] = [], priority: CardPriority? = nil, points: Int? = nil) {
+        self.title = title
+        self.description = description
+        self.acceptanceCriteria = acceptanceCriteria
+        self.priority = priority
+        self.points = points
+    }
+
+    public static func parse(_ data: Data) -> PartialTicketDraft {
+        guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return PartialTicketDraft() }
+        return PartialTicketDraft(
+            title: object["title"] as? String,
+            description: object["description"] as? String,
+            acceptanceCriteria: (object["acceptance_criteria"] as? [Any])?.compactMap { $0 as? String } ?? [],
+            priority: (object["priority"] as? String).flatMap(CardPriority.init(wireValue:)),
+            points: object["points"] as? Int
+        )
+    }
+
+    public var isEmpty: Bool { title == nil && description == nil && acceptanceCriteria.isEmpty && priority == nil && points == nil }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        acceptanceCriteria = try c.decodeIfPresent([String].self, forKey: .acceptanceCriteria) ?? []
+        priority = try c.decodeIfPresent(String.self, forKey: .priority).flatMap(CardPriority.init(wireValue:))
+        points = try c.decodeIfPresent(Int.self, forKey: .points)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(title, forKey: .title)
+        try c.encode(description, forKey: .description)
+        try c.encode(acceptanceCriteria, forKey: .acceptanceCriteria)
+        try c.encode(priority?.wireValue, forKey: .priority)
+        try c.encode(points, forKey: .points)
+    }
+}

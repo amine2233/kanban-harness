@@ -43,7 +43,7 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         var providers: [AIProviderConfig] = []
         for id in ids {
             let scope = ai.scoped(to: ConfigKey(["providers", id]))
-            guard let kindRaw = scope.string(forKey: "kind"), let kind = AIProviderKind(rawValue: kindRaw) else {
+            guard let kindRaw = scope.string(forKey: "kind"), let kind = AIProviderKind(configValue: kindRaw) else {
                 throw PersistenceError.corrupt(path: path, reason: "ai.providers.\(id).kind is missing or unknown")
             }
             do {

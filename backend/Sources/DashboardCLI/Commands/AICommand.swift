@@ -80,7 +80,7 @@ struct AICommand: AsyncParsableCommand {
             @Argument(help: "Provider id (a-z, 0-9, _), e.g. claude, local.")
             var id: String
 
-            @Option(help: "anthropic, openai_compatible or ollama.")
+            @Option(help: "apple, anthropic, openai, gemini, ollama or claude_code.")
             var kind: AIProviderKind
 
             @Option(help: "Model name, e.g. claude-sonnet-5, gpt-4o, llama3.2.")
@@ -89,7 +89,7 @@ struct AICommand: AsyncParsableCommand {
             @Option(help: "Display name (defaults to the id).")
             var name: String?
 
-            @Option(name: .customLong("base-url"), help: "API base URL (required for openai_compatible and ollama unless the vendor default applies).")
+            @Option(name: .customLong("base-url"), help: "API base URL; defaults to the vendor endpoint (OpenAI-compatible servers: their /v1 URL).")
             var baseURL: String?
 
             @Option(name: .customLong("api-key"), help: "API key; prefer the env var MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY to keep it out of the file.")

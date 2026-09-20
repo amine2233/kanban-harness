@@ -125,3 +125,50 @@ import Testing
         #expect(!prompt.contains("Card 199 "))
     }
 }
+
+@Suite struct AssistantStreamingTests {
+    @Test func streamsStagesPartialsUsageThenTheResult() async throws {
+        let f = try await AssistantServiceTests().fixture(responses: [#"{"title":"Fix login crash","description":"Users crash","acceptance_criteria":["No crash"],"priority":"high"}"#])
+        var stages: [String] = []
+        var partials: [PartialTicketDraft] = []
+        var usage: CompletionUsage?
+        var result: DraftedTicket?
+        for try await event in f.service.streamTicket(project: .name("Demo"), boardId: f.boardId, idea: "login crashes", providerId: nil) {
+            switch event {
+            case let .stage(name, elapsedMs):
+                #expect(elapsedMs >= 0)
+                stages.append(name)
+            case let .partial(p): partials.append(p)
+            case let .usage(u): usage = u
+            case let .result(r): result = r
+            }
+        }
+        #expect(stages.first == "resolving provider")
+        #expect(stages.contains("provider Fake (fake-1)"))
+        #expect(stages.contains { $0.hasPrefix("context: 4 columns, 1 cards") })
+        #expect(stages.suffix(3) == ["streaming", "validating", "done"])
+        #expect(partials.count > 1, "chunks of 12 characters produce several distinct partials")
+        #expect(partials.first?.title?.isEmpty == false)
+        #expect(partials.last?.title == "Fix login crash")
+        #expect(partials.last?.acceptanceCriteria == ["No crash"])
+        #expect(partials == partials.reduce(into: []) { if $0.last != $1 { $0.append($1) } }, "no duplicate partials")
+        #expect(usage == CompletionUsage(inputTokens: 10, outputTokens: 20))
+        #expect(result?.draft.title == "Fix login crash")
+        #expect(result?.usage == usage)
+    }
+
+    @Test func failuresEndTheStreamWithATypedError() async throws {
+        let f = try await AssistantServiceTests().fixture(responses: [], failure: .unavailable("offline"))
+        var sawResult = false
+        do {
+            for try await event in f.service.streamTicket(project: .name("Demo"), boardId: f.boardId, idea: "x", providerId: nil) {
+                if case .result = event { sawResult = true }
+            }
+            Issue.record("expected error")
+        } catch let ServiceError.remote(code, message) {
+            #expect(code == "AI_PROVIDER")
+            #expect(message.contains("offline"))
+        }
+        #expect(!sawResult)
+    }
+}

@@ -35,7 +35,15 @@ public struct CompletionUsage: Sendable, Equatable, Codable {
     }
 }
 
-/// The raw JSON the model produced (already extracted from any prose/fences).
+/// What a provider emits while answering. `snapshot` carries the JSON produced
+/// so far, completed into a parseable object; `done` carries the final JSON.
+public enum CompletionEvent: Sendable, Equatable {
+    case snapshot(Data)
+    case usage(CompletionUsage)
+    case done(json: Data, model: String)
+}
+
+/// The final answer: the JSON the model produced plus usage.
 public struct CompletionResult: Sendable, Equatable {
     public var json: Data
     public var usage: CompletionUsage
@@ -66,10 +74,25 @@ extension AIProviderError: LocalizedError {
     }
 }
 
-/// What every vendor implements. One implementation per `AIProviderKind`.
+/// What every vendor implements: a stream of events ending with `.done`.
 public protocol AIProvider: Sendable {
     var config: AIProviderConfig { get }
-    func complete(_ request: CompletionRequest) async throws -> CompletionResult
+    func stream(_ request: CompletionRequest) -> AsyncThrowingStream<CompletionEvent, any Error>
+}
+
+extension AIProvider {
+    /// Folds the stream into its final result.
+    public func complete(_ request: CompletionRequest) async throws -> CompletionResult {
+        var usage = CompletionUsage()
+        for try await event in stream(request) {
+            switch event {
+            case .snapshot: continue
+            case let .usage(u): usage = u
+            case let .done(json, model): return CompletionResult(json: json, usage: usage, model: model)
+            }
+        }
+        throw AIProviderError.badResponse("stream ended without a result")
+    }
 }
 
 /// Maps a kind to an implementation; registered by the composition root.

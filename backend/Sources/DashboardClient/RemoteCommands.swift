@@ -226,7 +226,22 @@ public struct RemoteAssistantCommands: AssistantCommands {
         projects = RemoteProjectCommands(client: client)
     }
 
-    public func draftTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) async throws(ServiceError) -> DraftedTicket {
+    // ponytail: one JSON round trip surfaced as a single `.result`; SSE frames come with the streaming route.
+    public func streamTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) -> AsyncThrowingStream<AssistantEvent, any Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    continuation.yield(.result(try await self.draft(project: project, boardId: boardId, idea: idea, providerId: providerId)))
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private func draft(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) async throws(ServiceError) -> DraftedTicket {
         let id = try await projects.get(project).id
         let response = try await client.send(
             "POST", "api/projects/\(id.uuidString)/ai/tickets/draft",

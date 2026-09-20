@@ -25,9 +25,15 @@ import Testing
 
     @Test func kindKnowsWhetherAKeyIsRequired() {
         #expect(AIProviderKind.anthropic.requiresAPIKey)
-        #expect(AIProviderKind.openaiCompatible.requiresAPIKey)
+        #expect(AIProviderKind.openai.requiresAPIKey)
+        #expect(AIProviderKind.gemini.requiresAPIKey)
         #expect(!AIProviderKind.ollama.requiresAPIKey)
-        #expect(AIProviderKind(rawValue: "openai_compatible") == .openaiCompatible)
+        #expect(!AIProviderKind.apple.requiresAPIKey)
+        #expect(!AIProviderKind.claudeCode.requiresAPIKey)
+        #expect(AIProviderKind(rawValue: "claude_code") == .claudeCode)
+        #expect(AIProviderKind(configValue: "openai_compatible") == .openai, "legacy config value keeps working")
+        #expect(AIProviderKind(configValue: "gemini") == .gemini)
+        #expect(AIProviderKind(configValue: "bogus") == nil)
     }
 
     @Test func firstProviderBecomesDefaultAndUpsertReplaces() throws {

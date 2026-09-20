@@ -18,6 +18,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-configuration.git", from: "1.2.0", traits: ["JSON", "YAML"]),
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.4.0"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.0"),
+        .package(url: "https://github.com/mattt/AnyLanguageModel.git", from: "0.13.0", traits: ["AsyncHTTPClient"]),
     ],
     targets: [
         .target(name: "DashboardDomain"),
@@ -50,7 +51,11 @@ let package = Package(
         .target(name: "DashboardAI", dependencies: ["DashboardDomain", "DashboardService"]),
         .target(
             name: "DashboardAIProviders",
-            dependencies: ["DashboardAI", .product(name: "Logging", package: "swift-log")]
+            dependencies: [
+                "DashboardAI",
+                .product(name: "AnyLanguageModel", package: "AnyLanguageModel"),
+                .product(name: "Logging", package: "swift-log"),
+            ]
         ),
         .target(
             name: "DashboardMCP",

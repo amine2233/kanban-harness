@@ -1,11 +1,13 @@
 import DashboardAI
 import DashboardDomain
 import Foundation
+import Synchronization
 
 /// Claude Code CLI in headless mode (`claude -p`): uses the machine's Claude
 /// login, so no API key. Tools are disabled and `--json-schema` makes the
-/// CLI return validated structured output. `baseURL` is unused; `model` is
-/// passed through (`sonnet`, `opus`, or a full model id).
+/// CLI return validated structured output. `stream-json` with partial
+/// messages lets us render the draft as it is typed. `baseURL` is unused;
+/// `model` is passed through (`sonnet`, `opus`, or a full model id).
 public struct ClaudeCodeProvider: AIProvider {
     public let config: AIProviderConfig
     let executable: String
@@ -17,16 +19,50 @@ public struct ClaudeCodeProvider: AIProvider {
         self.timeout = timeout
     }
 
-    public func complete(_ request: CompletionRequest) async throws -> CompletionResult {
-        let schema = String(decoding: try JSONEncoder().encode(request.schema), as: UTF8.self)
-        let arguments = [
-            "-p", "--output-format", "json", "--no-session-persistence", "--tools", "", "--strict-mcp-config",
-            "--model", config.model, "--system-prompt", request.system, "--json-schema", schema, request.prompt,
-        ]
-        let output = try await Subprocess.run(executable, arguments: arguments, timeout: timeout)
-        guard let object = try? JSONSerialization.jsonObject(with: output) as? [String: Any] else {
-            throw AIProviderError.badResponse("claude did not return JSON: \(String(decoding: output.prefix(300), as: UTF8.self))")
+    public func stream(_ request: CompletionRequest) -> AsyncThrowingStream<CompletionEvent, any Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let schema = String(decoding: try JSONEncoder().encode(request.schema), as: UTF8.self)
+                    let arguments = [
+                        "-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
+                        "--no-session-persistence", "--tools", "", "--strict-mcp-config",
+                        "--model", config.model, "--system-prompt", request.system, "--json-schema", schema, request.prompt,
+                    ]
+                    var typed = ""
+                    var finished = false
+                    for try await line in Subprocess.lines(executable, arguments: arguments, timeout: timeout) {
+                        try Task.checkCancellation()
+                        guard let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else { continue }
+                        if object["is_error"] != nil {
+                            let (json, usage) = try Self.finalOutput(object)
+                            continuation.yield(.usage(usage))
+                            continuation.yield(.done(json: json, model: config.model))
+                            finished = true
+                        } else if let delta = Self.delta(in: object) {
+                            typed += delta
+                            if let partial = JSONCompleter.complete(typed) { continuation.yield(.snapshot(partial)) }
+                        }
+                    }
+                    guard finished else { throw AIProviderError.badResponse("claude ended without a result") }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    /// Text or tool-input fragments from `--include-partial-messages` events.
+    private static func delta(in object: [String: Any]) -> String? {
+        guard object["type"] as? String == "stream_event",
+              let delta = (object["event"] as? [String: Any])?["delta"] as? [String: Any]
+        else { return nil }
+        return delta["text"] as? String ?? delta["partial_json"] as? String
+    }
+
+    private static func finalOutput(_ object: [String: Any]) throws -> (Data, CompletionUsage) {
         if object["is_error"] as? Bool == true {
             throw AIProviderError.request(object["result"] as? String ?? "claude reported an error")
         }
@@ -40,50 +76,74 @@ public struct ClaudeCodeProvider: AIProvider {
             throw AIProviderError.badResponse("claude returned no structured output")
         }
         let usage = object["usage"] as? [String: Any]
-        return CompletionResult(
-            json: json,
-            usage: CompletionUsage(inputTokens: usage?["input_tokens"] as? Int, outputTokens: usage?["output_tokens"] as? Int, costUSD: object["total_cost_usd"] as? Double),
-            model: config.model
-        )
+        return (json, CompletionUsage(inputTokens: usage?["input_tokens"] as? Int, outputTokens: usage?["output_tokens"] as? Int, costUSD: object["total_cost_usd"] as? Double))
     }
 }
 
-/// Runs a command to completion with a timeout; stderr is discarded from the result but kept for errors.
+/// Runs a command and yields its stdout line by line; the stream fails on a
+/// non-zero exit (with stderr), on a timeout, or when the consumer cancels.
 enum Subprocess {
-    static func run(_ executable: String, arguments: [String], timeout: TimeInterval) async throws -> Data {
+    private final class Handle: @unchecked Sendable {
         let process = Process()
-        if executable.contains("/") {
-            process.executableURL = URL(fileURLWithPath: executable)
-        } else {
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = [executable] + arguments
-        }
-        if executable.contains("/") { process.arguments = arguments }
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
-        process.standardInput = FileHandle.nullDevice
-        do {
-            try process.run()
-        } catch {
-            throw AIProviderError.unavailable("cannot start '\(executable)': \(error.localizedDescription)")
-        }
-        let output = Task.detached { stdout.fileHandleForReading.readDataToEndOfFile() }
-        let errors = Task.detached { stderr.fileHandleForReading.readDataToEndOfFile() }
-        let deadline = Date().addingTimeInterval(timeout)
-        while process.isRunning {
-            if Date() > deadline {
-                process.terminate()
-                throw AIProviderError.unavailable("'\(executable)' timed out after \(Int(timeout))s")
+        let timedOut = Mutex(false)
+    }
+
+    static func lines(_ executable: String, arguments: [String], timeout: TimeInterval) -> AsyncThrowingStream<String, any Error> {
+        AsyncThrowingStream { continuation in
+            let handle = Handle()
+            let process = handle.process
+            if executable.contains("/") {
+                process.executableURL = URL(fileURLWithPath: executable)
+                process.arguments = arguments
+            } else {
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                process.arguments = [executable] + arguments
             }
-            try await Task.sleep(for: .milliseconds(50))
+            let stdout = Pipe()
+            let stderr = Pipe()
+            process.standardOutput = stdout
+            process.standardError = stderr
+            process.standardInput = FileHandle.nullDevice
+            do {
+                try process.run()
+            } catch {
+                continuation.finish(throwing: AIProviderError.unavailable("cannot start '\(executable)': \(error.localizedDescription)"))
+                return
+            }
+            let errors = Task.detached { stderr.fileHandleForReading.readDataToEndOfFile() }
+            let watchdog = Task.detached {
+                try await Task.sleep(for: .seconds(timeout))
+                handle.timedOut.withLock { $0 = true }
+                handle.process.terminate()
+            }
+            Task.detached {
+                let reader = stdout.fileHandleForReading
+                var buffer = Data()
+                while true {
+                    let chunk = reader.availableData
+                    if chunk.isEmpty { break }
+                    buffer.append(chunk)
+                    while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
+                        continuation.yield(String(decoding: buffer[buffer.startIndex ..< newline], as: UTF8.self))
+                        buffer.removeSubrange(buffer.startIndex ... newline)
+                    }
+                }
+                if !buffer.isEmpty { continuation.yield(String(decoding: buffer, as: UTF8.self)) }
+                handle.process.waitUntilExit()
+                watchdog.cancel()
+                if handle.timedOut.withLock({ $0 }) {
+                    continuation.finish(throwing: AIProviderError.unavailable("'\(executable)' timed out after \(Int(timeout))s"))
+                } else if handle.process.terminationStatus != 0 {
+                    let message = String(decoding: await errors.value.prefix(500), as: UTF8.self)
+                    continuation.finish(throwing: AIProviderError.request("'\(executable)' exited with \(handle.process.terminationStatus): \(message)"))
+                } else {
+                    continuation.finish()
+                }
+            }
+            continuation.onTermination = { _ in
+                watchdog.cancel()
+                if handle.process.isRunning { handle.process.terminate() }
+            }
         }
-        let data = await output.value
-        guard process.terminationStatus == 0 else {
-            let message = String(decoding: await errors.value.prefix(500), as: UTF8.self)
-            throw AIProviderError.request("'\(executable)' exited with \(process.terminationStatus): \(message)")
-        }
-        return data
     }
 }

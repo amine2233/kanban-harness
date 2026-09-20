@@ -8,12 +8,12 @@ export interface PageHeaderProps {
 
 export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
-    <header className="flex items-center justify-between mb4">
-      <div>
-        <h1 className="f1 b near-black ma0">{title}</h1>
-        {description && <p className="f4 gray mt1 mb0">{description}</p>}
+    <header className="ds-page-header">
+      <div style={{ minWidth: 0 }}>
+        <h1 className="ds-page-title truncate">{title}</h1>
+        {description && <p className="ds-page-description truncate">{description}</p>}
       </div>
-      {actions && <div className="flex items-center">{actions}</div>}
+      {actions && <div className="flex items-center flex-none">{actions}</div>}
     </header>
   )
 }

@@ -16,7 +16,12 @@ export function TopBar({ title }: { title: string }) {
       >
         <Icon name="menu" size={18} />
       </button>
-      <span className="f3 b">{title}</span>
+      <span className="ds-brand">
+        <span className="ds-brand__mark">
+          <Icon name="bolt" size={14} />
+        </span>
+        {title}
+      </span>
     </header>
   )
 }

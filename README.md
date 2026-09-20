@@ -68,7 +68,8 @@ Set in `mise.toml` (override in a git-ignored `.env.local`):
 4. **Cards** — `+ Add card` opens the card dialog; click a card to edit title, description, priority, status, column, due date, points, move it to another board, or delete it. ← → on a card moves it one column.
 5. **Project page header** — switch the project's storage (JSON ⇄ SQLite, converted in place, old file kept) or **Unregister** it (files on disk are never deleted).
 6. **Settings** — _This browser_: the API server URL this browser talks to (stored in `localStorage`; empty = same origin, with a Test connection button). _Server_: `settings.json` on the server — default storage for new projects and allowed browser origins (CORS) — applied live, no restart. _AI providers_: `config.json`/`config.yaml` on the server, see below.
-7. **Draft with AI** — in the new-card dialog, describe the ticket in a sentence; the title and description fill in as the model types, an activity strip shows provider · model · stage · elapsed · tokens (expandable log), Cancel stops it. Nothing is created until you press Create.
+7. **Draft with AI** — in the new-card dialog, describe the ticket in a sentence; the title and description fill in as the model types. The activity panel shows the steps (Prepare · Wait for model · Streaming · Validate), provider, time to first token, tokens and cost, which fields have arrived, and under _Details_ the per-phase durations, error codes, a _Copy log_ button and the raw model output. Nothing is created until you press Create.
+8. **Cost** — a card created from a draft remembers what it cost (`✨ $0.03` on the board, details in the card dialog). Claude Code reports its real cost; other vendors are priced from the provider's pricing (marked ≈), local models are free. This is the first entry of a card's cost history; backlog→done tracking and project totals come next.
 
 ### AI providers
 
@@ -83,7 +84,7 @@ Providers live in `config.json` (or `config.yaml`) under the dashboard home; the
 | `gemini`      | Google Gemini                                                                           | API key           |
 | `ollama`      | Local Ollama (`http://127.0.0.1:11434` by default)                                      | Ollama running    |
 
-Everything but `claude_code` goes through [AnyLanguageModel](https://github.com/mattt/AnyLanguageModel), so adding a vendor is one line in `AIProviderRegistry.standard`. Keys are write-only (the API only reports `has_api_key`), the file is written `0600`, and `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` keeps a key out of the file entirely. Card text is passed to the model as data, never as instructions.
+Each provider can carry `pricing: {input_per_million, output_per_million}` (USD) so drafts get a cost even when the vendor reports none. Everything but `claude_code` goes through [AnyLanguageModel](https://github.com/mattt/AnyLanguageModel), so adding a vendor is one line in `AIProviderRegistry.standard`. Keys are write-only (the API only reports `has_api_key`), the file is written `0600`, and `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` keeps a key out of the file entirely. Card text is passed to the model as data, never as instructions.
 
 ### CLI
 
@@ -102,7 +103,7 @@ dashboard project remove <name|id>                  # unregister only
 dashboard settings show
 dashboard settings set [--default-storage sqlite] [--cors-origin URL ...] [--clear-cors]
 
-dashboard ai providers list | add <id> --kind K --model M [--base-url URL] [--api-key KEY] | remove <id> | default <id>
+dashboard ai providers list | add <id> --kind K --model M [--base-url URL] [--api-key KEY] [--input-price N --output-price N] | remove <id> | default <id>
 dashboard ai ticket <project> "idea" [--board B] [--provider P] [--stream] [--create [--column C]]   # draft (and create) a card; --stream narrates on stderr
 dashboard mcp                                       # MCP server over stdio (boards & cards as tools)
 dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...]

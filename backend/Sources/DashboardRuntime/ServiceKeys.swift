@@ -46,6 +46,10 @@ public enum SettingsCommandsKey: ServiceKey {
     public typealias Value = any SettingsCommands
 }
 
+public enum BoardCommandsKey: ServiceKey {
+    public typealias Value = any BoardCommands
+}
+
 public enum AIConfigStoreKey: ServiceKey {
     public typealias Value = any AIConfigStore
 }

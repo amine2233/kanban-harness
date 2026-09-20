@@ -35,6 +35,7 @@ struct Runtime {
             runtime.container.register(ProjectCommandsKey.self) { _ in RemoteProjectCommands(client: client) }
             runtime.container.register(SettingsCommandsKey.self) { _ in RemoteSettingsCommands(client: client) }
             runtime.container.register(AIConfigCommandsKey.self) { _ in RemoteAIConfigCommands(client: client) }
+            runtime.container.register(BoardCommandsKey.self) { _ in RemoteBoardCommands(client: client) }
         case .local:
             try await DashboardRuntime.register(on: runtime.container, config: RuntimeConfig(home: global.resolvedHome))
         }

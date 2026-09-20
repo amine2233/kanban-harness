@@ -29,5 +29,5 @@ public func configure(_ app: Vapor.Application, config: ServerConfig) async thro
         app.middleware.use(FileMiddleware(publicDirectory: staticDir))
     }
 
-    try routes(app, config: config)
+    try await routes(app, config: config)
 }

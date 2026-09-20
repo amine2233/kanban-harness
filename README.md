@@ -86,6 +86,7 @@ dashboard project remove <name|id>                  # unregister only
 dashboard settings show
 dashboard settings set [--default-storage sqlite] [--cors-origin URL ...] [--clear-cors]
 
+dashboard mcp                                       # MCP server over stdio (boards & cards as tools)
 dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...]
 dashboard --home <dir> …                            # registry/settings location (or MVP_DASHBOARD_HOME), local mode only
 dashboard --server http://host:5175 … | --remote | --local
@@ -111,6 +112,22 @@ Base path `/api`; JSON in and out; errors are `{"code": "NOT_FOUND" | "ALREADY_E
 | `PATCH` | `…/boards/{b}/cards/{card}` · `DELETE`                 | Edit; `column_id` moves, `board_id` moves across boards |
 
 Shapes follow kanban-api's wire format (snake_case, explicit nulls, paginated lists as `{items, total, page, page_size, total_pages}`).
+
+### MCP (AI agents on your boards)
+
+The same boards and cards are exposed as [MCP](https://modelcontextprotocol.io) tools — `list_projects`, `list_boards`, `create_board`, `list_columns`, `list_cards`, `create_card`, `update_card`, `move_card`, `delete_card` — built on the official [swift-sdk](https://github.com/modelcontextprotocol/swift-sdk). Two transports, same tools:
+
+- **stdio** — `dashboard mcp`. When a dashboard server is running the tools go through it (single writer, browsers update live); otherwise they work on the files.
+- **HTTP** — `POST http://127.0.0.1:5175/mcp` on the running server (streamable HTTP, localhost origins only).
+
+Claude Code, for example:
+
+```sh
+claude mcp add dashboard -- dashboard mcp                       # stdio
+claude mcp add --transport http dashboard http://127.0.0.1:5175/mcp
+```
+
+then "in project Demo, move task-12 to In progress" just works, with your Claude subscription — no API key involved.
 
 ## Tasks
 

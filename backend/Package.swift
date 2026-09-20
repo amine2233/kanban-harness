@@ -17,6 +17,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.6.0"),
         .package(url: "https://github.com/apple/swift-configuration.git", from: "1.2.0", traits: ["JSON", "YAML"]),
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.4.0"),
+        .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.0"),
     ],
     targets: [
         .target(name: "DashboardDomain"),
@@ -47,6 +48,15 @@ let package = Package(
         ),
         .target(name: "DashboardAPI", dependencies: ["DashboardDomain"]),
         .target(
+            name: "DashboardMCP",
+            dependencies: [
+                "DashboardDomain",
+                "DashboardService",
+                .product(name: "MCP", package: "swift-sdk"),
+                .product(name: "Logging", package: "swift-log"),
+            ]
+        ),
+        .target(
             name: "DashboardClient",
             dependencies: ["DashboardAPI", "DashboardPersistence", "DashboardService"]
         ),
@@ -65,6 +75,7 @@ let package = Package(
             dependencies: [
                 "DashboardRuntime",
                 "DashboardAPI",
+                "DashboardMCP",
                 .product(name: "Vapor", package: "vapor"),
                 .product(name: "Fluent", package: "fluent"),
                 .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
@@ -76,6 +87,7 @@ let package = Package(
             dependencies: [
                 "DashboardServer",
                 "DashboardClient",
+                "DashboardMCP",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Logging", package: "swift-log"),
             ]
@@ -97,6 +109,7 @@ let package = Package(
             dependencies: ["DashboardService", "DashboardPersistenceJSON", "DashboardPersistenceFluent"]
         ),
         .testTarget(name: "DashboardRuntimeTests", dependencies: ["DashboardRuntime"]),
+        .testTarget(name: "DashboardMCPTests", dependencies: ["DashboardMCP", "DashboardPersistence"]),
         .testTarget(
             name: "DashboardClientTests",
             dependencies: [

@@ -27,13 +27,14 @@ struct Health: Content {
     let status = "ok"
 }
 
-func routes(_ app: Vapor.Application, config: ServerConfig) throws {
+func routes(_ app: Vapor.Application, config: ServerConfig) async throws {
     let api = app.grouped("api")
     api.get("health") { _ in Health() }
     try api.register(collection: ProjectsController())
     try api.register(collection: SettingsController())
     try api.register(collection: AIConfigController())
     try api.register(collection: EventsController())
+    try app.register(collection: try await MCPHost.start(app))
     try api.grouped("projects", ":project", "kanban", "v1").register(collection: KanbanController())
 
     if let staticDir = config.staticDir {

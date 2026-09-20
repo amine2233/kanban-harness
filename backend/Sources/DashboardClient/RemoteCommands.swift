@@ -119,3 +119,99 @@ public struct RemoteAIConfigCommands: AIConfigCommands {
 
     public static let redactedKey = "••••••••"
 }
+
+/// `BoardCommands` over the server's `/kanban/v1` API. Domain values are
+/// rebuilt from the wire DTOs (fields the API does not expose keep defaults).
+public struct RemoteBoardCommands: BoardCommands {
+    private let client: DashboardClient
+    private let projects: RemoteProjectCommands
+
+    public init(client: DashboardClient) {
+        self.client = client
+        projects = RemoteProjectCommands(client: client)
+    }
+
+    private func base(_ project: ProjectRef) async throws(ServiceError) -> String {
+        "api/projects/\(try await projects.get(project).id.uuidString)/kanban/v1"
+    }
+
+    public func boards(_ project: ProjectRef) async throws(ServiceError) -> [Board] {
+        let page = try await client.send("GET", "\(try await base(project))/boards?page_size=500", body: Empty?.none, as: Page<BoardResponse>.self)
+        return page.items.map(Self.board)
+    }
+
+    public func createBoard(_ project: ProjectRef, name: String, withDefaultColumns: Bool) async throws(ServiceError) -> Board {
+        let body = CreateBoardRequest(name: name, withDefaultColumns: withDefaultColumns)
+        return Self.board(try await client.send("POST", "\(try await base(project))/boards", body: body, as: BoardResponse.self))
+    }
+
+    public func columns(_ project: ProjectRef, boardId: UUID) async throws(ServiceError) -> [Column] {
+        let page = try await client.send("GET", "\(try await base(project))/boards/\(boardId.uuidString)/columns?page_size=500", body: Empty?.none, as: Page<ColumnResponse>.self)
+        return page.items.map(Self.column)
+    }
+
+    public func cards(_ project: ProjectRef, boardId: UUID) async throws(ServiceError) -> [Card] {
+        let page = try await client.send("GET", "\(try await base(project))/boards/\(boardId.uuidString)/cards?page_size=500", body: Empty?.none, as: Page<CardResponse>.self)
+        return page.items.compactMap(Self.card)
+    }
+
+    public func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority) async throws(ServiceError) -> Card {
+        let body = CreateCardRequest(title: title, description: description, priority: PriorityDTO(priority))
+        let response = try await client.send("POST", "\(try await base(project))/columns/\(columnId.uuidString)/cards", body: body, as: CardResponse.self)
+        guard let card = Self.card(response) else { throw .remote(code: "BAD_RESPONSE", message: "unknown card enum values") }
+        return card
+    }
+
+    public func updateCard(_ project: ProjectRef, boardId: UUID, cardId: UUID, changes: CardChanges) async throws(ServiceError) -> Card {
+        let body = UpdateCardRequest(
+            title: changes.title,
+            priority: changes.priority.map(PriorityDTO.init),
+            status: changes.status.map(StatusDTO.init),
+            columnId: changes.columnId,
+            description: Self.patch(changes.description),
+            dueDate: Self.patch(changes.dueDate),
+            points: Self.patch(changes.points)
+        )
+        let response = try await client.send("PATCH", "\(try await base(project))/boards/\(boardId.uuidString)/cards/\(cardId.uuidString)", body: body, as: CardResponse.self)
+        guard let card = Self.card(response) else { throw .remote(code: "BAD_RESPONSE", message: "unknown card enum values") }
+        return card
+    }
+
+    public func deleteCard(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError) {
+        try await client.send("DELETE", "\(try await base(project))/boards/\(boardId.uuidString)/cards/\(cardId.uuidString)", body: Empty?.none)
+    }
+
+    private static func patch<T: Codable & Sendable & Equatable>(_ value: T??) -> Patch<T> {
+        switch value {
+        case .none: .keep
+        case .some(.none): .clear
+        case let .some(.some(v)): .set(v)
+        }
+    }
+
+    private static func board(_ r: BoardResponse) -> Board {
+        var board = Board(name: r.name, position: r.position, id: r.id, now: r.createdAt)
+        board.description = r.description
+        board.cardPrefix = r.cardPrefix
+        board.sprintPrefix = r.sprintPrefix
+        board.updatedAt = r.updatedAt
+        return board
+    }
+
+    private static func column(_ r: ColumnResponse) -> Column {
+        var column = Column(boardId: r.boardId, name: r.name, position: r.position, wipLimit: r.wipLimit, defaultStatus: r.defaultStatus.flatMap(\.domain), id: r.id, now: r.createdAt)
+        column.updatedAt = r.updatedAt
+        return column
+    }
+
+    private static func card(_ r: CardResponse) -> Card? {
+        guard let priority = r.priority.domain, let status = r.status.domain else { return nil }
+        var card = Card(boardId: r.boardId, columnId: r.columnId, prefix: r.prefix, cardNumber: r.cardNumber, title: r.title, description: r.description, priority: priority, status: status, position: r.position, id: r.id, now: r.createdAt)
+        card.dueDate = r.dueDate
+        card.points = r.points
+        card.sprintId = r.sprintId
+        card.updatedAt = r.updatedAt
+        card.completedAt = r.completedAt
+        return card
+    }
+}

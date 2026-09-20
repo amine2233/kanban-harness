@@ -26,10 +26,16 @@ struct CLI {
             .deletingLastPathComponent()
     }
 
+    /// Tests run in local mode unless they exercise server routing themselves,
+    /// so a dashboard server running on the machine cannot interfere.
+    var local = true
+
     init() throws {
         home = NSTemporaryDirectory() + "mvp-dashboard-cli-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
     }
+
+    private var baseArguments: [String] { ["--home", home] + (local ? ["--local"] : []) }
 
     func tempFolder(_ name: String = "project") -> String {
         home + "/folders/" + name
@@ -39,7 +45,7 @@ struct CLI {
     func run(_ arguments: String...) throws -> (status: Int32, stdout: String, stderr: String) {
         let process = Process()
         process.executableURL = Self.binary
-        process.arguments = ["--home", home] + arguments
+        process.arguments = baseArguments + arguments
         let out = Pipe()
         let err = Pipe()
         process.standardOutput = out
@@ -60,7 +66,7 @@ struct CLI {
     private func run(_ first: String, _ rest: [String]) throws -> (status: Int32, stdout: String, stderr: String) {
         let process = Process()
         process.executableURL = Self.binary
-        process.arguments = ["--home", home, first] + rest
+        process.arguments = baseArguments + [first] + rest
         let out = Pipe()
         let err = Pipe()
         process.standardOutput = out
@@ -261,7 +267,8 @@ struct CLI {
         defer { server.terminate() }
         try await waitForHealth(port: port)
 
-        let cli = try CLI()
+        var cli = try CLI()
+        cli.local = false
         let created = try #require(try cli.json("--server", "http://127.0.0.1:\(port)", "project", "add", cli.tempFolder("via-server"), "--name", "Via server") as? [String: Any])
         #expect(created["name"] as? String == "Via server")
         let (data, _) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/api/projects")!)
@@ -295,6 +302,38 @@ struct CLI {
         #expect(((try cli.json("ai", "providers", "remove", "claude") as? [String: Any])?["providers"] as? [Any])?.count == 1)
         #expect(try cli.run("ai", "providers", "add", "Bad Id", "--kind", "ollama", "--model", "m").status == 1)
         #expect(try cli.run("ai", "providers", "add", "x", "--kind", "magic", "--model", "m").status != 0)
+    }
+
+    @Test func mcpOverStdioAnswersInitializeAndToolsList() throws {
+        let cli = try CLI()
+        _ = try cli.json("project", "add", cli.tempFolder("mcp"), "--name", "MCP demo")
+        let process = Process()
+        process.executableURL = CLI.binary
+        process.arguments = ["--home", cli.home, "--local", "mcp"]
+        let input = Pipe(), output = Pipe()
+        process.standardInput = input
+        process.standardOutput = output
+        process.standardError = Pipe()
+        try process.run()
+        let messages = [
+            #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}"#,
+            #"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
+            #"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_boards","arguments":{"project":"MCP demo"}}}"#,
+        ]
+        input.fileHandleForWriting.write(Data((messages.joined(separator: "\n") + "\n").utf8))
+        var collected = Data()
+        let deadline = Date().addingTimeInterval(10)
+        while Date() < deadline {
+            collected.append(output.fileHandleForReading.availableData)
+            if String(decoding: collected, as: UTF8.self).components(separatedBy: "\n").filter({ $0.contains("\"id\"") }).count >= 2 { break }
+        }
+        process.terminate()
+        let lines = String(decoding: collected, as: UTF8.self).split(separator: "\n").compactMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any] }
+        let initialize = try #require(lines.first { $0["id"] as? Int == 1 })
+        #expect(((initialize["result"] as? [String: Any])?["serverInfo"] as? [String: Any])?["name"] as? String == "mvp-dashboard")
+        let call = try #require(lines.first { $0["id"] as? Int == 2 })
+        let structured = try #require((call["result"] as? [String: Any])?["structuredContent"] as? [String: Any])
+        #expect((structured["items"] as? [[String: Any]])?.first?["name"] as? String == "MCP demo")
     }
 
     @Test func helpListsSubcommands() throws {

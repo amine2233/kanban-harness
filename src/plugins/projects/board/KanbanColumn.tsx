@@ -1,34 +1,30 @@
 import { useState, type DragEvent } from 'react'
 import { cx, Icon } from '@mvp/design-system'
-import { CardDialog } from './CardDialog'
+import type { BoardIndex } from '@mvp/kanban-model'
+import { CardDialog } from '../card/CardDialog'
 import { CARD_MIME, draggedCard, serialiseCardDrag } from './dragAndDrop'
 import { KanbanCard } from './KanbanCard'
-import { useMoveCardMutation, type Board, type Card, type Column } from './kanbanApi'
+import { useMoveCardMutation, type Board, type Card, type Column } from '../api/kanbanApi'
 
 interface Props {
   scope: { projectId: string; boardId: string }
   column: Column
   columns: Column[]
   boards: Board[]
-  /** Cards whose column this is (top-level ones render here; sub-tasks render under their parent). */
+  /** Cards whose column this is. */
   cards: Card[]
-  /** Every card of the board, to nest sub-tasks under parents in this column. */
-  allCards: Card[]
+  /** Derived board data: hierarchy, names, progress, colours. */
+  index: BoardIndex
   header?: React.ReactNode
 }
 
 type Dialog = { kind: 'create' } | { kind: 'edit'; card: Card }
 
-export function KanbanColumn({ scope, column, columns, boards, cards, allCards, header }: Props) {
+export function KanbanColumn({ scope, column, columns, boards, cards, index, header }: Props) {
   const [moveCard] = useMoveCardMutation()
   const [dialog, setDialog] = useState<Dialog>()
   const [dragOver, setDragOver] = useState(false)
   const overLimit = column.wip_limit !== null && cards.length > column.wip_limit
-  const childrenOf = (card: Card) =>
-    allCards.filter((c) => c.parent_id === card.id).sort((a, b) => a.card_number - b.card_number)
-  const parentOf = (card: Card) =>
-    card.parent_id ? allCards.find((c) => c.id === card.parent_id) : undefined
-  const columnName = (id: string) => columns.find((c) => c.id === id)?.name ?? '?'
 
   const onDragStart = (card: Card) => (event: DragEvent<HTMLLIElement>) => {
     event.dataTransfer.setData(CARD_MIME, serialiseCardDrag(card.id, card.column_id))
@@ -84,14 +80,14 @@ export function KanbanColumn({ scope, column, columns, boards, cards, allCards, 
       </header>
       <ul className="ds-column__cards list pl0 ma0">
         {cards.map((card) => {
-          const children = childrenOf(card)
-          const done = children.filter((c) => c.status === 'done').length
+          const children = index.childrenOf(card)
+          const { done } = index.progress(card)
           return (
             <KanbanCard
               key={card.id}
               card={card}
               columns={columns}
-              parent={parentOf(card)}
+              index={index}
               onOpen={open}
               onMove={move}
               onDragStart={onDragStart}
@@ -117,7 +113,7 @@ export function KanbanColumn({ scope, column, columns, boards, cards, allCards, 
                           'ds-subtree__row',
                           child.status === 'done' && 'ds-subtree__row--done',
                         )}
-                        aria-label={`${child.title} (sub-task, ${columnName(child.column_id)})`}
+                        aria-label={`${child.title} (sub-task, ${index.columnName(child.column_id)})`}
                       >
                         <span
                           className={`ds-priority ds-priority--${child.priority}`}
@@ -137,7 +133,7 @@ export function KanbanColumn({ scope, column, columns, boards, cards, allCards, 
                           {child.title}
                         </button>
                         <span className={cx('ds-chip', child.status === 'done' && 'ds-chip--done')}>
-                          {columnName(child.column_id)}
+                          {index.columnName(child.column_id)}
                         </span>
                       </li>
                     ))}
@@ -164,7 +160,7 @@ export function KanbanColumn({ scope, column, columns, boards, cards, allCards, 
           scope={scope}
           columns={columns}
           boards={boards}
-          cards={allCards}
+          index={index}
           card={dialog.kind === 'edit' ? dialog.card : undefined}
           columnId={column.id}
           onOpenCard={open}

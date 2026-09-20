@@ -3,7 +3,7 @@ import { NavLink } from 'react-router'
 import { errorMessage } from '@/app/api'
 import { Icon, Spinner } from '@mvp/design-system'
 import { AddProjectForm } from './AddProjectForm'
-import { useListProjectsQuery } from './projectsApi'
+import { useListProjectsQuery } from './api/projectsApi'
 
 export function ProjectsSidebar() {
   const { data: projects = [], isLoading, error } = useListProjectsQuery()

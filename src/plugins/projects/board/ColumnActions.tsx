@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ConfirmModal, Menu } from '@mvp/design-system'
 import { ColumnDialog } from './ColumnDialog'
-import { useDeleteColumnMutation, useUpdateColumnMutation, type Column } from './kanbanApi'
+import { useDeleteColumnMutation, useUpdateColumnMutation, type Column } from '../api/kanbanApi'
 
 interface Props {
   scope: { projectId: string; boardId: string }

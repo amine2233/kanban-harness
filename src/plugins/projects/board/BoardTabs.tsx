@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
-import { Button, ConfirmModal, Input, Menu, Modal } from '@mvp/design-system'
+import { Button, ConfirmModal, Input, Menu, Modal, Row } from '@mvp/design-system'
 import { ColumnDialog } from './ColumnDialog'
 import {
   useCloneBoardMutation,
@@ -8,7 +8,7 @@ import {
   useDeleteBoardMutation,
   useUpdateBoardMutation,
   type Board,
-} from './kanbanApi'
+} from '../api/kanbanApi'
 
 interface Props {
   projectId: string
@@ -58,7 +58,7 @@ export function BoardTabs({ projectId, boards, selectedId, onSelect }: Props) {
 
   return (
     <>
-      <div className="ds-tabs-row flex items-center mb3" style={{ gap: 8 }}>
+      <Row className="ds-tabs-row mb3">
         <div className="ds-tabs flex-auto" role="tablist" aria-label="Boards">
           {boards.map((board) => (
             <button
@@ -135,7 +135,7 @@ export function BoardTabs({ projectId, boards, selectedId, onSelect }: Props) {
             />
           </span>
         )}
-      </div>
+      </Row>
       {dialog?.kind === 'create' && (
         <BoardForm projectId={projectId} onClose={close} onCreated={onSelect} />
       )}
@@ -222,14 +222,14 @@ function BoardForm({
           className="mb2"
         />
         {error && <p className="f6 red mt0 mb2">{errorMessage(error)}</p>}
-        <div className="flex justify-end" style={{ gap: 8 }}>
+        <Row className="justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={create.isLoading || update.isLoading}>
             {board ? 'Save' : 'Create'}
           </Button>
-        </div>
+        </Row>
       </form>
     </Modal>
   )

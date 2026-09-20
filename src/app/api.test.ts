@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import { setServerUrl } from '@/core/settings/settingsSlice'
-import { projectsApi } from '@/plugins/projects/projectsApi'
+import { projectsApi } from '@/plugins/projects/api/projectsApi'
 import { createStore } from './store'
 
 afterEach(() => {

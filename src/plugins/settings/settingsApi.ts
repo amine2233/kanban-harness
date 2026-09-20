@@ -1,5 +1,5 @@
 import { baseApi } from '@/app/api'
-import type { StorageKind } from '@/plugins/projects/projectsApi'
+import type { StorageKind } from '@/plugins/projects/api/projectsApi'
 
 /** Server-side settings (settings.json on the server), applied live. */
 export interface ServerSettings {

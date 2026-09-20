@@ -9,6 +9,7 @@ import {
   Input,
   Menu,
   Modal,
+  Row,
   Select,
   Spinner,
 } from '@mvp/design-system'
@@ -72,8 +73,7 @@ export function AIProvidersCard() {
           {data.providers.map((provider) => (
             <li
               key={provider.id}
-              className="flex items-center pv2 bb b--light-silver"
-              style={{ gap: 12 }}
+              className="ds-row ds-gap-md ds-align-center pv2 bb b--light-silver"
               aria-label={provider.name}
             >
               <span className="flex-auto" style={{ minWidth: 0 }}>
@@ -219,7 +219,7 @@ function ProviderDialog({
           void submit(event)
         }}
       >
-        <div className="flex mb2" style={{ gap: 8 }}>
+        <Row className="mb2">
           <Input
             name="provider-id"
             label="Id"
@@ -247,11 +247,11 @@ function ProviderDialog({
               </option>
             ))}
           </Select>
-        </div>
+        </Row>
         {!idValid && id !== '' && (
           <p className="f6 red mt0 mb2">Use a-z, 0-9 and _, starting with a letter.</p>
         )}
-        <div className="flex mb2" style={{ gap: 8 }}>
+        <Row className="mb2">
           <Input
             name="provider-name"
             label="Name"
@@ -273,7 +273,7 @@ function ProviderDialog({
               setModel(e.target.value)
             }}
           />
-        </div>
+        </Row>
         {defaultBaseUrl && (
           <Input
             name="provider-base-url"
@@ -316,7 +316,7 @@ function ProviderDialog({
             )}
           </>
         )}
-        <div className="flex mb2" style={{ gap: 8 }}>
+        <Row className="mb2">
           <Input
             name="provider-max-tokens"
             label="Max tokens (optional)"
@@ -358,20 +358,20 @@ function ProviderDialog({
               setOutputPrice(e.target.value)
             }}
           />
-        </div>
+        </Row>
         <p className="f6 gray mt0 mb2">
           Pricing is used to estimate a draft&apos;s cost when the vendor does not report one; local
           models are free without it.
         </p>
         {result.error && <p className="f6 red mt0 mb2">{errorMessage(result.error)}</p>}
-        <div className="flex justify-end" style={{ gap: 8 }}>
+        <Row className="justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={!idValid || result.isLoading}>
             {provider ? 'Save' : 'Add'}
           </Button>
-        </div>
+        </Row>
       </form>
     </Modal>
   )

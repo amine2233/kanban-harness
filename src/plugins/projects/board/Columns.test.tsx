@@ -5,7 +5,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import { createStore } from '@/app/store'
 import { stubApi } from '@/test/fakeApi'
 import { KanbanBoard } from './KanbanBoard'
-import type { CardStatus } from './kanbanApi'
+import type { CardStatus } from '../api/kanbanApi'
 
 const projectId = 'p1'
 const base = `/api/projects/${projectId}/kanban/v1`

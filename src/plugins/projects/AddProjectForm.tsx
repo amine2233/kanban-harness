@@ -1,10 +1,10 @@
 import { useState, type SyntheticEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { errorMessage } from '@/app/api'
-import { Button, Input, Select } from '@mvp/design-system'
+import { Button, Input, Row, Select } from '@mvp/design-system'
 import { folderName } from './paths'
 import { useGetServerSettingsQuery } from '@/plugins/settings/settingsApi'
-import { useCreateProjectMutation, type StorageKind } from './projectsApi'
+import { useCreateProjectMutation, type StorageKind } from './api/projectsApi'
 
 export function AddProjectForm({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate()
@@ -72,14 +72,14 @@ export function AddProjectForm({ onDone }: { onDone: () => void }) {
         <option value="sqlite">SQLite (kanban.sqlite)</option>
       </Select>
       {error && <p className="f6 red mt0 mb2">{errorMessage(error)}</p>}
-      <div className="flex" style={{ gap: 8 }}>
+      <Row>
         <Button type="submit" size="sm" disabled={isLoading}>
           Add
         </Button>
         <Button type="button" size="sm" variant="secondary" onClick={onDone}>
           Cancel
         </Button>
-      </div>
+      </Row>
     </form>
   )
 }

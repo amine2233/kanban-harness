@@ -1245,7 +1245,15 @@ body {
 :root[data-theme='dark'] .hk-button--tertiary,
 :root[data-theme='dark'] .hk-button-sm--secondary,
 :root[data-theme='dark'] .hk-button-sm--tertiary {
-  background: var(--ds-surface);
+  background-color: var(--ds-surface);
+}
+
+/* Keep purple3's chevron, brightened for the dark surface. */
+:root[data-theme='dark'] .hk-select {
+  filter: none;
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%239aa5b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 10px center;
+  background-size: 12px 12px;
 }
 
 :root[data-theme='dark'] .hk-input,
@@ -1328,4 +1336,45 @@ body {
 :root[data-theme='dark'] input[type='checkbox'],
 :root[data-theme='dark'] input[type='date'] {
   color-scheme: dark;
+}
+
+/* --- Layout ---------------------------------------------------------------- */
+
+.ds-row {
+  display: flex;
+  min-width: 0;
+}
+
+.ds-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ds-gap-xs {
+  gap: 4px;
+}
+
+.ds-gap-sm {
+  gap: 8px;
+}
+
+.ds-gap-md {
+  gap: 12px;
+}
+
+.ds-align-start {
+  align-items: flex-start;
+}
+
+.ds-align-center {
+  align-items: center;
+}
+
+.ds-align-end {
+  align-items: flex-end;
+}
+
+.ds-align-stretch {
+  align-items: stretch;
 }

@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice, type PayloadAction, type WithSlice } fro
 import { rootReducer, type RootState } from '@/app/reducer'
 import { apiBaseUrl, selectServerUrl } from '@/core/settings/settingsSlice'
 import type { DraftTicketResponse, PartialTicketDraft, Usage } from '@mvp/kanban-model'
-import { readEventStream } from './sse'
+import { readEventStream } from '../api/sse'
 
 export type Step = 'resolve' | 'context' | 'wait' | 'stream' | 'validate' | 'done'
 export const STEPS: Step[] = ['resolve', 'context', 'wait', 'stream', 'validate', 'done']

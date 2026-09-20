@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createStore } from '@/app/store'
 import { setServerUrl } from '@/core/settings/settingsSlice'
-import { projectsApi } from '@/plugins/projects/projectsApi'
+import { projectsApi } from '@/plugins/projects/api/projectsApi'
 import { stubApi } from '@/test/fakeApi'
 import { selectLiveEventCount, selectLiveStatus, startLive, stopLive } from './liveSlice'
 

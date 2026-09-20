@@ -1,13 +1,17 @@
 import type { DragEvent, ReactNode } from 'react'
 import { Button, cx, Icon } from '@mvp/design-system'
-import { cardColor, checklistProgress, formatCost, neighbourColumns } from '@mvp/kanban-model'
-import type { Card, Column } from './kanbanApi'
+import {
+  formatCost,
+  neighbourColumns,
+  type BoardIndex,
+  type Card,
+  type Column,
+} from '@mvp/kanban-model'
 
 interface Props {
   card: Card
   columns: Column[]
-  /** The card's parent, shown as a breadcrumb so a sub-task is readable on its own column. */
-  parent?: Card | undefined
+  index: BoardIndex
   onOpen: (card: Card) => void
   onMove: (card: Card, columnId: string) => void
   onDragStart: (card: Card) => (event: DragEvent<HTMLLIElement>) => void
@@ -16,19 +20,12 @@ interface Props {
 }
 
 /** A card on the board: title, the facts that matter at a glance, never the whole description. */
-export function KanbanCard({
-  card,
-  columns,
-  parent,
-  onOpen,
-  onMove,
-  onDragStart,
-  children,
-}: Props) {
+export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, children }: Props) {
   const { previous, next } = neighbourColumns(columns, card.column_id)
-  const checklist = checklistProgress(card.description)
+  const parent = index.parentOf(card)
+  const checklist = index.checklist(card)
   const due = card.due_date ? dueLabel(card.due_date, card.status === 'done') : null
-  const color = cardColor(card, parent)
+  const color = index.color(card)
 
   return (
     <li

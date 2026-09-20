@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { errorMessage } from '@/app/api'
 import { Banner, Spinner } from '@mvp/design-system'
-import { groupCardsByColumn } from '@mvp/kanban-model'
+import { buildBoardIndex, groupCardsByColumn } from '@mvp/kanban-model'
 import { BoardTabs } from './BoardTabs'
 import { ColumnActions } from './ColumnActions'
 import { KanbanColumn } from './KanbanColumn'
-import { useListBoardsQuery, useListCardsQuery, useListColumnsQuery } from './kanbanApi'
+import { useListBoardsQuery, useListCardsQuery, useListColumnsQuery } from '../api/kanbanApi'
 
 export function KanbanBoard({ projectId }: { projectId: string }) {
   const boards = useListBoardsQuery(projectId)
@@ -48,6 +48,9 @@ function BoardColumns({ projectId, boardId }: { projectId: string; boardId: stri
   const boards = useListBoardsQuery(projectId)
   const columns = useListColumnsQuery(scope)
   const cards = useListCardsQuery(scope)
+  const columnList = useMemo(() => columns.data ?? [], [columns.data])
+  const allCards = useMemo(() => cards.data ?? [], [cards.data])
+  const index = useMemo(() => buildBoardIndex(allCards, columnList), [allCards, columnList])
 
   if (columns.isLoading || cards.isLoading) return <Spinner />
   const error = columns.error ?? cards.error
@@ -58,8 +61,6 @@ function BoardColumns({ projectId, boardId }: { projectId: string; boardId: stri
       </Banner>
     )
   }
-  const columnList = columns.data ?? []
-  const allCards = cards.data ?? []
   const grouped = groupCardsByColumn(columnList, allCards)
 
   return (
@@ -72,7 +73,7 @@ function BoardColumns({ projectId, boardId }: { projectId: string; boardId: stri
           columns={columnList}
           boards={boards.data ?? []}
           cards={grouped.get(column.id) ?? []}
-          allCards={allCards}
+          index={index}
           header={<ColumnActions scope={scope} column={column} columns={columnList} />}
         />
       ))}

@@ -1,12 +1,12 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
-import { Button, Input, Modal, Select } from '@mvp/design-system'
+import { Button, Input, Modal, Row, Select } from '@mvp/design-system'
 import {
   useCreateColumnMutation,
   useUpdateColumnMutation,
   type CardStatus,
   type Column,
-} from './kanbanApi'
+} from '../api/kanbanApi'
 
 const STATUSES: CardStatus[] = ['todo', 'in_progress', 'blocked', 'done']
 
@@ -59,7 +59,7 @@ export function ColumnDialog({ scope, column, onClose }: Props) {
           }}
           className="mb2"
         />
-        <div className="flex mb2" style={{ gap: 8 }}>
+        <Row className="mb2">
           <Input
             name="column-wip"
             label="WIP limit"
@@ -87,16 +87,16 @@ export function ColumnDialog({ scope, column, onClose }: Props) {
               </option>
             ))}
           </Select>
-        </div>
+        </Row>
         {error && <p className="f6 red mt0 mb2">{errorMessage(error)}</p>}
-        <div className="flex justify-end" style={{ gap: 8 }}>
+        <Row className="justify-end">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={create.isLoading || update.isLoading}>
             {column ? 'Save' : 'Create'}
           </Button>
-        </div>
+        </Row>
       </form>
     </Modal>
   )

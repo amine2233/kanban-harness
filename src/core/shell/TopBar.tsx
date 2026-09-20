@@ -1,6 +1,6 @@
 import { useAppDispatch } from '@/app/hooks'
 import { ThemePicker } from '@/core/settings/ThemePicker'
-import { Icon } from '@mvp/design-system'
+import { Icon, Row } from '@mvp/design-system'
 import { ServerStatus } from './ServerStatus'
 import { toggleSidebar } from './shellSlice'
 
@@ -24,10 +24,10 @@ export function TopBar({ title }: { title: string }) {
         </span>
         {title}
       </span>
-      <span className="ml-auto flex items-center" style={{ gap: 12 }}>
+      <Row as="span" gap="md" className="ml-auto">
         <ThemePicker compact />
         <ServerStatus />
-      </span>
+      </Row>
     </header>
   )
 }

@@ -9,7 +9,7 @@ import {
   setServerUrl,
 } from '@/core/settings/settingsSlice'
 import { ThemePicker } from '@/core/settings/ThemePicker'
-import { Banner, Button, Card, Input, PageHeader, type Tone } from '@mvp/design-system'
+import { Banner, Button, Card, Input, PageHeader, Row, type Tone } from '@mvp/design-system'
 import { AIProvidersCard } from './AIProvidersCard'
 import { ServerSettingsCard } from './ServerSettingsCard'
 
@@ -84,7 +84,7 @@ export function SettingsPage() {
           {invalid && (
             <p className="f6 red mt0 mb2">Enter an absolute http(s) URL, or leave it empty.</p>
           )}
-          <div className="flex" style={{ gap: 8 }}>
+          <Row>
             <Button type="submit" disabled={invalid || normalised === serverUrl}>
               Save
             </Button>
@@ -108,7 +108,7 @@ export function SettingsPage() {
             >
               Reset to default
             </Button>
-          </div>
+          </Row>
         </form>
         {check && (
           <Banner tone={check.tone} title={check.title} className="mt3">

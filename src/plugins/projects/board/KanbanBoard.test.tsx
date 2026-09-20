@@ -320,7 +320,7 @@ describe('KanbanBoard', () => {
       'aria-selected',
       'true',
     )
-    expect(within(dialog).getByText('Acceptance criteria').tagName).toBe('STRONG')
+    expect((await within(dialog).findByText('Acceptance criteria')).tagName).toBe('STRONG')
     await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Email sent' }))
     expect(api.calls.find((c) => c.key === `PATCH ${base}/boards/b1/cards/c1`)?.body).toEqual({
       description: 'Why\n\n**Acceptance criteria**\n- [x] Email sent\n- [x] Link expires',

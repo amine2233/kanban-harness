@@ -346,22 +346,28 @@ struct CLI {
         _ = try cli.json("project", "add", cli.tempFolder("ai"), "--name", "AI demo")
         _ = try cli.json("ai", "providers", "add", "cc", "--kind", "claude_code", "--model", "sonnet")
 
-        let process = { (args: [String]) throws -> [String: Any] in
+        let run = { (args: [String]) throws -> ([String: Any], String) in
             let p = Process()
             p.executableURL = CLI.binary
             p.arguments = ["--home", cli.home, "--local"] + args
             p.environment = ProcessInfo.processInfo.environment.merging(["MVP_DASHBOARD_CLAUDE_BIN": stub]) { $1 }
             let out = Pipe()
+            let err = Pipe()
             p.standardOutput = out
-            p.standardError = Pipe()
+            p.standardError = err
             try p.run()
             let data = out.fileHandleForReading.readDataToEndOfFile()
+            let stderr = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
             p.waitUntilExit()
-            return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+            return (try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:], stderr)
         }
+        let process = { (args: [String]) throws -> [String: Any] in try run(args).0 }
         let drafted = try process(["ai", "ticket", "AI demo", "password reset"])
         #expect((drafted["draft"] as? [String: Any])?["title"] as? String == "Drafted by CLI")
         #expect(drafted["provider"] as? String == "cc")
+        let (streamed, narration) = try run(["ai", "ticket", "AI demo", "password reset", "--stream"])
+        #expect((streamed["draft"] as? [String: Any])?["title"] as? String == "Drafted by CLI", "stdout stays JSON")
+        #expect(narration.contains("resolving provider") && narration.contains("] done"))
         let created = try process(["ai", "ticket", "AI demo", "password reset", "--create", "--column", "To do"])
         #expect(created["key"] as? String == "task-1")
         let boards = try #require(try cli.json("project", "boards", "AI demo") as? [[String: Any]])

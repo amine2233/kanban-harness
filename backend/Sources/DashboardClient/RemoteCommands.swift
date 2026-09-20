@@ -226,12 +226,25 @@ public struct RemoteAssistantCommands: AssistantCommands {
         projects = RemoteProjectCommands(client: client)
     }
 
-    // ponytail: one JSON round trip surfaced as a single `.result`; SSE frames come with the streaming route.
+    /// Consumes the server's event stream and maps each frame back to an `AssistantEvent`.
     public func streamTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) -> AsyncThrowingStream<AssistantEvent, any Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    continuation.yield(.result(try await self.draft(project: project, boardId: boardId, idea: idea, providerId: providerId)))
+                    let id = try await projects.get(project).id
+                    let request = DraftTicketRequest(idea: idea, boardId: boardId, provider: providerId)
+                    var parser = SSEParser()
+                    for try await line in client.eventStream("POST", "api/projects/\(id.uuidString)/ai/tickets/draft", body: request) {
+                        guard let (event, data) = parser.feed(line: line), let frame = try AssistantFrame.decode(event: event, data: data) else { continue }
+                        switch frame {
+                        case let .stage(stage): continuation.yield(.stage(stage.name, elapsedMs: stage.elapsedMs))
+                        case let .partial(partial): continuation.yield(.partial(partial))
+                        case let .usage(usage): continuation.yield(.usage(Self.usage(usage)))
+                        case let .result(response):
+                            continuation.yield(.result(DraftedTicket(draft: response.draft, providerId: response.provider, model: response.model, usage: Self.usage(response.usage))))
+                        case let .error(apiError): throw ServiceError.remote(code: apiError.code, message: apiError.message)
+                        }
+                    }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -241,15 +254,7 @@ public struct RemoteAssistantCommands: AssistantCommands {
         }
     }
 
-    private func draft(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) async throws(ServiceError) -> DraftedTicket {
-        let id = try await projects.get(project).id
-        let response = try await client.send(
-            "POST", "api/projects/\(id.uuidString)/ai/tickets/draft",
-            body: DraftTicketRequest(idea: idea, boardId: boardId, provider: providerId), as: DraftTicketResponse.self
-        )
-        return DraftedTicket(
-            draft: response.draft, providerId: response.provider, model: response.model,
-            usage: CompletionUsage(inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens, costUSD: response.usage.costUSD)
-        )
+    private static func usage(_ dto: DraftTicketResponse.UsageDTO) -> CompletionUsage {
+        CompletionUsage(inputTokens: dto.inputTokens, outputTokens: dto.outputTokens, costUSD: dto.costUSD)
     }
 }

@@ -161,6 +161,9 @@ extension AICommand {
         @Flag(help: "Create the card right away instead of only printing the draft.")
         var create = false
 
+        @Flag(help: "Show the provider's progress (stages, partial title) on stderr while drafting.")
+        var stream = false
+
         func run() async throws {
             try await failing {
                 try await Runtime.run(global) { services in
@@ -170,8 +173,10 @@ extension AICommand {
                     guard let target = board.map({ b in all.first { $0.name.caseInsensitiveCompare(b) == .orderedSame || $0.id.uuidString.caseInsensitiveCompare(b) == .orderedSame } }) ?? all.first else {
                         throw ServiceError.domain(.notFound(board ?? "board"))
                     }
-                    let drafted = try await services.make(AssistantCommandsKey.self)
-                        .draftTicket(project: ref, boardId: target.id, idea: idea, providerId: provider)
+                    let assistant = services.make(AssistantCommandsKey.self)
+                    let drafted = stream
+                        ? try await Self.watch(assistant.streamTicket(project: ref, boardId: target.id, idea: idea, providerId: provider))
+                        : try await assistant.draftTicket(project: ref, boardId: target.id, idea: idea, providerId: provider)
                     if create {
                         let columns = try await boards.columns(ref, boardId: target.id)
                         guard let destination = column.map({ c in columns.first { $0.name.caseInsensitiveCompare(c) == .orderedSame || $0.id.uuidString.caseInsensitiveCompare(c) == .orderedSame } }) ?? columns.first else {
@@ -184,6 +189,27 @@ extension AICommand {
                     }
                 }
             }
+        }
+
+        /// Narrates the stream on stderr and returns the result; stdout stays JSON-only.
+        static func watch(_ events: AsyncThrowingStream<AssistantEvent, any Error>) async throws -> DraftedTicket {
+            var lastTitle: String?
+            for try await event in events {
+                switch event {
+                case let .stage(name, elapsedMs):
+                    Output.progress(String(format: "[%6dms] %@", elapsedMs, name))
+                case let .partial(partial):
+                    if let title = partial.title, title != lastTitle {
+                        lastTitle = title
+                        Output.progress("          title: \(title)")
+                    }
+                case let .usage(usage):
+                    Output.progress("          tokens: \(usage.inputTokens ?? 0) in / \(usage.outputTokens ?? 0) out" + (usage.costUSD.map { String(format: ", $%.4f", $0) } ?? ""))
+                case let .result(drafted):
+                    return drafted
+                }
+            }
+            throw ServiceError.remote(code: "AI_PROVIDER", message: "stream ended without a result")
         }
 
         struct DraftView: Encodable {

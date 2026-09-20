@@ -9,6 +9,10 @@ enum Output {
         RFC3339.configure(encoder)
         print(String(decoding: try encoder.encode(value), as: UTF8.self))
     }
+
+    static func progress(_ line: String) {
+        FileHandle.standardError.write(Data((line + "\n").utf8))
+    }
 }
 
 extension AsyncParsableCommand {

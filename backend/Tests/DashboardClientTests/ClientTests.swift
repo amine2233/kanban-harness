@@ -1,3 +1,4 @@
+import DashboardAI
 import DashboardDomain
 import DashboardServer
 import DashboardService
@@ -123,6 +124,51 @@ import Vapor
             guard case .unreachable = error else {
                 Issue.record("unexpected \(error)")
                 return
+            }
+        }
+    }
+
+    @Test func assistantStreamsFramesBackIntoEvents() async throws {
+        let dir = NSTemporaryDirectory() + "claude-stub-" + UUID().uuidString
+        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let stub = dir + "/claude"
+        try """
+        #!/bin/sh
+        echo '{"type":"stream_event","event":{"delta":{"partial_json":"{\\"title\\":\\"Str"}}}'
+        echo '{"type":"result","is_error":false,"structured_output":{"title":"Streamed","priority":"low","acceptance_criteria":["a"]},"usage":{"input_tokens":1,"output_tokens":2}}'
+        """.write(toFile: stub, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub)
+        setenv("MVP_DASHBOARD_CLAUDE_BIN", stub, 1)
+        defer { unsetenv("MVP_DASHBOARD_CLAUDE_BIN") }
+        try await withServer { client, home in
+            let projects = RemoteProjectCommands(client: client)
+            _ = try await projects.add(name: "Demo", path: home + "/demo", storage: nil)
+            _ = try await RemoteAIConfigCommands(client: client).upsert(try AIProviderConfig(id: "cc", kind: .claudeCode, name: "CC", model: "sonnet"))
+            let board = try #require(try await projects.boards(.name("Demo")).first)
+            let assistant = RemoteAssistantCommands(client: client)
+
+            var stages: [String] = []
+            var partials: [PartialTicketDraft] = []
+            var result: DraftedTicket?
+            for try await event in assistant.streamTicket(project: .name("Demo"), boardId: board.id, idea: "x", providerId: nil) {
+                switch event {
+                case let .stage(name, _): stages.append(name)
+                case let .partial(p): partials.append(p)
+                case .usage: break
+                case let .result(r): result = r
+                }
+            }
+            #expect(stages.first == "resolving provider" && stages.last == "done")
+            #expect(partials.map { $0.title } == ["Str"])
+            #expect(result?.draft.title == "Streamed")
+            #expect(result?.usage == CompletionUsage(inputTokens: 1, outputTokens: 2))
+            #expect(try await assistant.draftTicket(project: .name("Demo"), boardId: board.id, idea: "x", providerId: nil).draft.title == "Streamed")
+
+            do {
+                _ = try await assistant.draftTicket(project: .name("Demo"), boardId: board.id, idea: "x", providerId: "ghost")
+                Issue.record("expected not found")
+            } catch let error as ServiceError {
+                #expect(error.isNotFound)
             }
         }
     }

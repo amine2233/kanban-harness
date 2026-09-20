@@ -1,3 +1,4 @@
+import DashboardAPI
 import DashboardServer
 import Foundation
 import Testing
@@ -62,6 +63,55 @@ import VaporTesting
             #expect(unknown == .notFound)
             let (empty, _) = try await app.json(.POST, "/api/projects/\(id)/ai/tickets/draft", body: ["idea": "  ", "board_id": boardId])
             #expect(empty == .badRequest)
+        }
+    }
+
+    func frames(_ app: TestingApplicationTester, _ path: String, body: [String: Any]) async throws -> (HTTPStatus, [AssistantFrame]) {
+        var headers = HTTPHeaders()
+        headers.contentType = .json
+        headers.replaceOrAdd(name: .accept, value: "text/event-stream")
+        let response = try await app.sendRequest(.POST, path, headers: headers, body: ByteBuffer(data: try JSONSerialization.data(withJSONObject: body)))
+        #expect(response.headers.contentType?.subType == "event-stream")
+        var parser = SSEParser()
+        var frames: [AssistantFrame] = []
+        for line in String(buffer: response.body).split(separator: "\n", omittingEmptySubsequences: false) {
+            if let (event, data) = parser.feed(line: String(line)), let frame = try AssistantFrame.decode(event: event, data: data) { frames.append(frame) }
+        }
+        return (response.status, frames)
+    }
+
+    @Test func acceptEventStreamStreamsStagesPartialsAndTheResult() async throws {
+        let stub = try stubClaude(output: """
+        {"type":"stream_event","event":{"delta":{"partial_json":"{\\"title\\":\\"Add pass"}}}
+        {"type":"stream_event","event":{"delta":{"partial_json":"word reset\\",\\"priority\\":\\"high\\""}}}
+        {"type":"result","is_error":false,"structured_output":{"title":"Add password reset","acceptance_criteria":["Email sent"],"priority":"high"},"total_cost_usd":0.02,"usage":{"input_tokens":3,"output_tokens":4}}
+        """)
+        setenv("MVP_DASHBOARD_CLAUDE_BIN", stub, 1)
+        defer { unsetenv("MVP_DASHBOARD_CLAUDE_BIN") }
+        try await withServer { app, home in
+            let project = try await app.createProject("Demo", at: home + "/demo")
+            let id = try #require(project["id"] as? String)
+            _ = try await app.json(.PUT, "/api/settings/ai/providers/cc", body: ["kind": "claude_code", "name": "Claude Code", "model": "sonnet"])
+            let (boardId, _) = try await app.firstBoardAndColumns("/api/projects/\(id)/kanban/v1")
+
+            let (status, frames) = try await self.frames(app, "/api/projects/\(id)/ai/tickets/draft", body: ["idea": "password reset", "board_id": boardId])
+            #expect(status == .ok)
+            let stages = frames.compactMap { if case let .stage(s) = $0 { s.name } else { nil } }
+            #expect(stages.first == "resolving provider")
+            #expect(stages.contains("provider Claude Code (sonnet)"))
+            #expect(stages.last == "done")
+            let partials = frames.compactMap { if case let .partial(p) = $0 { p } else { nil } }
+            #expect(partials.map { $0.title } == ["Add pass", "Add password reset"])
+            #expect(partials.last?.priority == .high)
+            #expect(frames.contains(.usage(.init(inputTokens: 3, outputTokens: 4, costUSD: 0.02))))
+            guard case let .result(result) = try #require(frames.last) else { Issue.record("no result frame"); return }
+            #expect(result.draft.title == "Add password reset")
+            #expect(result.provider == "cc")
+
+            let (failed, errorFrames) = try await self.frames(app, "/api/projects/\(id)/ai/tickets/draft", body: ["idea": "x", "board_id": boardId, "provider": "ghost"])
+            #expect(failed == .ok)
+            guard case let .error(apiError) = try #require(errorFrames.last) else { Issue.record("no error frame"); return }
+            #expect(apiError.code == "NOT_FOUND")
         }
     }
 }

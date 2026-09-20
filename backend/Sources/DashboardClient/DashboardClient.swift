@@ -75,6 +75,33 @@ public struct DashboardClient: Sendable {
         return data
     }
 
+    /// Sends `body` with `Accept: text/event-stream` and yields the response
+    /// line by line (no timeout: a draft takes as long as the model takes).
+    /// A non-2xx status is surfaced as the API's error envelope.
+    func eventStream<Body: Encodable>(_ method: String, _ path: String, body: Body) -> AsyncThrowingStream<String, any Error> {
+        AsyncThrowingStream { continuation in
+            guard let url = URL(string: path, relativeTo: baseURL.appending(path: "")) else {
+                continuation.finish(throwing: ServiceError.remote(code: "BAD_REQUEST", message: "invalid path \(path)"))
+                return
+            }
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            request.timeoutInterval = 600
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+            do {
+                request.httpBody = try Self.encoder.encode(body)
+            } catch {
+                continuation.finish(throwing: ServiceError.remote(code: "BAD_REQUEST", message: String(describing: error)))
+                return
+            }
+            let delegate = LineDelegate(continuation: continuation, server: baseURL.absoluteString)
+            let task = URLSession(configuration: .ephemeral, delegate: delegate, delegateQueue: nil).dataTask(with: request)
+            task.resume()
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     static let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
         RFC3339.configure(encoder)
@@ -89,3 +116,45 @@ public struct DashboardClient: Sendable {
 }
 
 struct Empty: Encodable {}
+
+/// Splits a streaming response into lines; a failure status is collected and
+/// decoded as an `ApiError` when the response ends.
+private final class LineDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    private let continuation: AsyncThrowingStream<String, any Error>.Continuation
+    private let server: String
+    private var status = 0
+    private var buffer = Data()
+
+    init(continuation: AsyncThrowingStream<String, any Error>.Continuation, server: String) {
+        self.continuation = continuation
+        self.server = server
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        completionHandler(.allow)
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        buffer.append(data)
+        guard (200 ..< 300).contains(status) else { return }
+        while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
+            continuation.yield(String(decoding: buffer[buffer.startIndex ..< newline], as: UTF8.self))
+            buffer.removeSubrange(buffer.startIndex ... newline)
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
+        defer { session.finishTasksAndInvalidate() }
+        if let error {
+            continuation.finish(throwing: ServiceError.unreachable(url: server, reason: error.localizedDescription))
+        } else if (200 ..< 300).contains(status) {
+            continuation.yield("")
+            continuation.finish()
+        } else if let apiError = try? DashboardClient.decoder.decode(ApiError.self, from: buffer) {
+            continuation.finish(throwing: ServiceError.remote(code: apiError.code, message: apiError.message))
+        } else {
+            continuation.finish(throwing: ServiceError.remote(code: "HTTP_\(status)", message: String(decoding: buffer, as: UTF8.self)))
+        }
+    }
+}

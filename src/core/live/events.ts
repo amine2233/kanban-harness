@@ -2,11 +2,14 @@ import type { TagDescription } from '@reduxjs/toolkit/query'
 
 /** Wire shape of `GET /api/events` frames (see DashboardAPI.ChangeEventDTO). */
 export interface ChangeEvent {
-  kind: 'hello' | 'projects_changed' | 'workspace_changed' | 'settings_changed'
+  kind:
+    'hello' | 'projects_changed' | 'workspace_changed' | 'settings_changed' | 'ai_config_changed'
   project_id?: string | null
 }
 
-export type ApiTag = TagDescription<'Project' | 'Board' | 'Column' | 'Card' | 'Settings'>
+export type ApiTag = TagDescription<
+  'Project' | 'Board' | 'Column' | 'Card' | 'Settings' | 'AIConfig'
+>
 
 export function parseChangeEvent(raw: string): ChangeEvent | null {
   try {
@@ -15,6 +18,7 @@ export function parseChangeEvent(raw: string): ChangeEvent | null {
       case 'hello':
       case 'projects_changed':
       case 'settings_changed':
+      case 'ai_config_changed':
         return { kind: value.kind }
       case 'workspace_changed':
         return typeof value.project_id === 'string'
@@ -35,6 +39,8 @@ export function tagsFor(event: ChangeEvent): ApiTag[] {
       return ['Project']
     case 'settings_changed':
       return ['Settings']
+    case 'ai_config_changed':
+      return ['AIConfig']
     case 'workspace_changed':
       return ['Board', 'Column', 'Card']
     case 'hello':

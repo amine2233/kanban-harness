@@ -21,6 +21,7 @@ test('tagsFor maps events to the caches they invalidate', () => {
   expect(tagsFor({ kind: 'hello' })).toEqual([])
   expect(tagsFor({ kind: 'projects_changed' })).toEqual(['Project'])
   expect(tagsFor({ kind: 'settings_changed' })).toEqual(['Settings'])
+  expect(tagsFor({ kind: 'ai_config_changed' })).toEqual(['AIConfig'])
   expect(tagsFor({ kind: 'workspace_changed', project_id: 'p' })).toEqual([
     'Board',
     'Column',

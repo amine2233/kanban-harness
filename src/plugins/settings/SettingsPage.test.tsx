@@ -13,7 +13,10 @@ afterEach(() => {
 })
 
 function renderPage() {
-  stubApi({ 'GET /api/settings': () => ({ body: { default_storage: 'json', cors_origins: [] } }) })
+  stubApi({
+    'GET /api/settings': () => ({ body: { default_storage: 'json', cors_origins: [] } }),
+    'GET /api/settings/ai': () => ({ body: { providers: [], default_provider: null } }),
+  })
   const store = createStore()
   render(
     <Provider store={store}>

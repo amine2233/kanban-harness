@@ -51,11 +51,12 @@ Then open `http://<this machine's IP>:5173` (or `:5175`). If it still doesn't an
 
 Set in `mise.toml` (override in a git-ignored `.env.local`):
 
-| Variable             | Default                 | Meaning                                                                                                                                   |
-| -------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `MVP_DASHBOARD_HOME` | `.local/dashboard-home` | Where the server/CLI keep `projects.sqlite` (registry) and `settings.json`. Outside mise it defaults to `$XDG_CONFIG_HOME/mvp-dashboard`. |
-| `MVP_DASHBOARD_PORT` | `5175`                  | Port used by the `dev`, `serve` and `backend:serve` tasks.                                                                                |
-| `MVP_DASHBOARD_HOST` | `127.0.0.1`             | Interface the servers bind to; `0.0.0.0` exposes them on the network (see "Reaching it from another machine").                            |
+| Variable                                  | Default                 | Meaning                                                                                                                                   |
+| ----------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `MVP_DASHBOARD_HOME`                      | `.local/dashboard-home` | Where the server/CLI keep `projects.sqlite` (registry) and `settings.json`. Outside mise it defaults to `$XDG_CONFIG_HOME/mvp-dashboard`. |
+| `MVP_DASHBOARD_PORT`                      | `5175`                  | Port used by the `dev`, `serve` and `backend:serve` tasks.                                                                                |
+| `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` | —                       | Supplies a provider's API key from the environment instead of the config file (never written back).                                       |
+| `MVP_DASHBOARD_HOST`                      | `127.0.0.1`             | Interface the servers bind to; `0.0.0.0` exposes them on the network (see "Reaching it from another machine").                            |
 
 ## Use
 
@@ -141,6 +142,7 @@ Dependencies point inward everywhere: interface → service → persistence → 
 | `backend/Sources/DashboardDomain`            | `Project`, `ProjectRegistry`, `Settings`, and the kanban `Workspace` aggregate (numbering, WIP, status rules). Pure.                                                                                |
 | `backend/Sources/DashboardPersistence`       | `ProjectStore` / `WorkspaceStore` / `SettingsStore` protocols, in-memory stores, shared contract tests, RFC 3339 codec.                                                                             |
 | `backend/Sources/DashboardPersistenceJSON`   | `KanbanJSONStore` (kanban-rs v18 envelope), JSON registry and settings stores; atomic writes.                                                                                                       |
+| `backend/Sources/DashboardPersistenceConfig` | `config.json`/`config.yaml` AI provider store: swift-configuration reads (file + env), atomic private writes.                                                                                       |
 | `backend/Sources/DashboardPersistenceFluent` | Fluent SQLite stores for the registry and workspaces; `SQLiteDatabasePool`.                                                                                                                         |
 | `backend/Sources/DashboardService`           | `ProjectService`, `SettingsService` actors; clock/ids via cascade-kit `@Dependency`.                                                                                                                |
 | `backend/Sources/DashboardAPI`               | Wire DTOs (kanban-api shapes, `Page`, `ApiError`).                                                                                                                                                  |

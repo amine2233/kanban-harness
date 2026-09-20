@@ -9,6 +9,7 @@ import {
   setServerUrl,
 } from '@/core/settings/settingsSlice'
 import { Banner, Button, Card, Input, PageHeader, type Tone } from '@/design-system'
+import { AIProvidersCard } from './AIProvidersCard'
 import { ServerSettingsCard } from './ServerSettingsCard'
 
 interface Check {
@@ -115,6 +116,7 @@ export function SettingsPage() {
         )}
       </Card>
       <ServerSettingsCard />
+      <AIProvidersCard />
     </>
   )
 }

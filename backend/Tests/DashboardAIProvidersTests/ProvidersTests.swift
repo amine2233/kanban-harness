@@ -137,6 +137,15 @@ import Vapor
         #expect(args.last == "draft")
     }
 
+    @Test func claudeCodeWrappedStructuredOutputStillYieldsPartials() throws {
+        let typed = #"{"$PARAMETER_NAME": "{\n  \"title\": \"Support Apple Pay\",\n  \"priority\": \"hi"#
+        let partial = try #require(ClaudeCodeProvider.partialSnapshot(typed))
+        #expect(PartialTicketDraft.parse(partial).title == "Support Apple Pay")
+        #expect(PartialTicketDraft.parse(partial).priority == nil)
+        let plain = try #require(ClaudeCodeProvider.partialSnapshot(#"{"title":"Plain"#))
+        #expect(PartialTicketDraft.parse(plain).title == "Plain")
+    }
+
     @Test func claudeCodeErrorsAreSurfaced() async throws {
         let config = try AIProviderConfig(id: "cc", kind: .claudeCode, name: "CC", model: "sonnet")
         let (dir, notLoggedIn) = try stubClaude("echo '{\"type\":\"result\",\"is_error\":true,\"result\":\"Not logged in · Please run /login\"}'\n")

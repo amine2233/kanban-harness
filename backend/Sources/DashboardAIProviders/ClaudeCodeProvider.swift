@@ -42,7 +42,7 @@ public struct ClaudeCodeProvider: AIProvider {
                         } else if let delta = Self.delta(in: object) {
                             typed += delta
                             continuation.yield(.text(delta))
-                            if let partial = JSONCompleter.complete(typed) { continuation.yield(.snapshot(partial)) }
+                            if let partial = Self.partialSnapshot(typed) { continuation.yield(.snapshot(partial)) }
                         }
                     }
                     guard finished else { throw AIProviderError.badResponse("claude ended without a result") }
@@ -61,6 +61,18 @@ public struct ClaudeCodeProvider: AIProvider {
               let delta = (object["event"] as? [String: Any])?["delta"] as? [String: Any]
         else { return nil }
         return delta["text"] as? String ?? delta["partial_json"] as? String
+    }
+
+    /// The CLI sometimes streams the structured output as one escaped JSON
+    /// string under a placeholder key (`{"$PARAMETER_NAME": "{\"title\": …`);
+    /// unwrap that so partial drafts still render.
+    static func partialSnapshot(_ typed: String) -> Data? {
+        guard let completed = JSONCompleter.complete(typed) else { return nil }
+        if let object = try? JSONSerialization.jsonObject(with: completed) as? [String: Any],
+           object.count == 1, let inner = object.values.first as? String, inner.contains("{") {
+            return JSONCompleter.complete(inner)
+        }
+        return completed
     }
 
     private static func finalOutput(_ object: [String: Any]) throws -> (Data, CompletionUsage) {

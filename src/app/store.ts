@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
+import { liveMiddleware } from '@/core/live/liveMiddleware'
 import { saveSettings, settingsSlice } from '@/core/settings/settingsSlice'
 import { baseApi } from './api'
 import { rootReducer } from './reducer'
@@ -6,7 +7,8 @@ import { rootReducer } from './reducer'
 export const createStore = () => {
   const store = configureStore({
     reducer: rootReducer,
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(baseApi.middleware),
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(baseApi.middleware, liveMiddleware),
   })
   let lastSettings = settingsSlice.selectSlice(store.getState())
   store.subscribe(() => {

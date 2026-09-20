@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { Provider } from 'react-redux'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
+import { startLive, stopLive } from '@/core/live/liveSlice'
 import { AppShell } from '@/core/shell/AppShell'
 import { registry } from './plugins'
 import { createStore } from './store'
@@ -18,6 +20,12 @@ const router = createBrowserRouter([
 ])
 
 export function App() {
+  useEffect(() => {
+    store.dispatch(startLive())
+    return () => {
+      store.dispatch(stopLive())
+    }
+  }, [])
   return (
     <Provider store={store}>
       <RouterProvider router={router} />

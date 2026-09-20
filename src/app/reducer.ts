@@ -1,4 +1,5 @@
 import { combineSlices } from '@reduxjs/toolkit'
+import { liveSlice } from '@/core/live/liveSlice'
 import { settingsSlice } from '@/core/settings/settingsSlice'
 import { shellSlice } from '@/core/shell/shellSlice'
 import { baseApi } from './api'
@@ -11,6 +12,7 @@ export interface LazyLoadedSlices {}
 export const rootReducer = combineSlices(
   shellSlice,
   settingsSlice,
+  liveSlice,
   baseApi,
 ).withLazyLoadedSlices<LazyLoadedSlices>()
 

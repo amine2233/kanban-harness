@@ -7,7 +7,7 @@ export interface ServerSettings {
   cors_origins: string[]
 }
 
-export const settingsApi = baseApi.enhanceEndpoints({ addTagTypes: ['Settings'] }).injectEndpoints({
+export const settingsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- RTK's no-argument query convention
     getServerSettings: build.query<ServerSettings, void>({

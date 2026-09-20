@@ -667,3 +667,15 @@ body {
 .ds-empty__form {
   text-align: left;
 }
+
+.ds-status--live .ds-status__dot {
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.25);
+  animation: ds-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ds-pulse {
+  50% {
+    box-shadow: 0 0 0 5px rgba(74, 222, 128, 0.12);
+  }
+}

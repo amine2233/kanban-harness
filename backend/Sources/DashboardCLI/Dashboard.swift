@@ -1,5 +1,7 @@
 import ArgumentParser
-import DashboardServer
+import CascadeKit
+import DashboardService
+import Logging
 
 @main
 struct Dashboard: AsyncParsableCommand {
@@ -20,7 +22,15 @@ struct GlobalOptions: ParsableArguments {
     )
     var home: String?
 
+    @Flag(name: .long, help: "Show info-level logs (migrations, database activity) on stderr.")
+    var verbose = false
+
     var resolvedHome: String {
-        home ?? ServerConfig.defaultHome()
+        home ?? DependencyValues.current.home
+    }
+
+    /// Log level for this invocation, applied through the `\.logger` dependency.
+    var logLevel: Logger.Level {
+        verbose ? .info : .warning
     }
 }

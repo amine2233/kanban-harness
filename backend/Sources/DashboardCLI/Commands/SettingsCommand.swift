@@ -1,8 +1,6 @@
 import ArgumentParser
 import DashboardDomain
-import DashboardPersistenceJSON
-import DashboardServer
-import DashboardService
+import DashboardRuntime
 
 struct SettingsCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
@@ -11,10 +9,6 @@ struct SettingsCommand: AsyncParsableCommand {
         subcommands: [Show.self, Set.self]
     )
 
-    static func service(home: String) -> SettingsService {
-        SettingsService(store: JSONSettingsStore(path: ServerConfig(home: home).settingsPath))
-    }
-
     struct Show: AsyncParsableCommand {
         static let configuration = CommandConfiguration(abstract: "Print the current settings.")
 
@@ -22,7 +16,9 @@ struct SettingsCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                try Output.json(try await SettingsCommand.service(home: global.resolvedHome).current())
+                try Output.json(try await Runtime.run(global) {
+                    try await $0.make(SettingsServiceKey.self).current()
+                })
             }
         }
     }
@@ -44,9 +40,10 @@ struct SettingsCommand: AsyncParsableCommand {
         func run() async throws {
             try await failing {
                 let origins: [String]? = clearCors ? [] : (corsOrigins.isEmpty ? nil : corsOrigins)
-                let updated = try await SettingsCommand.service(home: global.resolvedHome)
-                    .update(defaultStorage: defaultStorage, corsOrigins: origins)
-                try Output.json(updated)
+                let defaultStorage = self.defaultStorage
+                try Output.json(try await Runtime.run(global) {
+                    try await $0.make(SettingsServiceKey.self).update(defaultStorage: defaultStorage, corsOrigins: origins)
+                })
             }
         }
     }

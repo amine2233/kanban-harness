@@ -110,6 +110,17 @@ extension TestingApplicationTester {
         }
     }
 
+    @Test func everyResponseCarriesARequestIdFromTheRequestContainer() async throws {
+        try await withServer { app, _ in
+            let ok = try await app.sendRequest(.GET, "/api/health")
+            let failed = try await app.sendRequest(.GET, "/api/projects/\(UUID().uuidString)")
+            let okId = try #require(ok.headers["X-Request-Id"].first)
+            let failedId = try #require(failed.headers["X-Request-Id"].first)
+            #expect(UUID(uuidString: okId) != nil)
+            #expect(okId != failedId, "ids are per request")
+        }
+    }
+
     @Test func deleteProjectReturns204Then404AndKeepsFiles() async throws {
         try await withServer { app, home in
             let id = try #require(try await app.createProject("Demo", at: home + "/demo")["id"] as? String)

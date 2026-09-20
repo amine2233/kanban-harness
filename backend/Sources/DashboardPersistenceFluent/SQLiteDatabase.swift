@@ -28,13 +28,13 @@ public final class SQLiteDatabase: Sendable {
     }
 
     /// The project registry database.
-    public static func registry(path: String) throws -> SQLiteDatabase {
-        try SQLiteDatabase(path: path, migrations: FluentProjectStore.migrations)
+    public static func registry(path: String, logger: Logger = Logger(label: "dashboard.sqlite")) throws -> SQLiteDatabase {
+        try SQLiteDatabase(path: path, migrations: FluentProjectStore.migrations, logger: logger)
     }
 
     /// A project's kanban workspace database.
-    public static func workspace(path: String) throws -> SQLiteDatabase {
-        try SQLiteDatabase(path: path, migrations: FluentWorkspaceStore.migrations)
+    public static func workspace(path: String, logger: Logger = Logger(label: "dashboard.sqlite")) throws -> SQLiteDatabase {
+        try SQLiteDatabase(path: path, migrations: FluentWorkspaceStore.migrations, logger: logger)
     }
 
     public var database: any Database {
@@ -68,8 +68,12 @@ public actor SQLiteDatabasePool {
     private var open: [String: SQLiteDatabase] = [:]
     private let make: @Sendable (String) throws -> SQLiteDatabase
 
-    public init(make: @escaping @Sendable (String) throws -> SQLiteDatabase = SQLiteDatabase.workspace) {
+    public init(make: @escaping @Sendable (String) throws -> SQLiteDatabase) {
         self.make = make
+    }
+
+    public init(logger: Logger = Logger(label: "dashboard.sqlite")) {
+        self.init { try SQLiteDatabase.workspace(path: $0, logger: logger) }
     }
 
     public func database(at path: String) async throws -> any Database {

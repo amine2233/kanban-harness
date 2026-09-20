@@ -6,14 +6,18 @@ import Vapor
 /// Maps every failure to the `{code, message}` envelope with a kanban-server style code.
 struct ApiErrorMiddleware: AsyncMiddleware {
     func respond(to request: Request, chainingTo next: any AsyncResponder) async throws -> Response {
+        let requestId = request.requestId.uuidString.lowercased()
         do {
-            return try await next.respond(to: request)
+            let response = try await next.respond(to: request)
+            response.headers.replaceOrAdd(name: "X-Request-Id", value: requestId)
+            return response
         } catch {
             let (status, apiError) = Self.classify(error)
             if status == .internalServerError {
-                request.logger.report(error: error)
+                request.logger.report(error: error, metadata: ["request_id": .string(requestId)])
             }
             let response = Response(status: status)
+            response.headers.replaceOrAdd(name: "X-Request-Id", value: requestId)
             try response.content.encode(apiError, as: .json)
             return response
         }

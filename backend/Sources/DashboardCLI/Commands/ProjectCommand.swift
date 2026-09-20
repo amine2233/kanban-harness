@@ -1,6 +1,7 @@
 import ArgumentParser
 import DashboardAPI
 import DashboardDomain
+import DashboardRuntime
 import Foundation
 
 struct ProjectCommand: AsyncParsableCommand {
@@ -27,15 +28,16 @@ struct ProjectCommand: AsyncParsableCommand {
         func run() async throws {
             try await failing {
                 let absolute = Self.absolute(path)
-                let storage: StorageKind
-                if let requested = self.storage {
-                    storage = requested
-                } else {
-                    storage = try await SettingsCommand.service(home: global.resolvedHome).current().defaultStorage
-                }
-                let context = try await CLIContext.open(home: global.resolvedHome)
-                let project = try await context.run {
-                    try await $0.add(name: name ?? Self.folderName(absolute), path: absolute, storage: storage)
+                let requested = self.storage
+                let project = try await Runtime.run(global) { services in
+                    let storage: StorageKind
+                    if let requested {
+                        storage = requested
+                    } else {
+                        storage = try await services.make(SettingsServiceKey.self).current().defaultStorage
+                    }
+                    return try await services.make(ProjectServiceKey.self)
+                        .add(name: name ?? Self.folderName(absolute), path: absolute, storage: storage)
                 }
                 try Output.json(project)
             }
@@ -60,8 +62,9 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                let context = try await CLIContext.open(home: global.resolvedHome)
-                try Output.json(try await context.run { try await $0.list() })
+                try Output.json(try await Runtime.run(global) {
+                    try await $0.make(ProjectServiceKey.self).list()
+                })
             }
         }
     }
@@ -76,8 +79,9 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                let context = try await CLIContext.open(home: global.resolvedHome)
-                try Output.json(try await context.run { try await $0.get(.parse(project)) })
+                try Output.json(try await Runtime.run(global) {
+                    try await $0.make(ProjectServiceKey.self).get(.parse(project))
+                })
             }
         }
     }
@@ -92,8 +96,9 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                let context = try await CLIContext.open(home: global.resolvedHome)
-                try Output.json(try await context.run { try await $0.remove(.parse(project)) })
+                try Output.json(try await Runtime.run(global) {
+                    try await $0.make(ProjectServiceKey.self).remove(.parse(project))
+                })
             }
         }
     }
@@ -111,8 +116,9 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                let context = try await CLIContext.open(home: global.resolvedHome)
-                try Output.json(try await context.run { try await $0.changeStorage(.parse(project), to: storage) })
+                try Output.json(try await Runtime.run(global) {
+                    try await $0.make(ProjectServiceKey.self).changeStorage(.parse(project), to: storage)
+                })
             }
         }
     }
@@ -127,8 +133,9 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                let context = try await CLIContext.open(home: global.resolvedHome)
-                let workspace = try await context.run { try await $0.workspace(.parse(project)) }
+                let workspace = try await Runtime.run(global) {
+                    try await $0.make(ProjectServiceKey.self).workspace(.parse(project))
+                }
                 try Output.json(workspace.boards.sorted { $0.position < $1.position }.map(BoardResponse.init))
             }
         }

@@ -210,6 +210,30 @@ struct CLI {
         #expect(bad.stderr.contains("invalid origin"))
     }
 
+    @Test func homeFallsBackToEnvironmentWhenFlagIsAbsent() throws {
+        let cli = try CLI()
+        let process = Process()
+        process.executableURL = CLI.binary
+        process.arguments = ["project", "list"]
+        process.environment = ProcessInfo.processInfo.environment.merging(["MVP_DASHBOARD_HOME": cli.home]) { $1 }
+        let out = Pipe()
+        process.standardOutput = out
+        process.standardError = Pipe()
+        try process.run()
+        let stdout = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        process.waitUntilExit()
+        #expect(process.terminationStatus == 0)
+        #expect(stdout.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("["))
+        #expect(FileManager.default.fileExists(atPath: cli.home + "/projects.sqlite"))
+    }
+
+    @Test func verboseFlagTurnsOnInfoLogs() throws {
+        let quiet = try CLI()
+        #expect(!(try quiet.run("project", "list")).stderr.contains("Migrator"))
+        let verbose = try CLI()
+        #expect((try verbose.run("--verbose", "project", "list")).stderr.contains("Migrator"))
+    }
+
     @Test func helpListsSubcommands() throws {
         let result = try CLI().run("--help")
         #expect(result.status == 0)

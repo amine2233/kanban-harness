@@ -1,33 +1,23 @@
 import CascadeKit
-import DashboardPersistence
-import DashboardPersistenceFluent
-import DashboardPersistenceJSON
+import DashboardRuntime
 import DashboardService
 import Vapor
-
-/// cascade-kit service keys resolved from the Vapor application's container.
-public enum ProjectServiceKey: ServiceKey {
-    public typealias Value = ProjectService
-}
-
-public enum ProjectStoreKey: ServiceKey {
-    public typealias Value = any ProjectStore
-}
-
-public enum WorkspacePoolKey: ServiceKey {
-    public typealias Value = SQLiteDatabasePool
-}
-
-public enum SettingsServiceKey: ServiceKey {
-    public typealias Value = SettingsService
-}
 
 private struct ContainerKey: Vapor.StorageKey {
     typealias Value = CascadeKit.Application
 }
 
+private struct RequestContainerKey: Vapor.StorageKey {
+    typealias Value = CascadeKit.Request
+}
+
+/// Per-request value, resolved from the request container (never from the app's).
+public enum RequestIdKey: ServiceKey {
+    public typealias Value = UUID
+}
+
 extension Vapor.Application {
-    /// The cascade-kit container owning application-scoped services.
+    /// The cascade-kit container owning application-scoped services (see `DashboardRuntime`).
     public var services: CascadeKit.Application {
         if let container = storage[ContainerKey.self] { return container }
         let container = CascadeKit.Application()
@@ -37,38 +27,29 @@ extension Vapor.Application {
 }
 
 extension Vapor.Request {
-    public var projects: ProjectService {
-        application.services.make(ProjectServiceKey.self)
+    /// Request-scoped container layered over the application's: request-only
+    /// services live here, everything else falls through to the app container.
+    public var services: CascadeKit.Request {
+        if let container = storage[RequestContainerKey.self] { return container }
+        let container = CascadeKit.Request(application: application.services)
+        let id = DependencyValues.current.uuid()
+        container.register(RequestIdKey.self) { _ in id }
+        storage[RequestContainerKey.self] = container
+        return container
     }
 
-    public var settings: SettingsService {
-        application.services.make(SettingsServiceKey.self)
-    }
+    public var requestId: UUID { services.make(RequestIdKey.self) }
+    public var projects: ProjectService { services.make(ProjectServiceKey.self) }
+    public var settings: SettingsService { services.make(SettingsServiceKey.self) }
 }
 
-/// Default wiring: registry in Fluent SQLite, board data in kanban-rs JSON files.
-func registerServices(_ app: Vapor.Application, config: ServerConfig) {
-    let database = app.db
-    let pool = SQLiteDatabasePool()
-    let settingsPath = config.settingsPath
-    app.services.register(SettingsServiceKey.self) { _ in
-        SettingsService(store: JSONSettingsStore(path: settingsPath))
-    }
-    app.services.register(ProjectStoreKey.self) { _ in FluentProjectStore(database: database) }
-    app.services.register(WorkspacePoolKey.self) { _ in pool }
-    app.services.register(ProjectServiceKey.self) { container in
-        ProjectService(
-            store: container.make(ProjectStoreKey.self),
-            workspaces: WorkspaceStores.factory(pool: container.make(WorkspacePoolKey.self))
-        )
-    }
-    app.lifecycle.use(ClosePool(pool: pool))
+func registerServices(_ app: Vapor.Application, config: ServerConfig) async throws {
+    try await DashboardRuntime.register(on: app.services, config: config.runtime, registryDatabase: app.db)
+    app.lifecycle.use(ShutdownRuntime())
 }
 
-private struct ClosePool: LifecycleHandler {
-    let pool: SQLiteDatabasePool
-
+private struct ShutdownRuntime: LifecycleHandler {
     func shutdownAsync(_ application: Vapor.Application) async {
-        await pool.shutdownAll()
+        await DashboardRuntime.shutdown(application.services)
     }
 }

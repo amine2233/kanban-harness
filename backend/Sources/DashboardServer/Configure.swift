@@ -1,6 +1,5 @@
 import DashboardPersistence
 import DashboardPersistenceFluent
-import DashboardPersistenceJSON
 import Fluent
 import FluentSQLiteDriver
 import Foundation
@@ -22,7 +21,7 @@ public func configure(_ app: Vapor.Application, config: ServerConfig) async thro
     ContentConfiguration.global.use(encoder: encoder, for: .json)
     ContentConfiguration.global.use(decoder: decoder, for: .json)
 
-    registerServices(app, config: config)
+    try await registerServices(app, config: config)
     app.middleware = Middlewares()
     app.middleware.use(DynamicCORSMiddleware(staticOrigins: config.corsOrigins))
     app.middleware.use(ApiErrorMiddleware())

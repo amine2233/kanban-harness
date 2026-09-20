@@ -14,6 +14,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.0"),
         .package(url: "https://github.com/vapor/fluent.git", from: "4.13.0"),
         .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.9.0"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.6.0"),
     ],
     targets: [
         .target(name: "DashboardDomain"),
@@ -31,16 +32,24 @@ let package = Package(
             dependencies: [
                 "DashboardPersistence",
                 .product(name: "CascadeKit", package: "cascade-kit"),
+                .product(name: "Logging", package: "swift-log"),
             ]
         ),
         .target(name: "DashboardAPI", dependencies: ["DashboardDomain"]),
         .target(
-            name: "DashboardServer",
+            name: "DashboardRuntime",
             dependencies: [
                 "DashboardService",
-                "DashboardAPI",
                 "DashboardPersistenceJSON",
                 "DashboardPersistenceFluent",
+                .product(name: "CascadeKit", package: "cascade-kit"),
+            ]
+        ),
+        .target(
+            name: "DashboardServer",
+            dependencies: [
+                "DashboardRuntime",
+                "DashboardAPI",
                 .product(name: "Vapor", package: "vapor"),
                 .product(name: "Fluent", package: "fluent"),
                 .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
@@ -52,6 +61,7 @@ let package = Package(
             dependencies: [
                 "DashboardServer",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                .product(name: "Logging", package: "swift-log"),
             ]
         ),
         .testTarget(name: "DashboardDomainTests", dependencies: ["DashboardDomain"]),
@@ -69,6 +79,7 @@ let package = Package(
             name: "DashboardServiceTests",
             dependencies: ["DashboardService", "DashboardPersistenceJSON", "DashboardPersistenceFluent"]
         ),
+        .testTarget(name: "DashboardRuntimeTests", dependencies: ["DashboardRuntime"]),
         .testTarget(
             name: "DashboardServerTests",
             dependencies: [

@@ -679,3 +679,10 @@ body {
     box-shadow: 0 0 0 5px rgba(74, 222, 128, 0.12);
   }
 }
+
+.ds-assist {
+  padding: 12px;
+  border-radius: 8px;
+  background: #f7f3fb;
+  border: 1px solid #e6d9f5;
+}

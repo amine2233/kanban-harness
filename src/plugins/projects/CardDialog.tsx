@@ -1,6 +1,7 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
 import { Button, ConfirmModal, Input, Modal, Select, Textarea } from '@/design-system'
+import { DraftWithAI } from './DraftWithAI'
 import {
   useCreateCardMutation,
   useDeleteCardMutation,
@@ -107,6 +108,17 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
           void submit(event)
         }}
       >
+        {!card && (
+          <DraftWithAI
+            scope={scope}
+            onDraft={(draft, description) => {
+              setTitle(draft.title)
+              setDescription(description)
+              setPriority(draft.priority)
+              if (draft.points !== null) setPoints(String(draft.points))
+            }}
+          />
+        )}
         <Input
           name="card-title"
           label="Title"

@@ -86,6 +86,7 @@ dashboard project remove <name|id>                  # unregister only
 dashboard settings show
 dashboard settings set [--default-storage sqlite] [--cors-origin URL ...] [--clear-cors]
 
+dashboard ai ticket <project> "idea" [--board B] [--provider P] [--create [--column C]]   # draft (and create) a card with AI
 dashboard mcp                                       # MCP server over stdio (boards & cards as tools)
 dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...]
 dashboard --home <dir> …                            # registry/settings location (or MVP_DASHBOARD_HOME), local mode only

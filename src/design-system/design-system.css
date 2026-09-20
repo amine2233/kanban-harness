@@ -30,7 +30,8 @@ body {
   display: grid;
   grid-template-rows: var(--ds-topbar-height) 1fr;
   grid-template-columns: var(--ds-sidebar-width) 1fr;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .ds-shell--collapsed {
@@ -47,20 +48,50 @@ body {
   z-index: 20;
 }
 
+/* Fixed sidebar: static nav on top, plugin sections below; only a section's
+   own list scrolls when it overflows (e.g. many projects). */
 .ds-sidebar {
   background: #fff;
   border-right: 1px solid var(--ds-line);
-  overflow: hidden;
-  position: sticky;
-  top: var(--ds-topbar-height);
-  height: calc(100vh - var(--ds-topbar-height));
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.ds-sidebar__nav {
+  flex: none;
+}
+
+.ds-sidebar__sections {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ds-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 16px;
+}
+
+.ds-sidebar-section__header {
+  flex: none;
+}
+
+.ds-sidebar-section__list {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .ds-main {
   padding: 28px 32px 24px;
   min-width: 0;
-  height: calc(100vh - var(--ds-topbar-height));
+  min-height: 0;
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -250,6 +281,25 @@ body {
   min-height: 0;
   overflow: auto;
   padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.ds-board:hover {
+  scrollbar-width: thin;
+}
+
+.ds-board::-webkit-scrollbar {
+  height: 0;
+  width: 0;
+}
+
+.ds-board:hover::-webkit-scrollbar {
+  height: 6px;
+}
+
+.ds-board::-webkit-scrollbar-thumb {
+  background: rgba(89, 105, 129, 0.35);
+  border-radius: 999px;
 }
 
 .ds-column {
@@ -310,6 +360,11 @@ body {
   overflow-y: auto;
   padding: 0 8px;
   min-height: 24px;
+  scrollbar-width: none;
+}
+
+.ds-column__cards::-webkit-scrollbar {
+  width: 0;
 }
 
 .ds-column__add {

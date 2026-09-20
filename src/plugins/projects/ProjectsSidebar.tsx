@@ -10,8 +10,8 @@ export function ProjectsSidebar() {
   const [adding, setAdding] = useState(false)
 
   return (
-    <section className="mt3" aria-label="Projects">
-      <div className="flex items-center justify-between ph2 mb1">
+    <section className="ds-sidebar-section" aria-label="Projects">
+      <div className="ds-sidebar-section__header flex items-center justify-between ph2 mb1">
         <span className="f6 b gray ttu tracked">Projects</span>
         <button
           type="button"
@@ -41,7 +41,7 @@ export function ProjectsSidebar() {
       {!isLoading && !error && projects.length === 0 && (
         <p className="ph2 f6 gray ma0">No projects yet</p>
       )}
-      <ul className="list pl0 ma0">
+      <ul className="ds-sidebar-section__list list pl0 ma0">
         {projects.map((project) => (
           <li key={project.id}>
             <NavLink to={`/projects/${project.id}`} className="ds-nav-link">

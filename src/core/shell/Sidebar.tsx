@@ -10,8 +10,8 @@ export interface SidebarProps {
 
 export function Sidebar({ items, sections = [] }: SidebarProps) {
   return (
-    <nav className="ds-sidebar pa2" aria-label="Main">
-      <ul className="list pl0 ma0">
+    <nav className="ds-sidebar" aria-label="Main">
+      <ul className="ds-sidebar__nav list pl0 ma0">
         {items.map((item) => (
           <li key={item.to}>
             <NavLink to={item.to} className="ds-nav-link">
@@ -21,9 +21,11 @@ export function Sidebar({ items, sections = [] }: SidebarProps) {
           </li>
         ))}
       </ul>
-      {sections.map((Section, index) => (
-        <Section key={index} />
-      ))}
+      <div className="ds-sidebar__sections">
+        {sections.map((Section, index) => (
+          <Section key={index} />
+        ))}
+      </div>
     </nav>
   )
 }

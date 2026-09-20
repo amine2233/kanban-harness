@@ -10,6 +10,7 @@ extension AIProviderRegistry {
         var registry = AIProviderRegistry()
         registry.register(.apple) { config in
             AnyLanguageModelProvider(config: config) {
+                #if canImport(FoundationModels)
                 if #available(macOS 26.0, *) {
                     let model = SystemLanguageModel.default
                     if case let .unavailable(reason) = model.availability {
@@ -18,6 +19,9 @@ extension AIProviderRegistry {
                     return model
                 }
                 throw AIProviderError.unavailable("Apple's on-device model needs macOS 26 or later")
+                #else
+                throw AIProviderError.unavailable("Apple's on-device model is only available on macOS 26 or later")
+                #endif
             }
         }
         registry.register(.anthropic) { config in

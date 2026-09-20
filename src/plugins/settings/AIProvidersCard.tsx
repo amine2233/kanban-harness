@@ -13,6 +13,8 @@ import {
   Spinner,
 } from '@/design-system'
 import {
+  KEYED_KINDS,
+  KIND_BASE_URL,
   KIND_LABELS,
   useGetAIConfigQuery,
   useRemoveAIProviderMutation,
@@ -87,9 +89,11 @@ export function AIProvidersCard() {
                 </span>
               </span>
               <Badge
-                variant={provider.has_api_key || provider.kind === 'ollama' ? 'outline' : 'alpha'}
+                variant={
+                  provider.has_api_key || !KEYED_KINDS.has(provider.kind) ? 'outline' : 'alpha'
+                }
               >
-                {provider.kind === 'ollama'
+                {!KEYED_KINDS.has(provider.kind)
                   ? 'no key needed'
                   : provider.has_api_key
                     ? 'key set'
@@ -145,7 +149,16 @@ export function AIProvidersCard() {
   )
 }
 
-const KINDS: AIProviderKind[] = ['anthropic', 'openai_compatible', 'ollama']
+const KINDS = Object.keys(KIND_LABELS) as AIProviderKind[]
+
+const MODEL_PLACEHOLDER: Record<AIProviderKind, string> = {
+  apple: 'system',
+  anthropic: 'claude-sonnet-5',
+  openai: 'gpt-5',
+  gemini: 'gemini-2.5-flash',
+  ollama: 'llama3.2',
+  claude_code: 'sonnet',
+}
 
 function ProviderDialog({
   provider,
@@ -166,6 +179,8 @@ function ProviderDialog({
   )
   const [upsert, result] = useUpsertAIProviderMutation()
   const idValid = /^[a-z][a-z0-9_]{0,31}$/.test(id)
+  const needsKey = KEYED_KINDS.has(kind)
+  const defaultBaseUrl = KIND_BASE_URL[kind]
 
   const submit = async (event: SyntheticEvent) => {
     event.preventDefault()
@@ -174,7 +189,7 @@ function ProviderDialog({
       kind,
       name: name.trim() || id,
       model: model.trim(),
-      base_url: baseUrl.trim() || null,
+      base_url: defaultBaseUrl && baseUrl.trim() !== '' ? baseUrl.trim() : null,
       max_tokens: maxTokens === '' ? null : Number(maxTokens),
       ...(clearKey ? { api_key: '' } : apiKey ? { api_key: apiKey } : {}),
     }
@@ -235,7 +250,7 @@ function ProviderDialog({
           <Input
             name="provider-model"
             label="Model"
-            placeholder="claude-sonnet-5"
+            placeholder={MODEL_PLACEHOLDER[kind]}
             value={model}
             required
             className="flex-auto"
@@ -244,17 +259,19 @@ function ProviderDialog({
             }}
           />
         </div>
-        <Input
-          name="provider-base-url"
-          label={kind === 'anthropic' ? 'Base URL (optional)' : 'Base URL'}
-          placeholder={kind === 'ollama' ? 'http://127.0.0.1:11434' : 'https://api.example.com/v1'}
-          value={baseUrl}
-          className="mb2"
-          onChange={(e) => {
-            setBaseUrl(e.target.value)
-          }}
-        />
-        {kind !== 'ollama' && (
+        {defaultBaseUrl && (
+          <Input
+            name="provider-base-url"
+            label="Base URL (optional)"
+            placeholder={defaultBaseUrl}
+            value={baseUrl}
+            className="mb2"
+            onChange={(e) => {
+              setBaseUrl(e.target.value)
+            }}
+          />
+        )}
+        {needsKey && (
           <>
             <Input
               name="provider-api-key"

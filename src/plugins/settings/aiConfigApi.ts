@@ -1,6 +1,6 @@
 import { baseApi } from '@/app/api'
 
-export type AIProviderKind = 'anthropic' | 'openai_compatible' | 'ollama'
+export type AIProviderKind = 'apple' | 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'claude_code'
 
 export interface AIProvider {
   id: string
@@ -28,9 +28,24 @@ export interface UpsertAIProvider {
 }
 
 export const KIND_LABELS: Record<AIProviderKind, string> = {
+  apple: 'Apple Intelligence (on-device, macOS 26)',
   anthropic: 'Anthropic (Claude)',
-  openai_compatible: 'OpenAI-compatible (OpenAI, Mistral, Groq, LM Studio…)',
+  openai: 'OpenAI-compatible (OpenAI, Mistral, Groq, LM Studio…)',
+  gemini: 'Google Gemini',
   ollama: 'Ollama (local)',
+  claude_code: 'Claude Code CLI (your Claude login)',
+}
+
+/** Kinds that authenticate with an API key; the others use a local runtime or login. */
+export const KEYED_KINDS: ReadonlySet<AIProviderKind> = new Set(['anthropic', 'openai', 'gemini'])
+
+export const KIND_BASE_URL: Record<AIProviderKind, string | null> = {
+  apple: null,
+  anthropic: 'https://api.anthropic.com/v1',
+  openai: 'https://api.openai.com/v1',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
+  ollama: 'http://127.0.0.1:11434',
+  claude_code: null,
 }
 
 export const aiConfigApi = baseApi.injectEndpoints({

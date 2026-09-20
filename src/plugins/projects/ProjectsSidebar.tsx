@@ -12,7 +12,12 @@ export function ProjectsSidebar() {
   return (
     <section className="ds-sidebar-section" aria-label="Projects">
       <div className="ds-sidebar-section__header flex items-center justify-between ph2 mb1">
-        <span className="f6 b gray ttu tracked">Projects</span>
+        <span className="f6 b gray ttu tracked">
+          Projects
+          {projects.length > 0 && (
+            <span className="ds-sidebar-section__count">{projects.length}</span>
+          )}
+        </span>
         <button
           type="button"
           className="ds-icon-button gray"

@@ -1,5 +1,6 @@
 import { useAppDispatch } from '@/app/hooks'
 import { Icon } from '@/design-system'
+import { ServerStatus } from './ServerStatus'
 import { toggleSidebar } from './shellSlice'
 
 export function TopBar({ title }: { title: string }) {
@@ -21,6 +22,9 @@ export function TopBar({ title }: { title: string }) {
           <Icon name="bolt" size={14} />
         </span>
         {title}
+      </span>
+      <span className="ml-auto">
+        <ServerStatus />
       </span>
     </header>
   )

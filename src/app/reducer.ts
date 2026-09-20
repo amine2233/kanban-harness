@@ -4,7 +4,7 @@ import { shellSlice } from '@/core/shell/shellSlice'
 import { baseApi } from './api'
 
 // Plugins add their state with `slice.injectInto(rootReducer)` and augment
-// LazyLoadedSlices so RootState knows about it; see plugins/apps/appsSlice.ts.
+// LazyLoadedSlices so RootState knows about it (see README, "Adding a web plugin").
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface LazyLoadedSlices {}
 

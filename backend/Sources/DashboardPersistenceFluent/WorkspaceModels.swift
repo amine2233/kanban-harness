@@ -128,6 +128,7 @@ public final class CardModel: Model, @unchecked Sendable {
     @OptionalField(key: "points") public var points: Int?
     @OptionalField(key: "sprint_id") public var sprintId: UUID?
     @Field(key: "sprint_logs") public var sprintLogs: String
+    @OptionalField(key: "ai_cost") public var aiCost: String?
     @Field(key: "created_at") public var createdAt: String
     @Field(key: "updated_at") public var updatedAt: String
     @OptionalField(key: "completed_at") public var completedAt: String?
@@ -150,6 +151,7 @@ public final class CardModel: Model, @unchecked Sendable {
         points = card.points
         sprintId = card.sprintId
         sprintLogs = try JSONText.encode(card.sprintLogs)
+        aiCost = try card.aiCost.map(JSONText.encode)
         createdAt = RFC3339.format(card.createdAt)
         updatedAt = RFC3339.format(card.updatedAt)
         completedAt = card.completedAt.map(RFC3339.format)
@@ -173,6 +175,7 @@ public final class CardModel: Model, @unchecked Sendable {
         card.points = points
         card.sprintId = sprintId
         card.sprintLogs = try JSONText.decode(sprintLogs)
+        card.aiCost = try aiCost.map { try JSONText.decode($0) }
         card.updatedAt = try Row.date(updatedAt, "updated_at")
         card.completedAt = try completedAt.map { try Row.date($0, "completed_at") }
         return card
@@ -284,6 +287,19 @@ public struct CreateWorkspaceSchema: AsyncMigration {
         for schema in [SectionModel.schema, PrefixModel.schema, CardModel.schema, ColumnModel.schema, BoardModel.schema] {
             try await database.schema(schema).delete()
         }
+    }
+}
+
+/// Cards remember what their AI draft cost (KAN: cost tracking, step 1).
+public struct AddCardAICost: AsyncMigration {
+    public init() {}
+
+    public func prepare(on database: any Database) async throws {
+        try await database.schema(CardModel.schema).field("ai_cost", .string).update()
+    }
+
+    public func revert(on database: any Database) async throws {
+        try await database.schema(CardModel.schema).deleteField("ai_cost").update()
     }
 }
 

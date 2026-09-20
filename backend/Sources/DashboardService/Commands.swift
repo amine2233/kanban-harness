@@ -130,7 +130,7 @@ public protocol BoardCommands: Sendable {
     func createBoard(_ project: ProjectRef, name: String, withDefaultColumns: Bool) async throws(ServiceError) -> Board
     func columns(_ project: ProjectRef, boardId: UUID) async throws(ServiceError) -> [Column]
     func cards(_ project: ProjectRef, boardId: UUID) async throws(ServiceError) -> [Card]
-    func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority) async throws(ServiceError) -> Card
+    func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?) async throws(ServiceError) -> Card
     func updateCard(_ project: ProjectRef, boardId: UUID, cardId: UUID, changes: CardChanges) async throws(ServiceError) -> Card
     func deleteCard(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError)
 }
@@ -176,9 +176,9 @@ public struct LocalBoardCommands: BoardCommands {
         return workspace.cards(of: boardId)
     }
 
-    public func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority) async throws(ServiceError) -> Card {
+    public func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?) async throws(ServiceError) -> Card {
         try await projects.mutate(project) { workspace, now in
-            try workspace.createCard(columnId: columnId, title: title, description: description, priority: priority, now: now)
+            try workspace.createCard(columnId: columnId, title: title, description: description, priority: priority, aiCost: aiCost, now: now)
         }
     }
 

@@ -156,8 +156,8 @@ public struct RemoteBoardCommands: BoardCommands {
         return page.items.compactMap(Self.card)
     }
 
-    public func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority) async throws(ServiceError) -> Card {
-        let body = CreateCardRequest(title: title, description: description, priority: PriorityDTO(priority))
+    public func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?) async throws(ServiceError) -> Card {
+        let body = CreateCardRequest(title: title, description: description, priority: PriorityDTO(priority), aiCost: aiCost)
         let response = try await client.send("POST", "\(try await base(project))/columns/\(columnId.uuidString)/cards", body: body, as: CardResponse.self)
         guard let card = Self.card(response) else { throw .remote(code: "BAD_RESPONSE", message: "unknown card enum values") }
         return card
@@ -210,6 +210,7 @@ public struct RemoteBoardCommands: BoardCommands {
         var card = Card(boardId: r.boardId, columnId: r.columnId, prefix: r.prefix, cardNumber: r.cardNumber, title: r.title, description: r.description, priority: priority, status: status, position: r.position, id: r.id, now: r.createdAt)
         card.dueDate = r.dueDate
         card.points = r.points
+        card.aiCost = r.aiCost
         card.sprintId = r.sprintId
         card.updatedAt = r.updatedAt
         card.completedAt = r.completedAt

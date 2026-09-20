@@ -135,7 +135,7 @@ struct KanbanController: RouteCollection {
         let priority = try body.priority.map(Self.priority)
         let card = try await req.projects.mutate(req.projectRef) { workspace, now in
             try workspace.createCard(
-                columnId: columnId, title: body.title, description: body.description, priority: priority ?? .medium, now: now
+                columnId: columnId, title: body.title, description: body.description, priority: priority ?? .medium, aiCost: body.aiCost, now: now
             )
         }
         return try created(CardResponse(card))

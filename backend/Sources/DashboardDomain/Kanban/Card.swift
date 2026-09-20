@@ -37,6 +37,43 @@ public enum CardPriority: String, Codable, Hashable, Sendable, CaseIterable {
     }
 }
 
+/// What drafting a card with AI cost; the first entry of a card's cost history.
+/// `costUSD` nil = unknown (no pricing configured), `estimated` = computed from tokens.
+public struct AICost: Codable, Hashable, Sendable {
+    public var provider: String
+    public var model: String
+    public var inputTokens: Int?
+    public var outputTokens: Int?
+    public var costUSD: Double?
+    public var estimated: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case provider, model, estimated
+        case inputTokens = "input_tokens"
+        case outputTokens = "output_tokens"
+        case costUSD = "cost_usd"
+    }
+
+    public init(provider: String, model: String, inputTokens: Int? = nil, outputTokens: Int? = nil, costUSD: Double? = nil, estimated: Bool = false) {
+        self.provider = provider
+        self.model = model
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+        self.costUSD = costUSD
+        self.estimated = estimated
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        provider = try c.decode(String.self, forKey: .provider)
+        model = try c.decode(String.self, forKey: .model)
+        inputTokens = try c.decodeIfPresent(Int.self, forKey: .inputTokens)
+        outputTokens = try c.decodeIfPresent(Int.self, forKey: .outputTokens)
+        costUSD = try c.decodeIfPresent(Double.self, forKey: .costUSD)
+        estimated = try c.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
+    }
+}
+
 public struct Card: Codable, Hashable, Sendable, Identifiable {
     public let id: UUID
     public var boardId: UUID
@@ -52,6 +89,8 @@ public struct Card: Codable, Hashable, Sendable, Identifiable {
     public var points: Int?
     public var sprintId: UUID?
     public var sprintLogs: [JSONValue]
+    /// Extra key, absent unless the card was drafted with AI; kanban-rs ignores it.
+    public var aiCost: AICost?
     public let createdAt: Date
     public var updatedAt: Date
     public var completedAt: Date?
@@ -64,6 +103,7 @@ public struct Card: Codable, Hashable, Sendable, Identifiable {
         case dueDate = "due_date"
         case sprintId = "sprint_id"
         case sprintLogs = "sprint_logs"
+        case aiCost = "ai_cost"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case completedAt = "completed_at"
@@ -96,6 +136,7 @@ public struct Card: Codable, Hashable, Sendable, Identifiable {
         points = nil
         sprintId = nil
         sprintLogs = []
+        aiCost = nil
         createdAt = now
         updatedAt = now
         completedAt = status == .done ? now : nil

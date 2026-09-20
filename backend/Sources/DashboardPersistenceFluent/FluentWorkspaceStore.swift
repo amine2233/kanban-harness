@@ -7,7 +7,7 @@ import FluentKit
 public struct FluentWorkspaceStore: WorkspaceStore {
     public let database: any Database
 
-    public static let migrations: [any Migration] = [CreateWorkspaceSchema()]
+    public static let migrations: [any Migration] = [CreateWorkspaceSchema(), AddCardAICost()]
 
     public init(database: any Database) {
         self.database = database

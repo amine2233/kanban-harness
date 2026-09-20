@@ -45,6 +45,21 @@ import Testing
         #expect(workspace.prefixes == [Prefix(name: "task", cardCounter: 2)])
     }
 
+    @Test func aiCostIsAnOptionalExtraKeyOnTheWire() throws {
+        var workspace = Workspace()
+        let board = workspace.createBoardWithTemplateColumns(name: "B")
+        let column = workspace.columns(of: board.id)[0]
+        let plain = try workspace.createCard(columnId: column.id, title: "Plain")
+        let drafted = try workspace.createCard(columnId: column.id, title: "Drafted", aiCost: AICost(provider: "cc", model: "sonnet", inputTokens: 1, outputTokens: 2, costUSD: 0.5))
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        #expect(!String(decoding: try encoder.encode(plain), as: UTF8.self).contains("ai_cost"), "kanban-rs files stay byte-compatible for ordinary cards")
+        let json = String(decoding: try encoder.encode(drafted), as: UTF8.self)
+        #expect(json.contains(#""ai_cost":{"cost_usd":0.5,"estimated":false,"input_tokens":1,"model":"sonnet","output_tokens":2,"provider":"cc"}"#))
+        #expect(try JSONDecoder().decode(Card.self, from: Data(json.utf8)) == drafted)
+        #expect(try JSONDecoder().decode(AICost.self, from: Data(#"{"provider":"p","model":"m"}"#.utf8)) == AICost(provider: "p", model: "m"))
+    }
+
     @Test func createCardContinuesExistingPrefixCounterCaseInsensitively() throws {
         var (workspace, board, columns) = seeded()
         workspace.boards[0].cardPrefix = "KAN"

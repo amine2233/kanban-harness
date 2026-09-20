@@ -35,6 +35,10 @@ public enum StoreContract {
         let board = workspace.createBoardWithTemplateColumns(name: "Demo")
         let column = workspace.columns(of: board.id)[0]
         try workspace.createCard(columnId: column.id, title: "Card", priority: .high)
+        try workspace.createCard(
+            columnId: column.id, title: "Drafted",
+            aiCost: AICost(provider: "cc", model: "sonnet", inputTokens: 2, outputTokens: 400, costUSD: 0.03, estimated: true)
+        )
         try await store.save(workspace)
         let loaded = try await store.load()
         try require(loaded.boards == workspace.boards, "boards must round-trip")

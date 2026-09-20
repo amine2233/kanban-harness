@@ -205,10 +205,14 @@ extension TestingApplicationTester {
             let todo = try #require(columns[0]["id"] as? String)
             let done = try #require(columns[3]["id"] as? String)
 
-            let (created, card) = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "Ship it", "priority": "high"])
+            let (created, card) = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: [
+                "title": "Ship it", "priority": "high",
+                "ai_cost": ["provider": "cc", "model": "sonnet", "input_tokens": 2, "output_tokens": 400, "cost_usd": 0.03, "estimated": false],
+            ])
             #expect(created == .created)
             let cardBody = try #require(card as? [String: Any])
             #expect(cardBody["title"] as? String == "Ship it")
+            #expect((cardBody["ai_cost"] as? [String: Any])?["cost_usd"] as? Double == 0.03)
             #expect(cardBody["priority"] as? String == "high")
             #expect(cardBody["status"] as? String == "todo")
             #expect(cardBody["card_number"] as? Int == 1)

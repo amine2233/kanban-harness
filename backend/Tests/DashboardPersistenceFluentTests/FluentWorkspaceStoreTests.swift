@@ -26,6 +26,28 @@ import Testing
         try await database.shutdown()
     }
 
+    @Test func existingDatabasesGainTheAICostColumn() async throws {
+        let path = try tempDir() + "/kanban.sqlite"
+        let old = try SQLiteDatabase(path: path, migrations: [CreateWorkspaceSchema()])
+        try await old.migrate()
+        try await old.shutdown()
+
+        let current = try SQLiteDatabase.workspace(path: path)
+        try await current.migrate()
+        let store = FluentWorkspaceStore(database: current.database)
+        do {
+            var workspace = try await store.load()
+            let board = workspace.createBoardWithTemplateColumns(name: "Upgraded")
+            try workspace.createCard(columnId: workspace.columns(of: board.id)[0].id, title: "After", aiCost: AICost(provider: "cc", model: "sonnet", costUSD: 0.01))
+            try await store.save(workspace)
+            #expect(try await store.load().cards.first?.aiCost?.costUSD == 0.01)
+        } catch {
+            try await current.shutdown()
+            throw error
+        }
+        try await current.shutdown()
+    }
+
     @Test func pooledStoreSatisfiesContractAndReusesOneDatabase() async throws {
         let pool = SQLiteDatabasePool()
         let path = try tempDir() + "/kanban.sqlite"

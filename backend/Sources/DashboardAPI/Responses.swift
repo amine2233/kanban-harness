@@ -153,6 +153,7 @@ public struct CardResponse: Codable, Sendable, Equatable {
     public let points: Int?
     public let cardNumber: Int
     public let sprintId: UUID?
+    public let aiCost: AICost?
     public let createdAt: Date
     public let updatedAt: Date
     public let completedAt: Date?
@@ -164,6 +165,7 @@ public struct CardResponse: Codable, Sendable, Equatable {
         case dueDate = "due_date"
         case cardNumber = "card_number"
         case sprintId = "sprint_id"
+        case aiCost = "ai_cost"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case completedAt = "completed_at"
@@ -184,6 +186,7 @@ public struct CardResponse: Codable, Sendable, Equatable {
         try c.encode(points, forKey: .points)
         try c.encode(cardNumber, forKey: .cardNumber)
         try c.encode(sprintId, forKey: .sprintId)
+        try c.encode(aiCost, forKey: .aiCost)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(updatedAt, forKey: .updatedAt)
         try c.encode(completedAt, forKey: .completedAt)
@@ -203,6 +206,7 @@ public struct CardResponse: Codable, Sendable, Equatable {
         points = card.points
         cardNumber = card.cardNumber
         sprintId = card.sprintId
+        aiCost = card.aiCost
         createdAt = card.createdAt
         updatedAt = card.updatedAt
         completedAt = card.completedAt

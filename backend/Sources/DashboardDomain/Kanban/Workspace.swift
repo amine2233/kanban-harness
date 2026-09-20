@@ -115,6 +115,7 @@ public struct Workspace: Equatable, Sendable {
         title: String,
         description: String? = nil,
         priority: CardPriority = .medium,
+        aiCost: AICost? = nil,
         id: UUID = UUID(),
         now: Date = Date()
     ) throws -> Card {
@@ -124,7 +125,7 @@ public struct Workspace: Equatable, Sendable {
         let board = try board(column.boardId)
         try checkWipLimit(column, adding: 1)
         let prefix = board.cardPrefix ?? Prefix.defaultCardPrefix
-        let card = Card(
+        var card = Card(
             boardId: board.id,
             columnId: column.id,
             prefix: prefix,
@@ -137,6 +138,7 @@ public struct Workspace: Equatable, Sendable {
             id: id,
             now: now
         )
+        card.aiCost = aiCost
         cards.append(card)
         return card
     }

@@ -148,11 +148,19 @@ public struct CreateCardRequest: Codable, Sendable {
     public var title: String
     public var description: String?
     public var priority: PriorityDTO?
+    /// Set by clients that created the card from an AI draft.
+    public var aiCost: AICost?
 
-    public init(title: String, description: String? = nil, priority: PriorityDTO? = nil) {
+    enum CodingKeys: String, CodingKey {
+        case title, description, priority
+        case aiCost = "ai_cost"
+    }
+
+    public init(title: String, description: String? = nil, priority: PriorityDTO? = nil, aiCost: AICost? = nil) {
         self.title = title
         self.description = description
         self.priority = priority
+        self.aiCost = aiCost
     }
 }
 

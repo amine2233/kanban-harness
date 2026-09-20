@@ -139,7 +139,7 @@ public struct KanbanToolDispatcher: Sendable {
                 guard let value = CardPriority(wireValue: raw) else { throw ToolError("unknown priority '\(raw)'") }
                 return value
             } ?? .medium
-            let card = try await boards.createCard(project, columnId: column.id, title: try args.string("title"), description: args.optionalString("description"), priority: priority)
+            let card = try await boards.createCard(project, columnId: column.id, title: try args.string("title"), description: args.optionalString("description"), priority: priority, aiCost: nil)
             return try Value(CardView(card, columns: columns))
         case "update_card":
             let (project, board) = try await resolveBoard(args)

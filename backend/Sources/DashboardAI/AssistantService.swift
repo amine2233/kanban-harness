@@ -15,6 +15,11 @@ public struct DraftedTicket: Sendable, Equatable {
         self.model = model
         self.usage = usage
     }
+
+    /// What to stamp on the card when this draft is turned into one.
+    public var aiCost: AICost {
+        AICost(provider: providerId, model: model, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, costUSD: usage.costUSD, estimated: usage.estimated)
+    }
 }
 
 /// What a client sees while a draft is being produced.

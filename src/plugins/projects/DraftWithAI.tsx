@@ -262,6 +262,11 @@ function Activity({
           />
           <Field name="priority" ok={!!partial.priority} />
           <Field name="points" ok={partial.points !== null && partial.points !== undefined} />
+          <Field
+            name="subtasks"
+            ok={(partial.subtasks?.length ?? 0) > 0}
+            count={partial.subtasks?.length}
+          />
         </ul>
       )}
       {assistant.error && (

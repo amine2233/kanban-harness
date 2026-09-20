@@ -91,6 +91,10 @@ describe('DraftWithAI', () => {
     acceptance_criteria: ['Email sent'],
     priority: 'high',
     points: 5,
+    subtasks: [
+      { title: 'Login entry point', description: null, points: 2 },
+      { title: 'Call the reset endpoint', description: 'd', points: null },
+    ],
   }
   const usage = { input_tokens: 2, output_tokens: 400, cost_usd: 0.03, estimated: true }
 
@@ -107,7 +111,14 @@ describe('DraftWithAI', () => {
           ['text', { delta: '{"title":"Add pass' }],
           ['partial', { title: 'Add pass' }],
           ['text', { delta: 'word reset","priority":"high"' }],
-          ['partial', { title: 'Add password reset', priority: 'high' }],
+          [
+            'partial',
+            {
+              title: 'Add password reset',
+              priority: 'high',
+              subtasks: [{ title: 'Login entry point' }],
+            },
+          ],
           ['usage', usage],
           ['stage', { step: 'validate', detail: null, elapsed_ms: 6003 }],
           ['stage', { step: 'done', detail: null, elapsed_ms: 6004 }],
@@ -155,7 +166,7 @@ describe('DraftWithAI', () => {
     expect(steps).toHaveLength(4)
     for (const step of steps) expect(step.className).toContain('--done')
     expect(within(activity).getByRole('list', { name: 'Draft fields' })).toHaveTextContent(
-      '✓ title✓ description✓ criteria 1✓ priority✓ points',
+      '✓ title✓ description✓ criteria 1✓ priority✓ points✓ subtasks 2',
     )
     await userEvent.click(within(activity).getByText('Details'))
     expect(within(activity).getByRole('row', { name: /Wait for model/ })).toHaveTextContent('2.0 s')
@@ -173,7 +184,12 @@ describe('DraftWithAI', () => {
       provider: 'local',
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    const subtasks = screen.getByRole('group', { name: /Sub-tasks \(2\/2\)/ })
+    await userEvent.click(
+      within(subtasks).getByLabelText('Create sub-task Call the reset endpoint'),
+    )
+    await userEvent.type(within(subtasks).getByLabelText('Sub-task 1 title'), ' on iOS')
+    await userEvent.click(screen.getByRole('button', { name: 'Create 1 + 1 cards' }))
     await waitFor(() => {
       expect(
         api.calls.some((c) => c.key === 'POST /api/projects/p1/kanban/v1/columns/todo/cards'),
@@ -182,6 +198,9 @@ describe('DraftWithAI', () => {
     const created = api.calls.find(
       (c) => c.key === 'POST /api/projects/p1/kanban/v1/columns/todo/cards',
     )
+    expect((created?.body as { subtasks: unknown }).subtasks).toEqual([
+      { title: 'Login entry point on iOS', description: null, points: 2 },
+    ])
     expect((created?.body as { ai_cost: unknown }).ai_cost).toEqual({
       provider: 'local',
       model: 'llama3.2',

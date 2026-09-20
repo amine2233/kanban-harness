@@ -42,6 +42,16 @@ export interface Card {
   due_date: string | null
   points: number | null
   ai_cost: AICost | null
+  /** Set when the card is a sub-task of another card on the board. */
+  parent_id: string | null
+  children: { total: number; done: number }
+}
+
+export interface NewSubtask {
+  title: string
+  description?: string | null
+  priority?: CardPriority
+  points?: number | null
 }
 
 /** What drafting the card with AI cost; absent on hand-written cards. */
@@ -191,9 +201,11 @@ export const kanbanApi = baseApi.injectEndpoints({
         priority: CardPriority
         description?: string | null
         aiCost?: AICost | undefined
+        /** Created in the same column and linked to the card, atomically. */
+        subtasks?: NewSubtask[]
       }
     >({
-      query: ({ projectId, columnId, title, priority, description, aiCost }) => ({
+      query: ({ projectId, columnId, title, priority, description, aiCost, subtasks }) => ({
         url: `${kanban(projectId)}/columns/${columnId}/cards`,
         method: 'POST',
         body: {
@@ -201,6 +213,7 @@ export const kanbanApi = baseApi.injectEndpoints({
           priority,
           description: description ?? null,
           ...(aiCost ? { ai_cost: aiCost } : {}),
+          ...(subtasks && subtasks.length > 0 ? { subtasks } : {}),
         },
       }),
       invalidatesTags: (_result, _error, { boardId }) => [{ type: 'Card', id: boardId }],
@@ -223,6 +236,14 @@ export const kanbanApi = baseApi.injectEndpoints({
         { type: 'Card', id: boardId },
         ...(patch.board_id ? [{ type: 'Card' as const, id: patch.board_id }] : []),
       ],
+    }),
+    setCardParent: build.mutation<Card, BoardScope & { cardId: string; parentId: string | null }>({
+      query: ({ projectId, boardId, cardId, parentId }) => ({
+        url: `${kanban(projectId)}/boards/${boardId}/cards/${cardId}/parent`,
+        method: 'PUT',
+        body: { parent_id: parentId },
+      }),
+      invalidatesTags: (_result, _error, { boardId }) => [{ type: 'Card', id: boardId }],
     }),
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- 204 has no body
     deleteCard: build.mutation<void, BoardScope & { cardId: string }>({
@@ -249,5 +270,6 @@ export const {
   useCreateCardMutation,
   useMoveCardMutation,
   useUpdateCardMutation,
+  useSetCardParentMutation,
   useDeleteCardMutation,
 } = kanbanApi

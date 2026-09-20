@@ -817,3 +817,97 @@ body {
 .ds-card__cost {
   color: #79589f;
 }
+
+/* --- Sub-tasks ------------------------------------------------------------ */
+
+.ds-chip {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #eef0f4;
+  color: #62738d;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.ds-chip--done {
+  background: #e3f5e9;
+  color: #2f855a;
+}
+
+.ds-subtree {
+  margin: 0 8px 8px 12px;
+  padding-left: 10px;
+  border-left: 2px solid #e6d9f5;
+}
+
+.ds-subtree__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 4px 0;
+  font-size: 12px;
+  color: #4a5568;
+  cursor: grab;
+}
+
+.ds-subtree__item + .ds-subtree__item {
+  border-top: 1px solid #f0f2f5;
+}
+
+.ds-subtree__item--done .ds-subtree__title {
+  text-decoration: line-through;
+  color: #8a97ad;
+}
+
+.ds-subtree__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ds-subtree__key {
+  flex: none;
+  color: #8a97ad;
+  font-size: 11px;
+}
+
+.ds-subtree__item .ds-card__moves {
+  opacity: 0;
+}
+
+.ds-subtree__item:hover .ds-card__moves,
+.ds-subtree__item:focus-within .ds-card__moves {
+  opacity: 1;
+}
+
+.ds-subtasks {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #e6d9f5;
+  border-radius: 8px;
+  background: #fbf9fd;
+}
+
+.ds-link {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: #79589f;
+  cursor: pointer;
+}
+
+.ds-link:hover {
+  text-decoration: underline;
+}

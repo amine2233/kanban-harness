@@ -1,11 +1,18 @@
 import type { AICost, CardPriority } from './kanbanApi'
 
+export interface SubtaskDraft {
+  title: string
+  description: string | null
+  points: number | null
+}
+
 export interface TicketDraft {
   title: string
   description: string | null
   acceptance_criteria: string[]
   priority: CardPriority
   points: number | null
+  subtasks: SubtaskDraft[]
 }
 
 /** What the model has produced so far; every field may still be missing. */
@@ -15,6 +22,7 @@ export interface PartialTicketDraft {
   acceptance_criteria?: string[]
   priority?: CardPriority | null
   points?: number | null
+  subtasks?: SubtaskDraft[]
 }
 
 export interface Usage {
@@ -49,6 +57,8 @@ export interface DraftPatch {
   description?: string
   priority?: CardPriority
   points?: number
+  /** Proposed children; the user ticks which ones to create. */
+  subtasks?: SubtaskDraft[]
   /** Set once the draft is final: what to stamp on the card when it is created. */
   aiCost?: AICost
 }
@@ -60,6 +70,7 @@ export function draftPatch(draft: PartialTicketDraft): DraftPatch {
     ...(description ? { description } : {}),
     ...(draft.priority ? { priority: draft.priority } : {}),
     ...(draft.points !== null && draft.points !== undefined ? { points: draft.points } : {}),
+    ...(draft.subtasks && draft.subtasks.length > 0 ? { subtasks: draft.subtasks } : {}),
   }
 }
 

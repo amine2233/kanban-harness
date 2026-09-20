@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
-import { Button, ConfirmModal, Input, Modal, Select, Textarea } from '@/design-system'
+import { Button, ConfirmModal, cx, Input, Modal, Select, Textarea } from '@/design-system'
 import { formatCost, formatTokens } from './assistantApi'
 import { DraftWithAI } from './DraftWithAI'
 import {
@@ -23,14 +23,36 @@ interface Props {
   scope: { projectId: string; boardId: string }
   columns: Column[]
   boards: Board[]
+  /** Every card of the board, for the parent / children sections. */
+  cards?: Card[]
   /** Existing card to edit; omitted when creating. */
   card?: Card | undefined
   /** Column a new card lands in. */
   columnId?: string
+  /** Navigate to another card (a sub-task or the parent) in place of this one. */
+  onOpenCard?: (card: Card) => void
   onClose: () => void
 }
 
-export function CardDialog({ scope, columns, boards, card, columnId, onClose }: Props) {
+/** A proposed sub-task in the create form; unticked ones are not created. */
+interface SubtaskRow {
+  key: number
+  title: string
+  description: string | null
+  points: number | null
+  include: boolean
+}
+
+export function CardDialog({
+  scope,
+  columns,
+  boards,
+  cards = [],
+  card,
+  columnId,
+  onOpenCard,
+  onClose,
+}: Props) {
   const [title, setTitle] = useState(card?.title ?? '')
   const [description, setDescription] = useState(card?.description ?? '')
   const [priority, setPriority] = useState<CardPriority>(card?.priority ?? 'medium')
@@ -42,7 +64,14 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
     card?.points === null || card === undefined ? '' : String(card.points),
   )
   const [aiCost, setAiCost] = useState<AICost>()
+  const [subtasks, setSubtasks] = useState<SubtaskRow[]>([])
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const parent = card?.parent_id ? cards.find((c) => c.id === card.parent_id) : undefined
+  const children = card
+    ? cards.filter((c) => c.parent_id === card.id).sort((a, b) => a.card_number - b.card_number)
+    : []
+  const columnName = (id: string) => columns.find((c) => c.id === id)?.name ?? '?'
+  const included = subtasks.filter((s) => s.include && s.title.trim())
   const [createCard, create] = useCreateCardMutation()
   const [updateCard, update] = useUpdateCardMutation()
   const [deleteCard, remove] = useDeleteCardMutation()
@@ -62,6 +91,11 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
         priority,
         description: desc,
         aiCost,
+        subtasks: included.map((s) => ({
+          title: s.title.trim(),
+          description: s.description,
+          points: s.points,
+        })),
       })
       if (result.data) onClose()
       return
@@ -128,8 +162,25 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
               if (patch.priority !== undefined) setPriority(patch.priority)
               if (patch.points !== undefined) setPoints(String(patch.points))
               if (patch.aiCost !== undefined) setAiCost(patch.aiCost)
+              if (patch.subtasks !== undefined) {
+                setSubtasks(patch.subtasks.map((s, key) => ({ key, ...s, include: true })))
+              }
             }}
           />
+        )}
+        {parent && (
+          <p className="f6 mt0 mb2">
+            <span className="gray">Sub-task of </span>
+            <button
+              type="button"
+              className="ds-link"
+              onClick={() => {
+                onOpenCard?.(parent)
+              }}
+            >
+              {parent.prefix}-{String(parent.card_number)} {parent.title}
+            </button>
+          </p>
         )}
         <Input
           name="card-title"
@@ -247,6 +298,102 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
             />
           </div>
         )}
+        {!card && subtasks.length > 0 && (
+          <fieldset className="ds-subtasks mb2">
+            <legend className="f6 b">
+              Sub-tasks ({String(included.length)}/{String(subtasks.length)})
+              <span className="gray fw4"> — the draft split this into separate pieces of work</span>
+            </legend>
+            {subtasks.map((row) => (
+              <div key={row.key} className="flex items-center mb1" style={{ gap: 8 }}>
+                <input
+                  type="checkbox"
+                  aria-label={`Create sub-task ${row.title}`}
+                  checked={row.include}
+                  onChange={(e) => {
+                    setSubtasks((list) =>
+                      list.map((s) =>
+                        s.key === row.key ? { ...s, include: e.target.checked } : s,
+                      ),
+                    )
+                  }}
+                />
+                <input
+                  className="hk-input flex-auto"
+                  aria-label={`Sub-task ${String(row.key + 1)} title`}
+                  value={row.title}
+                  maxLength={200}
+                  onChange={(e) => {
+                    setSubtasks((list) =>
+                      list.map((s) => (s.key === row.key ? { ...s, title: e.target.value } : s)),
+                    )
+                  }}
+                />
+                {row.points !== null && <span className="f6 gray">{String(row.points)} pt</span>}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="tertiary"
+                  aria-label={`Remove sub-task ${row.title}`}
+                  onClick={() => {
+                    setSubtasks((list) => list.filter((s) => s.key !== row.key))
+                  }}
+                >
+                  ×
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="tertiary"
+              onClick={() => {
+                setSubtasks((list) => [
+                  ...list,
+                  {
+                    key: (list.at(-1)?.key ?? -1) + 1,
+                    title: '',
+                    description: null,
+                    points: null,
+                    include: true,
+                  },
+                ])
+              }}
+            >
+              + Add a sub-task
+            </Button>
+          </fieldset>
+        )}
+        {card && children.length > 0 && (
+          <section className="ds-subtasks mb2" aria-label="Sub-tasks">
+            <p className="f6 b mt0 mb1">
+              Sub-tasks {String(children.filter((c) => c.status === 'done').length)}/
+              {String(children.length)} done
+            </p>
+            <ul className="list pl0 ma0">
+              {children.map((child) => (
+                <li key={child.id} className="flex items-center f6 mb1" style={{ gap: 8 }}>
+                  <span
+                    className={`ds-priority ds-priority--${child.priority}`}
+                    title={child.priority}
+                  />
+                  <button
+                    type="button"
+                    className="ds-link truncate flex-auto tl"
+                    onClick={() => {
+                      onOpenCard?.(child)
+                    }}
+                  >
+                    {child.prefix}-{String(child.card_number)} {child.title}
+                  </button>
+                  <span className={cx('ds-chip', child.status === 'done' && 'ds-chip--done')}>
+                    {columnName(child.column_id)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {error && <p className="f6 red mt0 mb2">{errorMessage(error)}</p>}
         <div className="flex items-center justify-between">
           {card ? (
@@ -267,7 +414,11 @@ export function CardDialog({ scope, columns, boards, card, columnId, onClose }: 
               Cancel
             </Button>
             <Button type="submit" disabled={busy}>
-              {card ? 'Save' : 'Create'}
+              {card
+                ? 'Save'
+                : included.length > 0
+                  ? `Create 1 + ${String(included.length)} cards`
+                  : 'Create'}
             </Button>
           </span>
         </div>

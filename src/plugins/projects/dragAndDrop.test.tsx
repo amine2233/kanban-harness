@@ -34,6 +34,8 @@ const card = {
   due_date: null,
   points: null,
   ai_cost: null,
+  parent_id: null,
+  children: { total: 0, done: 0 },
 }
 const page = <T,>(items: T[]) => ({
   items,

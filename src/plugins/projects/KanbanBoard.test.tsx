@@ -35,6 +35,8 @@ const cardOf = (id: string, column_id: string, title: string, priority = 'medium
   due_date: null as string | null,
   points: null as number | null,
   ai_cost: null,
+  parent_id: null as string | null,
+  children: { total: 0, done: 0 },
 })
 const page = <T,>(items: T[]) => ({
   items,
@@ -218,6 +220,66 @@ describe('KanbanBoard', () => {
       expect(screen.queryByText('Doomed')).not.toBeInTheDocument()
     })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  test('nests sub-tasks under their parent with column chips and progress', async () => {
+    const parent = { ...cardOf('c1', 'todo', 'Epic'), children: { total: 2, done: 1 } }
+    const one = { ...cardOf('c2', 'done', 'Part one'), status: 'done', parent_id: 'c1' }
+    const two = { ...cardOf('c3', 'doing', 'Part two'), parent_id: 'c1' }
+    const api = boardRoutes([parent, one, two], {
+      [`PATCH ${base}/boards/b1/cards/c3`]: (body) => ({
+        body: { ...two, column_id: (body as { column_id: string }).column_id },
+      }),
+    })
+    renderBoard()
+    const todo = await screen.findByRole('region', { name: 'TODO' })
+    const tree = within(todo).getByRole('list', { name: 'Sub-tasks of Epic' })
+    expect(
+      within(tree)
+        .getAllByRole('listitem')
+        .map((li) => li.getAttribute('aria-label')),
+    ).toEqual(['Part one (sub-task, Complete)', 'Part two (sub-task, Doing)'])
+    expect(within(todo).getByLabelText('1 of 2 sub-tasks done')).toHaveTextContent('1/2')
+    expect(
+      within(screen.getByRole('region', { name: 'Doing' })).queryByText('Part two'),
+    ).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: 'Complete' })).queryByText('Part one'),
+    ).not.toBeInTheDocument()
+
+    await userEvent.click(within(tree).getByRole('button', { name: 'Move Part two to Complete' }))
+    expect(api.calls.find((c) => c.key === `PATCH ${base}/boards/b1/cards/c3`)?.body).toEqual({
+      column_id: 'done',
+    })
+
+    await userEvent.click(within(tree).getByRole('button', { name: 'Open Part two' }))
+    const dialog = screen.getByRole('dialog', { name: 'task-3' })
+    expect(within(dialog).getByText('Sub-task of')).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'task-1 Epic' }))
+    const parentDialog = screen.getByRole('dialog', { name: 'task-1' })
+    const list = within(parentDialog).getByRole('region', { name: 'Sub-tasks' })
+    expect(list).toHaveTextContent('Sub-tasks 1/2 done')
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2)
+  })
+
+  test('creates a card with the sub-tasks ticked in the dialog', async () => {
+    const cards = [cardOf('c1', 'todo', 'Existing')]
+    const api = boardRoutes(cards, {
+      [`POST ${base}/columns/todo/cards`]: () => ({
+        status: 201,
+        body: cardOf('c9', 'todo', 'Epic'),
+      }),
+    })
+    renderBoard()
+    await screen.findByText('Existing')
+    await userEvent.click(screen.getByRole('button', { name: 'Add card to TODO' }))
+    const dialog = screen.getByRole('dialog', { name: 'New card' })
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Epic')
+    expect(within(dialog).queryByText(/Sub-tasks/)).not.toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
+    expect(
+      api.calls.find((c) => c.key === `POST ${base}/columns/todo/cards`)?.body,
+    ).not.toHaveProperty('subtasks')
   })
 
   test('shows an info banner when the project has no board', async () => {

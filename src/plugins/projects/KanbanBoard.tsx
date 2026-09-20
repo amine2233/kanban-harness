@@ -59,7 +59,8 @@ function BoardColumns({ projectId, boardId }: { projectId: string; boardId: stri
     )
   }
   const columnList = columns.data ?? []
-  const grouped = groupCardsByColumn(columnList, cards.data ?? [])
+  const allCards = cards.data ?? []
+  const grouped = groupCardsByColumn(columnList, allCards)
 
   return (
     <div className="ds-board">
@@ -71,6 +72,7 @@ function BoardColumns({ projectId, boardId }: { projectId: string; boardId: stri
           columns={columnList}
           boards={boards.data ?? []}
           cards={grouped.get(column.id) ?? []}
+          allCards={allCards}
           header={<ColumnActions scope={scope} column={column} columns={columnList} />}
         />
       ))}

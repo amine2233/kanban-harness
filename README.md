@@ -69,7 +69,8 @@ Set in `mise.toml` (override in a git-ignored `.env.local`):
 5. **Project page header** — switch the project's storage (JSON ⇄ SQLite, converted in place, old file kept) or **Unregister** it (files on disk are never deleted).
 6. **Settings** — _This browser_: the API server URL this browser talks to (stored in `localStorage`; empty = same origin, with a Test connection button). _Server_: `settings.json` on the server — default storage for new projects and allowed browser origins (CORS) — applied live, no restart. _AI providers_: `config.json`/`config.yaml` on the server, see below.
 7. **Draft with AI** — in the new-card dialog, describe the ticket in a sentence; the title and description fill in as the model types. The activity panel shows the steps (Prepare · Wait for model · Streaming · Validate), provider, time to first token, tokens and cost, which fields have arrived, and under _Details_ the per-phase durations, error codes, a _Copy log_ button and the raw model output. Nothing is created until you press Create.
-8. **Cost** — a card created from a draft remembers what it cost (`✨ $0.03` on the board, details in the card dialog). Claude Code reports its real cost; other vendors are priced from the provider's pricing (marked ≈), local models are free. This is the first entry of a card's cost history; backlog→done tracking and project totals come next.
+8. **Sub-tasks** — a draft splits a big idea into sub-tasks (only when it clearly needs several independent pieces); they appear as ticked, editable rows and _Create 1 + N cards_ creates the tree in one request. On the board a parent shows its sub-tasks nested inside it with the column each one is in (`⌥ 1/3` done); drag a sub-task or use its arrows to move it — it stays under its parent, like Jira. The card dialog links a sub-task to its parent and lists a parent's sub-tasks. Links are kanban-rs `graph.spawns` edges, so the file keeps working there.
+9. **Cost** — a card created from a draft remembers what it cost (`✨ $0.03` on the board, details in the card dialog). Claude Code reports its real cost; other vendors are priced from the provider's pricing (marked ≈), local models are free. This is the first entry of a card's cost history; backlog→done tracking and project totals come next.
 
 ### AI providers
 
@@ -127,7 +128,8 @@ Base path `/api`; JSON in and out; errors are `{"code": "NOT_FOUND" | "ALREADY_E
 | `GET`   | `/projects/{id}/kanban/v1/boards/{b}/columns` · `POST`                                     | Columns (`{name, wip_limit?, default_status?}`)                                                                                    |
 | `PATCH` | `…/boards/{b}/columns/{c}` · `DELETE`                                                      | Edit / reorder / delete                                                                                                            |
 | `GET`   | `/projects/{id}/kanban/v1/boards/{b}/cards`                                                | Cards of a board                                                                                                                   |
-| `POST`  | `/projects/{id}/kanban/v1/columns/{c}/cards`                                               | Create (`{title, description?, priority?}`)                                                                                        |
+| `POST`  | `/projects/{id}/kanban/v1/columns/{c}/cards`                                               | Create (`{title, description?, priority?, ai_cost?, subtasks?}`); sub-tasks are created and linked atomically                      |
+| `GET`   | `…/boards/{b}/cards/{card}/children` · `PUT …/parent`                                      | A card's sub-tasks · link (`{parent_id}`) or detach (`null`); cards carry `parent_id` and `children: {total, done}`                |
 | `PATCH` | `…/boards/{b}/cards/{card}` · `DELETE`                                                     | Edit; `column_id` moves, `board_id` moves across boards                                                                            |
 | `GET`   | `/settings/ai` · `PUT /settings/ai/providers/{id}` · `DELETE` · `PUT /settings/ai/default` | AI providers (keys write-only)                                                                                                     |
 | `POST`  | `/projects/{id}/ai/tickets/draft`                                                          | `{idea, board_id, provider?}` → draft; with `Accept: text/event-stream`, frames `stage` / `partial` / `usage` / `result` / `error` |
@@ -137,7 +139,7 @@ Shapes follow kanban-api's wire format (snake_case, explicit nulls, paginated li
 
 ### MCP (AI agents on your boards)
 
-The same boards and cards are exposed as [MCP](https://modelcontextprotocol.io) tools — `list_projects`, `list_boards`, `create_board`, `list_columns`, `list_cards`, `create_card`, `update_card`, `move_card`, `delete_card` — built on the official [swift-sdk](https://github.com/modelcontextprotocol/swift-sdk). Two transports, same tools:
+The same boards and cards are exposed as [MCP](https://modelcontextprotocol.io) tools — `list_projects`, `list_boards`, `create_board`, `list_columns`, `list_cards`, `create_card`, `create_subtasks`, `list_card_children`, `set_card_parent`, `remove_card_parent`, `update_card`, `move_card`, `delete_card` — built on the official [swift-sdk](https://github.com/modelcontextprotocol/swift-sdk). Two transports, same tools:
 
 - **stdio** — `dashboard mcp`. When a dashboard server is running the tools go through it (single writer, browsers update live); otherwise they work on the files.
 - **HTTP** — `POST http://127.0.0.1:5175/mcp` on the running server (streamable HTTP, localhost origins only).

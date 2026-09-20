@@ -125,22 +125,30 @@ Shapes follow kanban-api's wire format (snake_case, explicit nulls, paginated li
 
 Dependencies point inward everywhere: interface → service → persistence → domain.
 
-| Path                                         | Role                                                                                                                                                      |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/design-system/`                         | Reusable components over purple3 (`Button`, `Card`, `Modal`, …). The only layer that knows `hk-*` classes.                                                |
-| `src/core/plugin/`                           | `DashboardPlugin` contract (`nav`, `routes`, optional `sidebar`) + registry.                                                                              |
-| `src/core/shell/`, `src/core/settings/`      | App chrome and the browser-side settings slice (server URL, persisted to `localStorage`).                                                                 |
-| `src/app/`                                   | Composition root: store, RTK Query `baseApi` (base URL resolved per request), router, plugin list.                                                        |
-| `src/plugins/projects/`                      | Sidebar project list, project page, board tabs, columns, card/column/board dialogs.                                                                       |
-| `src/plugins/settings/`                      | Settings page: browser card + server card.                                                                                                                |
-| `backend/Sources/DashboardDomain`            | `Project`, `ProjectRegistry`, `Settings`, and the kanban `Workspace` aggregate (numbering, WIP, status rules). Pure.                                      |
-| `backend/Sources/DashboardPersistence`       | `ProjectStore` / `WorkspaceStore` / `SettingsStore` protocols, in-memory stores, shared contract tests, RFC 3339 codec.                                   |
-| `backend/Sources/DashboardPersistenceJSON`   | `KanbanJSONStore` (kanban-rs v18 envelope), JSON registry and settings stores; atomic writes.                                                             |
-| `backend/Sources/DashboardPersistenceFluent` | Fluent SQLite stores for the registry and workspaces; `SQLiteDatabasePool`.                                                                               |
-| `backend/Sources/DashboardService`           | `ProjectService`, `SettingsService` actors; clock/ids via cascade-kit `@Dependency`.                                                                      |
-| `backend/Sources/DashboardAPI`               | Wire DTOs (kanban-api shapes, `Page`, `ApiError`).                                                                                                        |
-| `backend/Sources/DashboardServer`            | Vapor app: routes, error envelope, live CORS, services in a cascade-kit container; `WorkspaceStores.factory` is the single `StorageKind` → store mapping. |
-| `backend/Sources/DashboardCLI`               | `dashboard` executable.                                                                                                                                   |
+| Path                                         | Role                                                                                                                                                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/design-system/`                         | Reusable components over purple3 (`Button`, `Card`, `Modal`, …). The only layer that knows `hk-*` classes.                                                                                          |
+| `src/core/plugin/`                           | `DashboardPlugin` contract (`nav`, `routes`, optional `sidebar`) + registry.                                                                                                                        |
+| `src/core/shell/`, `src/core/settings/`      | App chrome and the browser-side settings slice (server URL, persisted to `localStorage`).                                                                                                           |
+| `src/app/`                                   | Composition root: store, RTK Query `baseApi` (base URL resolved per request), router, plugin list.                                                                                                  |
+| `src/plugins/projects/`                      | Sidebar project list, project page, board tabs, columns, card/column/board dialogs.                                                                                                                 |
+| `src/plugins/settings/`                      | Settings page: browser card + server card.                                                                                                                                                          |
+| `backend/Sources/DashboardDomain`            | `Project`, `ProjectRegistry`, `Settings`, and the kanban `Workspace` aggregate (numbering, WIP, status rules). Pure.                                                                                |
+| `backend/Sources/DashboardPersistence`       | `ProjectStore` / `WorkspaceStore` / `SettingsStore` protocols, in-memory stores, shared contract tests, RFC 3339 codec.                                                                             |
+| `backend/Sources/DashboardPersistenceJSON`   | `KanbanJSONStore` (kanban-rs v18 envelope), JSON registry and settings stores; atomic writes.                                                                                                       |
+| `backend/Sources/DashboardPersistenceFluent` | Fluent SQLite stores for the registry and workspaces; `SQLiteDatabasePool`.                                                                                                                         |
+| `backend/Sources/DashboardService`           | `ProjectService`, `SettingsService` actors; clock/ids via cascade-kit `@Dependency`.                                                                                                                |
+| `backend/Sources/DashboardAPI`               | Wire DTOs (kanban-api shapes, `Page`, `ApiError`).                                                                                                                                                  |
+| `backend/Sources/DashboardRuntime`           | Composition root shared by CLI and server: cascade-kit `ServiceKey`s, `DashboardRuntime.register/shutdown`, `RuntimeConfig`; `WorkspaceStores.factory` is the single `StorageKind` → store mapping. |
+| `backend/Sources/DashboardServer`            | Vapor app: routes, error envelope (+ `X-Request-Id`), live CORS, app and per-request cascade-kit containers.                                                                                        |
+| `backend/Sources/DashboardCLI`               | `dashboard` executable; one runtime container per invocation, `--verbose` bound through `\.logger`.                                                                                                 |
+
+### Dependency injection (cascade-kit)
+
+Two mechanisms, used for two different things:
+
+- **Container** (`CascadeKit.Application` / `Request`) for services with lifetimes. `DashboardRuntime.register` wires stores, the SQLite pool and the services once; `DashboardRuntime.shutdown` tears them down in reverse. The CLI builds one container per invocation; the server keeps one on the Vapor app and layers a `CascadeKit.Request` container per request (request id → `X-Request-Id`), falling through to the app container for everything else.
+- **`@Dependency`** for ambient values: `\.now`, `\.uuid`, `\.home` (data directory, from `MVP_DASHBOARD_HOME`/XDG), `\.logger`. Production reads `liveValue`; tests pin them with `withTestDependencies { $0.now = … }`; the CLI binds `\.logger.logLevel` from `--verbose`.
 
 JSON and SQLite are interchangeable by construction: both stores implement the same protocol against the same `Workspace`, pass the same contract test, and an interchange test proves JSON → SQLite → JSON is lossless.
 

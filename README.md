@@ -72,6 +72,8 @@ Set in `mise.toml` (override in a git-ignored `.env.local`):
 
 `mise run cli -- <args>` during development, or `backend/.build/release/dashboard` after `mise run backend:release`. All output is JSON; errors go to stderr as `{"error": {"message": …}}` with exit code 1.
 
+**Where commands go.** If a dashboard server answers (`--server URL`, else `$MVP_DASHBOARD_URL`, else `http://127.0.0.1:$MVP_DASHBOARD_PORT`), the CLI talks to it over the same `/api` the web app uses — the server stays the single writer and every change is pushed to connected browsers. With no server running it falls back to the files directly. `--remote` fails instead of falling back; `--local` forces the files even if a server is up.
+
 ```sh
 dashboard project add ~/work/demo [--name Demo] [--storage json|sqlite]
 dashboard project list
@@ -84,7 +86,8 @@ dashboard settings show
 dashboard settings set [--default-storage sqlite] [--cors-origin URL ...] [--clear-cors]
 
 dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...]
-dashboard --home <dir> …                            # registry/settings location (or MVP_DASHBOARD_HOME)
+dashboard --home <dir> …                            # registry/settings location (or MVP_DASHBOARD_HOME), local mode only
+dashboard --server http://host:5175 … | --remote | --local
 ```
 
 ### HTTP API
@@ -144,6 +147,12 @@ Dependencies point inward everywhere: interface → service → persistence → 
 | `backend/Sources/DashboardRuntime`           | Composition root shared by CLI and server: cascade-kit `ServiceKey`s, `DashboardRuntime.register/shutdown`, `RuntimeConfig`; `WorkspaceStores.factory` is the single `StorageKind` → store mapping. |
 | `backend/Sources/DashboardServer`            | Vapor app: routes, error envelope (+ `X-Request-Id`), live CORS, app and per-request cascade-kit containers.                                                                                        |
 | `backend/Sources/DashboardCLI`               | `dashboard` executable; one runtime container per invocation, `--verbose` bound through `\.logger`.                                                                                                 |
+
+### Source of truth
+
+- **Server** — owns the files/SQLite and is the single writer; it publishes a change event for every mutation (`/api/events`).
+- **CLI** — a client of the server when one runs (same API, same DTOs); local file mode only as a fallback.
+- **Web** — Redux is the frontend's source of truth: RTK Query caches mirror the server and the event socket keeps them fresh; components read the store, never the network.
 
 ### Dependency injection (cascade-kit)
 

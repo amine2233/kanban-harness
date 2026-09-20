@@ -1,5 +1,4 @@
 import ArgumentParser
-import DashboardAPI
 import DashboardDomain
 import DashboardRuntime
 import Foundation
@@ -30,14 +29,8 @@ struct ProjectCommand: AsyncParsableCommand {
                 let absolute = Self.absolute(path)
                 let requested = self.storage
                 let project = try await Runtime.run(global) { services in
-                    let storage: StorageKind
-                    if let requested {
-                        storage = requested
-                    } else {
-                        storage = try await services.make(SettingsServiceKey.self).current().defaultStorage
-                    }
-                    return try await services.make(ProjectServiceKey.self)
-                        .add(name: name ?? Self.folderName(absolute), path: absolute, storage: storage)
+                    try await services.make(ProjectCommandsKey.self)
+                        .add(name: name ?? Self.folderName(absolute), path: absolute, storage: requested)
                 }
                 try Output.json(project)
             }
@@ -63,7 +56,7 @@ struct ProjectCommand: AsyncParsableCommand {
         func run() async throws {
             try await failing {
                 try Output.json(try await Runtime.run(global) {
-                    try await $0.make(ProjectServiceKey.self).list()
+                    try await $0.make(ProjectCommandsKey.self).list()
                 })
             }
         }
@@ -80,7 +73,7 @@ struct ProjectCommand: AsyncParsableCommand {
         func run() async throws {
             try await failing {
                 try Output.json(try await Runtime.run(global) {
-                    try await $0.make(ProjectServiceKey.self).get(.parse(project))
+                    try await $0.make(ProjectCommandsKey.self).get(.parse(project))
                 })
             }
         }
@@ -97,7 +90,7 @@ struct ProjectCommand: AsyncParsableCommand {
         func run() async throws {
             try await failing {
                 try Output.json(try await Runtime.run(global) {
-                    try await $0.make(ProjectServiceKey.self).remove(.parse(project))
+                    try await $0.make(ProjectCommandsKey.self).remove(.parse(project))
                 })
             }
         }
@@ -117,7 +110,7 @@ struct ProjectCommand: AsyncParsableCommand {
         func run() async throws {
             try await failing {
                 try Output.json(try await Runtime.run(global) {
-                    try await $0.make(ProjectServiceKey.self).changeStorage(.parse(project), to: storage)
+                    try await $0.make(ProjectCommandsKey.self).changeStorage(.parse(project), to: storage)
                 })
             }
         }
@@ -133,10 +126,9 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                let workspace = try await Runtime.run(global) {
-                    try await $0.make(ProjectServiceKey.self).workspace(.parse(project))
-                }
-                try Output.json(workspace.boards.sorted { $0.position < $1.position }.map(BoardResponse.init))
+                try Output.json(try await Runtime.run(global) {
+                    try await $0.make(ProjectCommandsKey.self).boards(.parse(project))
+                })
             }
         }
     }

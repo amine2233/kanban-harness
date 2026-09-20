@@ -38,6 +38,14 @@ public enum SettingsServiceKey: ServiceKey {
     public typealias Value = SettingsService
 }
 
+public enum ProjectCommandsKey: ServiceKey {
+    public typealias Value = any ProjectCommands
+}
+
+public enum SettingsCommandsKey: ServiceKey {
+    public typealias Value = any SettingsCommands
+}
+
 public enum ChangeBroadcasterKey: ServiceKey {
     public typealias Value = ChangeBroadcaster
 }

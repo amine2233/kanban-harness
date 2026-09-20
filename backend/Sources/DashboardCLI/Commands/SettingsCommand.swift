@@ -17,7 +17,7 @@ struct SettingsCommand: AsyncParsableCommand {
         func run() async throws {
             try await failing {
                 try Output.json(try await Runtime.run(global) {
-                    try await $0.make(SettingsServiceKey.self).current()
+                    try await $0.make(SettingsCommandsKey.self).current()
                 })
             }
         }
@@ -42,7 +42,7 @@ struct SettingsCommand: AsyncParsableCommand {
                 let origins: [String]? = clearCors ? [] : (corsOrigins.isEmpty ? nil : corsOrigins)
                 let defaultStorage = self.defaultStorage
                 try Output.json(try await Runtime.run(global) {
-                    try await $0.make(SettingsServiceKey.self).update(defaultStorage: defaultStorage, corsOrigins: origins)
+                    try await $0.make(SettingsCommandsKey.self).update(defaultStorage: defaultStorage, corsOrigins: origins)
                 })
             }
         }

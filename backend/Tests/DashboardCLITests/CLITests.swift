@@ -132,7 +132,8 @@ struct CLI {
         let boards = try #require(try cli.json("project", "boards", "Delta") as? [[String: Any]])
         #expect(boards.count == 1)
         #expect(boards[0]["name"] as? String == "Delta")
-        #expect(boards[0]["task_list_view"] as? String == "flat")
+        #expect(boards[0]["position"] as? Int == 0)
+        #expect(boards[0].keys.contains("card_prefix"))
     }
 
     @Test func projectStorageConvertsBetweenFormats() throws {
@@ -232,6 +233,51 @@ struct CLI {
         #expect(!(try quiet.run("project", "list")).stderr.contains("Migrator"))
         let verbose = try CLI()
         #expect((try verbose.run("--verbose", "project", "list")).stderr.contains("Migrator"))
+    }
+
+    /// Starts `dashboard serve` on a free port and returns (process, port).
+    func startServer(home: String) throws -> (Process, Int) {
+        let port = Int.random(in: 20000 ... 40000)
+        let process = Process()
+        process.executableURL = CLI.binary
+        process.arguments = ["--home", home, "serve", "--port", String(port)]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+        try process.run()
+        return (process, port)
+    }
+
+    func waitForHealth(port: Int) async throws {
+        for _ in 0 ..< 50 {
+            if (try? await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/api/health")!)) != nil { return }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        Issue.record("server did not come up")
+    }
+
+    @Test func cliRoutesThroughARunningServerAndFallsBackToLocal() async throws {
+        let serverHome = try CLI().home
+        let (server, port) = try startServer(home: serverHome)
+        defer { server.terminate() }
+        try await waitForHealth(port: port)
+
+        let cli = try CLI()
+        let created = try #require(try cli.json("--server", "http://127.0.0.1:\(port)", "project", "add", cli.tempFolder("via-server"), "--name", "Via server") as? [String: Any])
+        #expect(created["name"] as? String == "Via server")
+        let (data, _) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/api/projects")!)
+        let serverSide = try #require(try JSONSerialization.jsonObject(with: data) as? [[String: Any]])
+        #expect(serverSide.map { $0["name"] as? String } == ["Via server"], "the server's registry received it")
+        #expect(!FileManager.default.fileExists(atPath: cli.home + "/projects.sqlite"), "no local registry was touched")
+
+        let local = try #require(try cli.json("--server", "http://127.0.0.1:\(port)", "--local", "project", "list") as? [Any])
+        #expect(local.isEmpty, "--local ignores the server and reads this home's (empty) registry")
+
+        let noServer = try cli.run("--server", "http://127.0.0.1:1", "--remote", "project", "list")
+        #expect(noServer.status == 1)
+        #expect(noServer.stderr.contains("unreachable"))
+
+        let fallback = try #require(try cli.json("--server", "http://127.0.0.1:1", "project", "list") as? [Any])
+        #expect(fallback.isEmpty, "without --remote the CLI falls back to local files")
     }
 
     @Test func helpListsSubcommands() throws {

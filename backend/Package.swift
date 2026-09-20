@@ -37,6 +37,10 @@ let package = Package(
         ),
         .target(name: "DashboardAPI", dependencies: ["DashboardDomain"]),
         .target(
+            name: "DashboardClient",
+            dependencies: ["DashboardAPI", "DashboardPersistence", "DashboardService"]
+        ),
+        .target(
             name: "DashboardRuntime",
             dependencies: [
                 "DashboardService",
@@ -60,6 +64,7 @@ let package = Package(
             name: "DashboardCLI",
             dependencies: [
                 "DashboardServer",
+                "DashboardClient",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Logging", package: "swift-log"),
             ]
@@ -80,6 +85,14 @@ let package = Package(
             dependencies: ["DashboardService", "DashboardPersistenceJSON", "DashboardPersistenceFluent"]
         ),
         .testTarget(name: "DashboardRuntimeTests", dependencies: ["DashboardRuntime"]),
+        .testTarget(
+            name: "DashboardClientTests",
+            dependencies: [
+                "DashboardClient",
+                "DashboardServer",
+                .product(name: "VaporTesting", package: "vapor"),
+            ]
+        ),
         .testTarget(
             name: "DashboardServerTests",
             dependencies: [

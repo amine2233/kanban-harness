@@ -55,6 +55,10 @@ public enum DashboardRuntime {
         container.register(SettingsServiceKey.self) { c in
             SettingsService(store: c.make(SettingsStoreKey.self), changes: c.make(ChangeBroadcasterKey.self))
         }
+        container.register(ProjectCommandsKey.self) { c in
+            LocalProjectCommands(projects: c.make(ProjectServiceKey.self), settings: c.make(SettingsServiceKey.self))
+        }
+        container.register(SettingsCommandsKey.self) { c in c.make(SettingsServiceKey.self) }
     }
 
     /// Runs the async shutdown hooks (workspace pool, then the registry

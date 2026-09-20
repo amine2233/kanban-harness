@@ -12,6 +12,9 @@ swift = "6.3.3"
 MVP_DASHBOARD_HOME = "{{config_root}}/.local/dashboard-home"
 # Where `dashboard serve` listens; the Vite dev server proxies /api to it.
 MVP_DASHBOARD_PORT = "5175"
+# Interface the servers bind to. 127.0.0.1 = this machine only (the API has
+# no authentication). The *:lan tasks use 0.0.0.0 to expose them on the network.
+MVP_DASHBOARD_HOST = "127.0.0.1"
 # Personal overrides (never committed).
 _.file = ".env.local"
 
@@ -26,6 +29,10 @@ run = ["pnpm install --frozen-lockfile", "swift package --package-path backend r
 [tasks."web:dev"]
 description = "Vite dev server on http://localhost:5173 (proxies /api to the backend)"
 run = "pnpm dev"
+
+[tasks."web:dev:lan"]
+description = "Vite dev server reachable from other machines on the network (http://<your-ip>:5173)"
+run = "pnpm dev --host 0.0.0.0"
 
 [tasks."web:test"]
 description = "Run the web unit tests"
@@ -54,7 +61,7 @@ run = "swift test"
 [tasks."backend:serve"]
 description = "Run the API server on $MVP_DASHBOARD_PORT"
 dir = "backend"
-run = "swift run dashboard serve --port $MVP_DASHBOARD_PORT"
+run = "swift run dashboard serve --hostname $MVP_DASHBOARD_HOST --port $MVP_DASHBOARD_PORT"
 
 [tasks."backend:release"]
 description = "Build an optimized dashboard binary into backend/.build/release/"
@@ -75,6 +82,18 @@ trap 'kill %1 2>/dev/null' EXIT
 pnpm dev
 """
 
+[tasks."dev:lan"]
+description = "Like dev, but the web app is reachable from other machines (backend stays on loopback behind the Vite proxy)"
+depends = ["backend:build"]
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$MISE_PROJECT_ROOT"
+backend/.build/debug/dashboard serve --port "$MVP_DASHBOARD_PORT" &
+trap 'kill %1 2>/dev/null' EXIT
+pnpm dev --host 0.0.0.0
+"""
+
 [tasks.test]
 description = "All tests (web + backend)"
 depends = ["web:test", "backend:test"]
@@ -86,7 +105,12 @@ depends = ["web:check", "web:test", "web:build", "backend:test"]
 [tasks.serve]
 description = "Serve the built web app and the API from one process"
 depends = ["web:build", "backend:release"]
-run = "backend/.build/release/dashboard serve --port $MVP_DASHBOARD_PORT --static-dir dist"
+run = "backend/.build/release/dashboard serve --hostname $MVP_DASHBOARD_HOST --port $MVP_DASHBOARD_PORT --static-dir dist"
+
+[tasks."serve:lan"]
+description = "Like serve, but reachable from other machines (http://<your-ip>:$MVP_DASHBOARD_PORT)"
+depends = ["web:build", "backend:release"]
+run = "backend/.build/release/dashboard serve --hostname 0.0.0.0 --port $MVP_DASHBOARD_PORT --static-dir dist"
 
 [tasks.cli]
 description = "Run the dashboard CLI, e.g. `mise run cli -- project list`"

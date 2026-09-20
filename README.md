@@ -34,6 +34,17 @@ mise run serve        # builds the web app and a release binary, then serves bot
 
 Equivalent by hand: `pnpm build && backend/.build/release/dashboard serve --static-dir dist`.
 
+### Reaching it from another machine
+
+Everything binds to loopback by default (the API has no authentication). To use the dashboard from another device on your network:
+
+```sh
+mise run dev:lan      # dev: Vite on 0.0.0.0:5173, backend stays on loopback behind the proxy
+mise run serve:lan    # prod-style: one process on 0.0.0.0:5175
+```
+
+Then open `http://<this machine's IP>:5173` (or `:5175`). If it still doesn't answer, the OS firewall is blocking the port — on macOS allow `node` / `dashboard` under _System Settings → Network → Firewall_, on Linux open the port in `ufw`/`firewalld`. Setting `MVP_DASHBOARD_HOST=0.0.0.0` in `.env.local` makes the plain `serve` / `backend:serve` tasks bind to all interfaces permanently.
+
 ### Environment
 
 Set in `mise.toml` (override in a git-ignored `.env.local`):
@@ -42,6 +53,7 @@ Set in `mise.toml` (override in a git-ignored `.env.local`):
 | -------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `MVP_DASHBOARD_HOME` | `.local/dashboard-home` | Where the server/CLI keep `projects.sqlite` (registry) and `settings.json`. Outside mise it defaults to `$XDG_CONFIG_HOME/mvp-dashboard`. |
 | `MVP_DASHBOARD_PORT` | `5175`                  | Port used by the `dev`, `serve` and `backend:serve` tasks.                                                                                |
+| `MVP_DASHBOARD_HOST` | `127.0.0.1`             | Interface the servers bind to; `0.0.0.0` exposes them on the network (see "Reaching it from another machine").                            |
 
 ## Use
 
@@ -100,6 +112,7 @@ Shapes follow kanban-api's wire format (snake_case, explicit nulls, paginated li
 | ------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | `mise run setup`                                                                | `pnpm install` + `swift package resolve`               |
 | `mise run dev`                                                                  | Backend + web dev servers                              |
+| `mise run dev:lan` / `serve:lan`                                                | Same, reachable from other machines on the network     |
 | `mise run serve`                                                                | Release binary serving the built web app               |
 | `mise run test`                                                                 | Web (Vitest) + backend (Swift Testing) tests           |
 | `mise run check`                                                                | Prettier, ESLint, tsc, tests and builds — what CI runs |

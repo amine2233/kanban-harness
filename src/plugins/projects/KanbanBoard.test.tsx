@@ -73,8 +73,8 @@ describe('KanbanBoard', () => {
     expect(within(todo).getByText('Write tests')).toBeInTheDocument()
     const doing = screen.getByRole('region', { name: 'Doing' })
     expect(within(doing).getByText('Ship')).toBeInTheDocument()
-    expect(within(doing).getByText('1/1')).toBeInTheDocument()
-    expect(within(doing).getByText('high')).toHaveClass('hk-badge--beta')
+    expect(within(doing).getByText('1 / 1')).toBeInTheDocument()
+    expect(within(doing).getByTitle('high')).toHaveClass('ds-priority--high')
     expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual([
       'TODO',
       'Doing',

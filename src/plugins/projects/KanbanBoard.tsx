@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { errorMessage } from '@/app/api'
-import { Banner, Button, Spinner } from '@/design-system'
+import { Banner, Spinner } from '@/design-system'
 import { groupCardsByColumn } from './board'
 import { BoardTabs } from './BoardTabs'
 import { ColumnActions } from './ColumnActions'
-import { ColumnDialog } from './ColumnDialog'
 import { KanbanColumn } from './KanbanColumn'
 import { useListBoardsQuery, useListCardsQuery, useListColumnsQuery } from './kanbanApi'
 
@@ -49,7 +48,6 @@ function BoardColumns({ projectId, boardId }: { projectId: string; boardId: stri
   const boards = useListBoardsQuery(projectId)
   const columns = useListColumnsQuery(scope)
   const cards = useListCardsQuery(scope)
-  const [adding, setAdding] = useState(false)
 
   if (columns.isLoading || cards.isLoading) return <Spinner />
   const error = columns.error ?? cards.error
@@ -64,7 +62,7 @@ function BoardColumns({ projectId, boardId }: { projectId: string; boardId: stri
   const grouped = groupCardsByColumn(columnList, cards.data ?? [])
 
   return (
-    <div className="flex items-start overflow-x-auto" style={{ gap: 16 }}>
+    <div className="ds-board">
       {columnList.map((column) => (
         <KanbanColumn
           key={column.id}
@@ -76,23 +74,6 @@ function BoardColumns({ projectId, boardId }: { projectId: string; boardId: stri
           header={<ColumnActions scope={scope} column={column} columns={columnList} />}
         />
       ))}
-      <Button
-        variant="secondary"
-        className="flex-none"
-        onClick={() => {
-          setAdding(true)
-        }}
-      >
-        + Add column
-      </Button>
-      {adding && (
-        <ColumnDialog
-          scope={scope}
-          onClose={() => {
-            setAdding(false)
-          }}
-        />
-      )}
     </div>
   )
 }

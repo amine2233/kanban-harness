@@ -56,7 +56,8 @@ describe('column management', () => {
       },
     })
     renderBoard()
-    await userEvent.click(await screen.findByRole('button', { name: '+ Add column' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Board actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Add column' }))
     const dialog = screen.getByRole('dialog', { name: 'New column' })
     await userEvent.type(within(dialog).getByLabelText('Name'), 'Review')
     await userEvent.type(within(dialog).getByLabelText('WIP limit'), '2')
@@ -65,7 +66,7 @@ describe('column management', () => {
 
     expect(await screen.findByRole('region', { name: 'Review' })).toBeInTheDocument()
     expect(
-      within(screen.getByRole('region', { name: 'Review' })).getByText('0/2'),
+      within(screen.getByRole('region', { name: 'Review' })).getByText('0 / 2'),
     ).toBeInTheDocument()
     const post = api.calls.find((c) => c.key === `POST ${base}/boards/b1/columns`)
     expect(post?.body).toEqual({ name: 'Review', wip_limit: 2, default_status: 'blocked' })

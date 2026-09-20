@@ -10,6 +10,9 @@ const PATHS = {
   plus: 'M12 5v14M5 12h14',
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  arrowLeft: 'M19 12H5M11 18l-6-6 6-6',
+  arrowRight: 'M5 12h14M13 6l6 6-6 6',
+  dots: 'M5 12h.01M12 12h.01M19 12h.01',
 } as const
 
 export type IconName = keyof typeof PATHS

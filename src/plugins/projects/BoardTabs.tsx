@@ -1,6 +1,7 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
 import { Button, ConfirmModal, Input, Menu, Modal } from '@/design-system'
+import { ColumnDialog } from './ColumnDialog'
 import {
   useCloneBoardMutation,
   useCreateBoardMutation,
@@ -17,7 +18,10 @@ interface Props {
 }
 
 type Dialog =
-  { kind: 'create' } | { kind: 'rename'; board: Board } | { kind: 'delete'; board: Board }
+  | { kind: 'create' }
+  | { kind: 'rename'; board: Board }
+  | { kind: 'delete'; board: Board }
+  | { kind: 'add-column'; board: Board }
 
 export function BoardTabs({ projectId, boards, selectedId, onSelect }: Props) {
   const [dialog, setDialog] = useState<Dialog>()
@@ -86,7 +90,14 @@ export function BoardTabs({ projectId, boards, selectedId, onSelect }: Props) {
               label="Board actions"
               items={[
                 {
+                  label: 'Add column',
+                  onSelect: () => {
+                    setDialog({ kind: 'add-column', board: selected })
+                  },
+                },
+                {
                   label: 'Rename',
+                  separated: true,
                   onSelect: () => {
                     setDialog({ kind: 'rename', board: selected })
                   },
@@ -130,6 +141,9 @@ export function BoardTabs({ projectId, boards, selectedId, onSelect }: Props) {
       )}
       {dialog?.kind === 'rename' && (
         <BoardForm projectId={projectId} board={dialog.board} onClose={close} />
+      )}
+      {dialog?.kind === 'add-column' && (
+        <ColumnDialog scope={{ projectId, boardId: dialog.board.id }} onClose={close} />
       )}
       {dialog?.kind === 'delete' && (
         <ConfirmModal

@@ -1,5 +1,4 @@
-import type { Card, CardPriority, Column } from './kanbanApi'
-import type { BadgeVariant } from '@/design-system'
+import type { Card, Column } from './kanbanApi'
 
 export function groupCardsByColumn(columns: Column[], cards: Card[]): Map<string, Card[]> {
   const grouped = new Map<string, Card[]>(columns.map((c) => [c.id, []]))
@@ -19,11 +18,4 @@ export function neighbourColumns(
   const index = columns.findIndex((c) => c.id === columnId)
   if (index === -1) return {}
   return { previous: columns[index - 1], next: columns[index + 1] }
-}
-
-export const PRIORITY_BADGE: Record<CardPriority, BadgeVariant> = {
-  low: 'outline',
-  medium: 'default',
-  high: 'beta',
-  critical: 'alpha',
 }

@@ -208,7 +208,9 @@ extension AICommand {
             for try await event in events {
                 switch event {
                 case let .stage(stage):
-                    Output.progress(String(format: "[%6dms] %@%@", stage.elapsedMs, stage.step.rawValue, stage.detail.map { ": " + $0 } ?? ""))
+                    let elapsed = String(stage.elapsedMs)
+                    let padding = String(repeating: " ", count: max(0, 6 - elapsed.count))
+                    Output.progress("[\(padding)\(elapsed)ms] \(stage.step.rawValue)\(stage.detail.map { ": " + $0 } ?? "")")
                 case .text:
                     break
                 case let .partial(partial):
@@ -217,7 +219,8 @@ extension AICommand {
                         Output.progress("          title: \(title)")
                     }
                 case let .usage(usage):
-                    Output.progress("          tokens: \(usage.inputTokens ?? 0) in / \(usage.outputTokens ?? 0) out" + (usage.costUSD.map { String(format: ", %@$%.4f", usage.estimated ? "≈" : "", $0) } ?? ""))
+                    let cost = usage.costUSD.map { ", \(usage.estimated ? "≈" : "")$" + String(format: "%.4f", $0) } ?? ""
+                    Output.progress("          tokens: \(usage.inputTokens ?? 0) in / \(usage.outputTokens ?? 0) out\(cost)")
                 case let .result(drafted):
                     return drafted
                 }

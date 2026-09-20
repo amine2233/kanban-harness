@@ -1,6 +1,5 @@
 import { useState, type DragEvent } from 'react'
 import { cx, Icon } from '@/design-system'
-import { isTopLevel } from './board'
 import { CardDialog } from './CardDialog'
 import { CARD_MIME, draggedCard, serialiseCardDrag } from './dragAndDrop'
 import { KanbanCard } from './KanbanCard'
@@ -25,9 +24,11 @@ export function KanbanColumn({ scope, column, columns, boards, cards, allCards, 
   const [dialog, setDialog] = useState<Dialog>()
   const [dragOver, setDragOver] = useState(false)
   const overLimit = column.wip_limit !== null && cards.length > column.wip_limit
-  const roots = cards.filter((card) => isTopLevel(card, allCards))
   const childrenOf = (card: Card) =>
     allCards.filter((c) => c.parent_id === card.id).sort((a, b) => a.card_number - b.card_number)
+  const parentOf = (card: Card) =>
+    card.parent_id ? allCards.find((c) => c.id === card.parent_id) : undefined
+  const columnName = (id: string) => columns.find((c) => c.id === id)?.name ?? '?'
 
   const onDragStart = (card: Card) => (event: DragEvent<HTMLLIElement>) => {
     event.dataTransfer.setData(CARD_MIME, serialiseCardDrag(card.id, card.column_id))
@@ -82,7 +83,7 @@ export function KanbanColumn({ scope, column, columns, boards, cards, allCards, 
         <span className="ds-column__actions">{header}</span>
       </header>
       <ul className="ds-column__cards list pl0 ma0">
-        {roots.map((card) => {
+        {cards.map((card) => {
           const children = childrenOf(card)
           const done = children.filter((c) => c.status === 'done').length
           return (
@@ -90,6 +91,7 @@ export function KanbanColumn({ scope, column, columns, boards, cards, allCards, 
               key={card.id}
               card={card}
               columns={columns}
+              parent={parentOf(card)}
               onOpen={open}
               onMove={move}
               onDragStart={onDragStart}
@@ -109,15 +111,35 @@ export function KanbanColumn({ scope, column, columns, boards, cards, allCards, 
                   </header>
                   <ul className="list pl0 ma0">
                     {children.map((child) => (
-                      <KanbanCard
+                      <li
                         key={child.id}
-                        card={child}
-                        columns={columns}
-                        variant="mini"
-                        onOpen={open}
-                        onMove={move}
-                        onDragStart={onDragStart}
-                      />
+                        className={cx(
+                          'ds-subtree__row',
+                          child.status === 'done' && 'ds-subtree__row--done',
+                        )}
+                        aria-label={`${child.title} (sub-task, ${columnName(child.column_id)})`}
+                      >
+                        <span
+                          className={`ds-priority ds-priority--${child.priority}`}
+                          title={child.priority}
+                        />
+                        <button
+                          type="button"
+                          className="ds-subtree__title truncate"
+                          aria-label={`Open ${child.title}`}
+                          onClick={() => {
+                            open(child)
+                          }}
+                        >
+                          <span className="ds-subtree__key">
+                            {child.prefix}-{child.card_number}
+                          </span>{' '}
+                          {child.title}
+                        </button>
+                        <span className={cx('ds-chip', child.status === 'done' && 'ds-chip--done')}>
+                          {columnName(child.column_id)}
+                        </span>
+                      </li>
                     ))}
                   </ul>
                 </section>

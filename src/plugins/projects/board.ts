@@ -26,11 +26,6 @@ export function groupChildren(cards: Card[]): Map<string, Card[]> {
   return grouped
 }
 
-/** A card renders at the top level unless its parent is on the board (then it nests under it). */
-export function isTopLevel(card: Card, cards: Card[]): boolean {
-  return !card.parent_id || !cards.some((c) => c.id === card.parent_id)
-}
-
 export function neighbourColumns(
   columns: Column[],
   columnId: string,
@@ -38,4 +33,27 @@ export function neighbourColumns(
   const index = columns.findIndex((c) => c.id === columnId)
   if (index === -1) return {}
   return { previous: columns[index - 1], next: columns[index + 1] }
+}
+
+/** Flat UI palette; deliberately no orange. */
+export const CARD_COLORS = [
+  '#1abc9c',
+  '#2ecc71',
+  '#3498db',
+  '#9b59b6',
+  '#34495e',
+  '#f1c40f',
+  '#e74c3c',
+  '#16a085',
+  '#2980b9',
+  '#8e44ad',
+  '#7f8c8d',
+] as const
+
+/** A stable flat colour per card family: a sub-task wears its parent's colour. */
+export function cardColor(card: Card, parent?: Card): string {
+  const key = (parent ?? card).id
+  let hash = 0
+  for (const char of key) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+  return CARD_COLORS[hash % CARD_COLORS.length] ?? CARD_COLORS[0]
 }

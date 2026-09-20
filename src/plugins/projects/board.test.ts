@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { groupCardsByColumn, neighbourColumns } from './board'
+import { CARD_COLORS, cardColor, groupCardsByColumn, neighbourColumns } from './board'
 import type { Card, Column } from './kanbanApi'
 
 const column = (id: string, position: number): Column => ({
@@ -62,4 +62,16 @@ describe('neighbourColumns', () => {
     expect(neighbourColumns(columns, 'done').next).toBeUndefined()
     expect(neighbourColumns(columns, 'nope')).toEqual({})
   })
+})
+
+test('cardColor is stable, flat, never orange, and shared by a family', () => {
+  const parent = card('p', 'todo', 0)
+  const child = { ...card('c', 'todo', 1), parent_id: 'p' }
+  expect(cardColor(parent)).toBe(cardColor(parent))
+  expect(cardColor(child, parent)).toBe(cardColor(parent))
+  expect(CARD_COLORS).not.toContain('#e67e22')
+  expect(
+    new Set(Array.from({ length: 40 }, (_, i) => cardColor(card(`id-${String(i)}`, 'todo', i))))
+      .size,
+  ).toBeGreaterThan(5)
 })

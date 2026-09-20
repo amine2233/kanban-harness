@@ -1,14 +1,14 @@
 import type { DragEvent, ReactNode } from 'react'
 import { Button, checklistProgress, cx, Icon } from '@/design-system'
 import { formatCost } from './assistantApi'
-import { neighbourColumns } from './board'
+import { cardColor, neighbourColumns } from './board'
 import type { Card, Column } from './kanbanApi'
 
 interface Props {
   card: Card
   columns: Column[]
-  /** `mini`: a sub-task tile inside its parent. */
-  variant?: 'card' | 'mini'
+  /** The card's parent, shown as a breadcrumb so a sub-task is readable on its own column. */
+  parent?: Card | undefined
   onOpen: (card: Card) => void
   onMove: (card: Card, columnId: string) => void
   onDragStart: (card: Card) => (event: DragEvent<HTMLLIElement>) => void
@@ -20,40 +20,55 @@ interface Props {
 export function KanbanCard({
   card,
   columns,
-  variant = 'card',
+  parent,
   onOpen,
   onMove,
   onDragStart,
   children,
 }: Props) {
-  const mini = variant === 'mini'
   const { previous, next } = neighbourColumns(columns, card.column_id)
-  const column = columns.find((c) => c.id === card.column_id)
   const checklist = checklistProgress(card.description)
   const due = card.due_date ? dueLabel(card.due_date, card.status === 'done') : null
+  const color = cardColor(card, parent)
 
   return (
     <li
-      className={cx(mini ? 'ds-mini' : 'ds-card', `ds-priority-edge--${card.priority}`)}
+      className="ds-card"
+      style={{ borderLeftColor: color }}
       draggable
       aria-label={
-        mini
-          ? `${card.title} (sub-task, ${column?.name ?? '?'})`
+        parent
+          ? `${card.title} (sub-task of ${parent.prefix}-${String(parent.card_number)})`
           : `${card.title} (${card.priority})`
       }
       onDragStart={onDragStart(card)}
     >
+      {parent && (
+        <button
+          type="button"
+          className="ds-card__parent"
+          style={{ color }}
+          aria-label={`Open parent ${parent.title}`}
+          title={parent.title}
+          onClick={() => {
+            onOpen(parent)
+          }}
+        >
+          <Icon name="subtasks" size={11} /> {parent.prefix}-{parent.card_number}
+          <span className="truncate"> · {parent.title}</span>
+        </button>
+      )}
       <button
         type="button"
-        className={mini ? 'ds-mini__body' : 'ds-card__body'}
+        className="ds-card__body"
         aria-label={`Open ${card.title}`}
         onClick={() => {
           onOpen(card)
         }}
       >
-        <span className={mini ? 'ds-mini__title' : 'ds-card__title'}>{card.title}</span>
+        <span className="ds-card__title">{card.title}</span>
       </button>
-      <footer className={mini ? 'ds-mini__footer' : 'ds-card__footer'}>
+      <footer className="ds-card__footer">
         <span className="ds-card__meta">
           <span className={`ds-priority ds-priority--${card.priority}`} title={card.priority} />
           <span className="ds-card__key">
@@ -76,12 +91,12 @@ export function KanbanCard({
               ☑ {String(checklist.done)}/{String(checklist.total)}
             </span>
           )}
-          {!checklist && card.description && !mini && (
+          {!checklist && card.description && (
             <span className="ds-fact" title="Has a description" aria-label="Has a description">
               ≡
             </span>
           )}
-          {card.ai_cost && !mini && (
+          {card.ai_cost && (
             <span
               className="ds-fact ds-fact--ai"
               title={`Drafted by ${card.ai_cost.provider} (${card.ai_cost.model})`}
@@ -90,11 +105,6 @@ export function KanbanCard({
             </span>
           )}
         </span>
-        {mini && (
-          <span className={cx('ds-chip', card.status === 'done' && 'ds-chip--done')}>
-            {column?.name ?? '?'}
-          </span>
-        )}
         {(previous ?? next) && (
           <span className="ds-card__moves">
             {previous && (

@@ -141,24 +141,27 @@ import Testing
 @Suite struct AssistantStreamingTests {
     @Test func streamsStagesPartialsUsageThenTheResult() async throws {
         let f = try await AssistantServiceTests().fixture(responses: [#"{"title":"Fix login crash","description":"Users crash","acceptance_criteria":["No crash"],"priority":"high"}"#])
-        var stages: [String] = []
+        var stages: [AssistantStage] = []
         var partials: [PartialTicketDraft] = []
+        var text = ""
         var usage: CompletionUsage?
         var result: DraftedTicket?
         for try await event in f.service.streamTicket(project: .name("Demo"), boardId: f.boardId, idea: "login crashes", providerId: nil) {
             switch event {
-            case let .stage(name, elapsedMs):
-                #expect(elapsedMs >= 0)
-                stages.append(name)
+            case let .stage(stage):
+                #expect(stage.elapsedMs >= 0)
+                stages.append(stage)
+            case let .text(delta): text += delta
             case let .partial(p): partials.append(p)
             case let .usage(u): usage = u
             case let .result(r): result = r
             }
         }
-        #expect(stages.first == "resolving provider")
-        #expect(stages.contains("provider Fake (fake-1)"))
-        #expect(stages.contains { $0.hasPrefix("context: 4 columns, 1 cards") })
-        #expect(stages.suffix(3) == ["streaming", "validating", "done"])
+        #expect(stages.map(\.step) == [.resolve, .resolve, .context, .context, .wait, .stream, .validate, .done])
+        #expect(stages[1].detail == "Fake (fake-1)")
+        #expect(stages[3].detail?.hasPrefix("4 columns, 1 cards") == true)
+        #expect(stages.allSatisfy { $0.step == .resolve || $0.step == .context || $0.detail == nil })
+        #expect(text.hasPrefix(#"{"title":"Fix login crash""#), "raw model output is relayed verbatim")
         #expect(partials.count > 1, "chunks of 12 characters produce several distinct partials")
         #expect(partials.first?.title?.isEmpty == false)
         #expect(partials.last?.title == "Fix login crash")

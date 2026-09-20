@@ -238,7 +238,10 @@ public struct RemoteAssistantCommands: AssistantCommands {
                     for try await line in client.eventStream("POST", "api/projects/\(id.uuidString)/ai/tickets/draft", body: request) {
                         guard let (event, data) = parser.feed(line: line), let frame = try AssistantFrame.decode(event: event, data: data) else { continue }
                         switch frame {
-                        case let .stage(stage): continuation.yield(.stage(stage.name, elapsedMs: stage.elapsedMs))
+                        case let .stage(stage):
+                            guard let step = AssistantStage.Step(rawValue: stage.step) else { continue }
+                            continuation.yield(.stage(AssistantStage(step, detail: stage.detail, elapsedMs: stage.elapsedMs)))
+                        case let .text(text): continuation.yield(.text(text.delta))
                         case let .partial(partial): continuation.yield(.partial(partial))
                         case let .usage(usage): continuation.yield(.usage(Self.usage(usage)))
                         case let .result(response):

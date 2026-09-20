@@ -41,6 +41,7 @@ public struct ClaudeCodeProvider: AIProvider {
                             finished = true
                         } else if let delta = Self.delta(in: object) {
                             typed += delta
+                            continuation.yield(.text(delta))
                             if let partial = JSONCompleter.complete(typed) { continuation.yield(.snapshot(partial)) }
                         }
                     }

@@ -42,7 +42,8 @@ struct AssistantController: RouteCollection {
 
     private static func frame(_ event: AssistantEvent) -> AssistantFrame {
         switch event {
-        case let .stage(name, elapsedMs): .stage(.init(name: name, elapsedMs: elapsedMs))
+        case let .stage(stage): .stage(.init(step: stage.step.rawValue, detail: stage.detail, elapsedMs: stage.elapsedMs))
+        case let .text(delta): .text(.init(delta: delta))
         case let .partial(partial): .partial(partial)
         case let .usage(usage): .usage(Self.usage(usage))
         case let .result(drafted): .result(response(drafted))

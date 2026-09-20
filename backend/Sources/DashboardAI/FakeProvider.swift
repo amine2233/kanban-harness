@@ -32,6 +32,7 @@ public actor FakeProvider: AIProvider {
                     var buffer = ""
                     for chunk in text.chunked(self.chunkSize) {
                         buffer += chunk
+                        continuation.yield(.text(chunk))
                         if let snapshot = JSONCompleter.complete(buffer) { continuation.yield(.snapshot(snapshot)) }
                     }
                     guard let json = JSONExtractor.firstObject(in: text) else { throw AIProviderError.badResponse("no JSON in scripted response") }

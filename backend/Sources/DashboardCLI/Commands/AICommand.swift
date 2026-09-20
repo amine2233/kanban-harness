@@ -207,8 +207,10 @@ extension AICommand {
             var lastTitle: String?
             for try await event in events {
                 switch event {
-                case let .stage(name, elapsedMs):
-                    Output.progress(String(format: "[%6dms] %@", elapsedMs, name))
+                case let .stage(stage):
+                    Output.progress(String(format: "[%6dms] %@%@", stage.elapsedMs, stage.step.rawValue, stage.detail.map { ": " + $0 } ?? ""))
+                case .text:
+                    break
                 case let .partial(partial):
                     if let title = partial.title, title != lastTitle {
                         lastTitle = title

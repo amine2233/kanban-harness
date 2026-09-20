@@ -42,6 +42,9 @@ public struct CompletionUsage: Sendable, Equatable, Codable {
 /// What a provider emits while answering. `snapshot` carries the JSON produced
 /// so far, completed into a parseable object; `done` carries the final JSON.
 public enum CompletionEvent: Sendable, Equatable {
+    /// Raw model output appended since the previous `text` event, for logs.
+    case text(String)
+    /// The JSON produced so far, completed into a parseable object.
     case snapshot(Data)
     case usage(CompletionUsage)
     case done(json: Data, model: String)
@@ -90,7 +93,7 @@ extension AIProvider {
         var usage = CompletionUsage()
         for try await event in stream(request) {
             switch event {
-            case .snapshot: continue
+            case .text, .snapshot: continue
             case let .usage(u): usage = u
             case let .done(json, model): return CompletionResult(json: json, usage: usage, model: model)
             }

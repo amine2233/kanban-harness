@@ -368,7 +368,7 @@ struct CLI {
         #expect(drafted["provider"] as? String == "cc")
         let (streamed, narration) = try run(["ai", "ticket", "AI demo", "password reset", "--stream"])
         #expect((streamed["draft"] as? [String: Any])?["title"] as? String == "Drafted by CLI", "stdout stays JSON")
-        #expect(narration.contains("resolving provider") && narration.contains("] done"))
+        #expect(narration.contains("] resolve: cc (sonnet)") && narration.contains("] done"))
         let created = try process(["ai", "ticket", "AI demo", "password reset", "--create", "--column", "To do"])
         #expect(created["key"] as? String == "task-1")
         let file = try String(contentsOfFile: folder + "/kanban.json", encoding: .utf8)

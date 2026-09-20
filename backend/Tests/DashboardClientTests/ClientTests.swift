@@ -145,18 +145,18 @@ import Vapor
             let board = try #require(try await projects.boards(.name("Demo")).first)
             let assistant = RemoteAssistantCommands(client: client)
 
-            var stages: [String] = []
+            var stages: [AssistantStage.Step] = []
             var partials: [PartialTicketDraft] = []
             var result: DraftedTicket?
             for try await event in assistant.streamTicket(project: .name("Demo"), boardId: board.id, idea: "x", providerId: nil) {
                 switch event {
-                case let .stage(name, _): stages.append(name)
+                case let .stage(stage): stages.append(stage.step)
                 case let .partial(p): partials.append(p)
-                case .usage: break
+                case .usage, .text: break
                 case let .result(r): result = r
                 }
             }
-            #expect(stages.first == "resolving provider" && stages.last == "done")
+            #expect(stages.first == .resolve && stages.last == .done)
             #expect(partials.map { $0.title } == ["Str"])
             #expect(result?.draft.title == "Streamed")
             #expect(result?.usage == CompletionUsage(inputTokens: 1, outputTokens: 2))

@@ -92,10 +92,12 @@ import VaporTesting
 
             let (status, frames) = try await self.frames(app, "/api/projects/\(id)/ai/tickets/draft", body: ["idea": "password reset", "board_id": boardId])
             #expect(status == .ok)
-            let stages = frames.compactMap { if case let .stage(s) = $0 { s.name } else { nil } }
-            #expect(stages.first == "resolving provider")
-            #expect(stages.contains("provider Claude Code (sonnet)"))
-            #expect(stages.last == "done")
+            let stages = frames.compactMap { if case let .stage(s) = $0 { s } else { nil } }
+            #expect(stages.first?.step == "resolve")
+            #expect(stages.contains { $0.step == "resolve" && $0.detail == "Claude Code (sonnet)" })
+            #expect(stages.last?.step == "done")
+            let text = frames.compactMap { if case let .text(t) = $0 { t.delta } else { nil } }.joined()
+            #expect(text == #"{"title":"Add password reset","priority":"high""#)
             let partials = frames.compactMap { if case let .partial(p) = $0 { p } else { nil } }
             #expect(partials.map { $0.title } == ["Add pass", "Add password reset"])
             #expect(partials.last?.priority == .high)

@@ -22,10 +22,29 @@ public struct DraftedTicket: Sendable, Equatable {
     }
 }
 
+/// A step of the drafting pipeline. Emitted when the step starts and again
+/// when it has something to say (`detail`); `elapsedMs` counts from the request.
+public struct AssistantStage: Sendable, Equatable {
+    public enum Step: String, Sendable, CaseIterable {
+        case resolve, context, wait, stream, validate, done
+    }
+
+    public let step: Step
+    public let detail: String?
+    public let elapsedMs: Int
+
+    public init(_ step: Step, detail: String? = nil, elapsedMs: Int) {
+        self.step = step
+        self.detail = detail
+        self.elapsedMs = elapsedMs
+    }
+}
+
 /// What a client sees while a draft is being produced.
 public enum AssistantEvent: Sendable, Equatable {
-    /// A step of the pipeline started/finished; `elapsedMs` since the request began.
-    case stage(String, elapsedMs: Int)
+    case stage(AssistantStage)
+    /// Raw model output as it arrives (appended to the previous `text`).
+    case text(String)
     case partial(PartialTicketDraft)
     case usage(CompletionUsage)
     case result(DraftedTicket)
@@ -81,15 +100,17 @@ public actor AssistantService: AssistantCommands {
 
     private func runTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?, emit: @Sendable (AssistantEvent) -> Void) async throws {
         let started = Date()
-        let elapsed = { Int(Date().timeIntervalSince(started) * 1000) }
+        func stage(_ step: AssistantStage.Step, _ detail: String?) {
+            emit(.stage(AssistantStage(step, detail: detail, elapsedMs: Int(Date().timeIntervalSince(started) * 1000))))
+        }
         let idea = idea.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !idea.isEmpty else { throw ServiceError.domain(.emptyTitle) }
 
-        emit(.stage("resolving provider", elapsedMs: elapsed()))
+        stage(.resolve, nil)
         let (provider, config) = try await resolveProvider(providerId)
-        emit(.stage("provider \(config.name) (\(config.model))", elapsedMs: elapsed()))
+        stage(.resolve, "\(config.name) (\(config.model))")
 
-        emit(.stage("building board context", elapsedMs: elapsed()))
+        stage(.context, nil)
         let boardList = try await boards.boards(project)
         guard let board = boardList.first(where: { $0.id == boardId }) else { throw ServiceError.domain(.boardNotFound(boardId)) }
         let columns = try await boards.columns(project, boardId: boardId)
@@ -100,9 +121,9 @@ public actor AssistantService: AssistantCommands {
             schema: TicketDraft.jsonSchema,
             maxTokens: config.maxTokens ?? 2048
         )
-        emit(.stage("context: \(columns.count) columns, \(min(cards.count, 20)) cards, ~\(request.prompt.count / 4) tokens", elapsedMs: elapsed()))
+        stage(.context, "\(columns.count) columns, \(min(cards.count, 20)) cards, ~\(request.prompt.count / 4) tokens")
 
-        emit(.stage("waiting for first token", elapsedMs: elapsed()))
+        stage(.wait, nil)
         var usage = CompletionUsage()
         var lastPartial = PartialTicketDraft()
         var first = true
@@ -110,8 +131,11 @@ public actor AssistantService: AssistantCommands {
             for try await event in provider.stream(request) {
                 try Task.checkCancellation()
                 switch event {
+                case let .text(delta):
+                    if first { stage(.stream, nil); first = false }
+                    emit(.text(delta))
                 case let .snapshot(data):
-                    if first { emit(.stage("streaming", elapsedMs: elapsed())); first = false }
+                    if first { stage(.stream, nil); first = false }
                     let partial = PartialTicketDraft.parse(data)
                     if partial != lastPartial, !partial.isEmpty {
                         lastPartial = partial
@@ -121,7 +145,7 @@ public actor AssistantService: AssistantCommands {
                     usage = u
                     emit(.usage(u))
                 case let .done(json, model):
-                    emit(.stage("validating", elapsedMs: elapsed()))
+                    stage(.validate, nil)
                     let draft: TicketDraft
                     do {
                         draft = try TicketDraft.parse(json)
@@ -130,7 +154,7 @@ public actor AssistantService: AssistantCommands {
                     }
                     let priced = Self.priced(usage, for: config)
                     if priced != usage { emit(.usage(priced)) }
-                    emit(.stage("done", elapsedMs: elapsed()))
+                    stage(.done, nil)
                     emit(.result(DraftedTicket(draft: draft, providerId: config.id, model: model, usage: priced)))
                     return
                 }

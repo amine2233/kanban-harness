@@ -40,10 +40,16 @@ public struct AnyLanguageModelProvider: AIProvider {
                     var options = GenerationOptions()
                     options.maximumResponseTokens = request.maxTokens
                     var last: GeneratedContent?
+                    var typed = ""
                     var usage = CompletionUsage()
                     for try await snapshot in session.streamResponse(to: Prompt(request.prompt), schema: GeneratedTicket.generationSchema, options: options) {
                         try Task.checkCancellation()
                         last = snapshot.rawContent
+                        let text = Self.text(snapshot.rawContent)
+                        if text != typed {
+                            continuation.yield(.text(text.hasPrefix(typed) ? String(text.dropFirst(typed.count)) : "\n" + text))
+                            typed = text
+                        }
                         if let json = Self.json(snapshot.rawContent) { continuation.yield(.snapshot(json)) }
                         usage = CompletionUsage(inputTokens: snapshot.usage.input.totalTokenCount, outputTokens: snapshot.usage.output.totalTokenCount)
                     }
@@ -65,6 +71,12 @@ public struct AnyLanguageModelProvider: AIProvider {
 
     /// ALM falls back to a raw string when the JSON so far does not parse; our
     /// completer closes it properly so partial drafts still render.
+    /// What the model has typed so far: ALM hands back either the raw string or a parsed object.
+    private static func text(_ content: GeneratedContent) -> String {
+        if case let .string(text) = content.kind { return text }
+        return content.jsonString
+    }
+
     private static func json(_ content: GeneratedContent) -> Data? {
         if case let .string(text) = content.kind { return JSONCompleter.complete(text) }
         return Data(content.jsonString.utf8)

@@ -74,29 +74,49 @@ public struct DraftTicketResponse: Codable, Sendable, Equatable {
 /// share this so the frames are the contract.
 public enum AssistantFrame: Sendable, Equatable {
     case stage(StageDTO)
+    case text(TextDTO)
     case partial(PartialTicketDraft)
     case usage(DraftTicketResponse.UsageDTO)
     case result(DraftTicketResponse)
     case error(ApiError)
 
+    /// `step` is one of resolve, context, wait, stream, validate, done.
     public struct StageDTO: Codable, Sendable, Equatable {
-        public let name: String
+        public let step: String
+        public let detail: String?
         public let elapsedMs: Int
 
         enum CodingKeys: String, CodingKey {
-            case name
+            case step, detail
             case elapsedMs = "elapsed_ms"
         }
 
-        public init(name: String, elapsedMs: Int) {
-            self.name = name
+        public init(step: String, detail: String?, elapsedMs: Int) {
+            self.step = step
+            self.detail = detail
             self.elapsedMs = elapsedMs
+        }
+
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(step, forKey: .step)
+            try c.encode(detail, forKey: .detail)
+            try c.encode(elapsedMs, forKey: .elapsedMs)
+        }
+    }
+
+    public struct TextDTO: Codable, Sendable, Equatable {
+        public let delta: String
+
+        public init(delta: String) {
+            self.delta = delta
         }
     }
 
     public var event: String {
         switch self {
         case .stage: "stage"
+        case .text: "text"
         case .partial: "partial"
         case .usage: "usage"
         case .result: "result"
@@ -108,6 +128,7 @@ public enum AssistantFrame: Sendable, Equatable {
     public func encoded(with encoder: JSONEncoder = JSONEncoder()) throws -> Data {
         let data = switch self {
         case let .stage(s): try encoder.encode(s)
+        case let .text(t): try encoder.encode(t)
         case let .partial(p): try encoder.encode(p)
         case let .usage(u): try encoder.encode(u)
         case let .result(r): try encoder.encode(r)
@@ -120,6 +141,7 @@ public enum AssistantFrame: Sendable, Equatable {
     public static func decode(event: String, data: Data, with decoder: JSONDecoder = JSONDecoder()) throws -> AssistantFrame? {
         switch event {
         case "stage": .stage(try decoder.decode(StageDTO.self, from: data))
+        case "text": .text(try decoder.decode(TextDTO.self, from: data))
         case "partial": .partial(try decoder.decode(PartialTicketDraft.self, from: data))
         case "usage": .usage(try decoder.decode(DraftTicketResponse.UsageDTO.self, from: data))
         case "result": .result(try decoder.decode(DraftTicketResponse.self, from: data))

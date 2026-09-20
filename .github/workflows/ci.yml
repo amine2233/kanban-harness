@@ -29,18 +29,20 @@ jobs:
 
   backend:
     strategy:
+      fail-fast: false
       matrix:
-        os: [macos-15, ubuntu-24.04]
+        os: [macos-26, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: backend
     steps:
       - uses: actions/checkout@v5
+      # The same toolchain mise pins locally (mise.toml), on both platforms.
       - uses: swift-actions/setup-swift@v2
-        if: runner.os == 'Linux'
         with:
-          swift-version: '6.2'
+          swift-version: '6.3.3'
+      - run: swift --version
       - uses: actions/cache@v4
         with:
           path: backend/.build

@@ -9,7 +9,9 @@ const config: Config = {
   favicon: 'img/favicon.ico',
   future: { v4: true },
   url: 'https://amine2233.github.io',
-  baseUrl: '/',
+  // GitHub Pages serves the project site under /kanban-harness/; local builds stay at /.
+  baseUrl: process.env.DOCS_BASE_URL ?? '/',
+  trailingSlash: false,
   organizationName: 'amine2233',
   projectName: 'kanban-harness',
   onBrokenLinks: 'throw',

@@ -12,6 +12,8 @@ swift = "6.3.3"
 MVP_DASHBOARD_HOME = "{{config_root}}/.local/dashboard-home"
 # Where `dashboard serve` listens; the Vite dev server proxies /api to it.
 MVP_DASHBOARD_PORT = "5175"
+# Vite dev server port.
+MVP_DASHBOARD_WEB_PORT = "5173"
 # Interface the servers bind to. 127.0.0.1 = this machine only (the API has
 # no authentication). The *:lan tasks use 0.0.0.0 to expose them on the network.
 MVP_DASHBOARD_HOST = "127.0.0.1"
@@ -71,28 +73,14 @@ run = "swift build -c release"
 # --- Whole project -----------------------------------------------------------
 
 [tasks.dev]
-description = "Backend + web dev servers together (Ctrl-C stops both)"
+description = "Backend + web dev servers together (Ctrl-C stops both; stale servers on the ports are stopped first)"
 depends = ["backend:build"]
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-cd "$MISE_PROJECT_ROOT"
-backend/.build/debug/dashboard serve --port "$MVP_DASHBOARD_PORT" &
-trap 'kill %1 2>/dev/null' EXIT
-pnpm dev
-"""
+run = "scripts/dev.sh"
 
 [tasks."dev:lan"]
 description = "Like dev, but the web app is reachable from other machines (backend stays on loopback behind the Vite proxy)"
 depends = ["backend:build"]
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-cd "$MISE_PROJECT_ROOT"
-backend/.build/debug/dashboard serve --port "$MVP_DASHBOARD_PORT" &
-trap 'kill %1 2>/dev/null' EXIT
-pnpm dev --host 0.0.0.0
-"""
+run = "scripts/dev.sh --lan"
 
 [tasks.test]
 description = "All tests (web + backend)"
@@ -116,6 +104,19 @@ run = "backend/.build/release/dashboard serve --hostname 0.0.0.0 --port $MVP_DAS
 description = "Run the dashboard CLI, e.g. `mise run cli -- project list`"
 dir = "backend"
 run = "swift run -q dashboard"
+
+[tasks.stop]
+description = "Stop any dashboard / Vite dev servers left running"
+run = """
+#!/usr/bin/env bash
+pkill -f 'dashboard serve' && echo "stopped dashboard serve" || echo "no dashboard server running"
+pkill -f 'vite' && echo "stopped vite" || echo "no vite running"
+exit 0
+"""
+
+[tasks.doctor]
+description = "Check toolchain, build outputs and dev ports"
+run = "scripts/doctor.sh"
 
 [tasks.clean]
 description = "Remove build outputs (keeps .local dev data)"

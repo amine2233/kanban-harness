@@ -26,6 +26,8 @@ mise run dev
 
 Starts the API on `http://127.0.0.1:5175` and Vite on `http://localhost:5173` (Vite proxies `/api` to the backend, so no CORS setup is needed). Ctrl-C stops both. Or run them separately: `mise run backend:serve` and `mise run web:dev`.
 
+If it won't start: `mise run doctor` reports toolchain, build outputs and who holds the ports; `mise run stop` kills servers left behind by a closed terminal. `dev` already stops stale copies of its own servers and refuses to start when a foreign process holds a port (change `MVP_DASHBOARD_PORT` / `MVP_DASHBOARD_WEB_PORT` in `.env.local` in that case).
+
 ### Production-style (one process)
 
 ```sh

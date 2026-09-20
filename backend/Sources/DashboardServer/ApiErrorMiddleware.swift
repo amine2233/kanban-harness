@@ -34,6 +34,8 @@ struct ApiErrorMiddleware: AsyncMiddleware {
             (.conflict, ApiError(code: "ALREADY_EXISTS", message: error.localizedDescription))
         case let error as ServiceError where error.isValidation:
             (.badRequest, ApiError(code: "VALIDATION_FAILED", message: error.localizedDescription))
+        case let ServiceError.remote(code, message):
+            (code == "AI_PROVIDER" || code == "AI_BAD_OUTPUT" ? .badGateway : .badRequest, ApiError(code: code, message: message))
         case let error as DecodingError:
             (.badRequest, ApiError(code: "VALIDATION_FAILED", message: error.reason))
         case let error as any AbortError:

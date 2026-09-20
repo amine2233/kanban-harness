@@ -47,6 +47,11 @@ let package = Package(
             ]
         ),
         .target(name: "DashboardAPI", dependencies: ["DashboardDomain"]),
+        .target(name: "DashboardAI", dependencies: ["DashboardDomain", "DashboardService"]),
+        .target(
+            name: "DashboardAIProviders",
+            dependencies: ["DashboardAI", .product(name: "Logging", package: "swift-log")]
+        ),
         .target(
             name: "DashboardMCP",
             dependencies: [
@@ -58,7 +63,7 @@ let package = Package(
         ),
         .target(
             name: "DashboardClient",
-            dependencies: ["DashboardAPI", "DashboardPersistence", "DashboardService"]
+            dependencies: ["DashboardAPI", "DashboardPersistence", "DashboardService", "DashboardAI"]
         ),
         .target(
             name: "DashboardRuntime",
@@ -66,6 +71,8 @@ let package = Package(
                 "DashboardService",
                 "DashboardPersistenceJSON",
                 "DashboardPersistenceConfig",
+                "DashboardAI",
+                "DashboardAIProviders",
                 "DashboardPersistenceFluent",
                 .product(name: "CascadeKit", package: "cascade-kit"),
             ]
@@ -110,6 +117,11 @@ let package = Package(
         ),
         .testTarget(name: "DashboardRuntimeTests", dependencies: ["DashboardRuntime"]),
         .testTarget(name: "DashboardMCPTests", dependencies: ["DashboardMCP", "DashboardPersistence"]),
+        .testTarget(name: "DashboardAITests", dependencies: ["DashboardAI", "DashboardPersistence"]),
+        .testTarget(
+            name: "DashboardAIProvidersTests",
+            dependencies: ["DashboardAIProviders", .product(name: "Vapor", package: "vapor")]
+        ),
         .testTarget(
             name: "DashboardClientTests",
             dependencies: [

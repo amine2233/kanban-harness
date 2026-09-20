@@ -1,4 +1,6 @@
 import CascadeKit
+import DashboardAI
+import DashboardAIProviders
 import DashboardPersistenceConfig
 import DashboardPersistenceFluent
 import DashboardPersistenceJSON
@@ -67,6 +69,10 @@ public enum DashboardRuntime {
         }
         container.register(SettingsCommandsKey.self) { c in c.make(SettingsServiceKey.self) }
         container.register(BoardCommandsKey.self) { c in LocalBoardCommands(projects: c.make(ProjectServiceKey.self)) }
+        container.register(AIProviderRegistryKey.self) { _ in AIProviderRegistry.standard }
+        container.register(AssistantCommandsKey.self) { c in
+            AssistantService(aiConfig: c.make(AIConfigCommandsKey.self), boards: c.make(BoardCommandsKey.self), registry: c.make(AIProviderRegistryKey.self))
+        }
     }
 
     /// Runs the async shutdown hooks (workspace pool, then the registry

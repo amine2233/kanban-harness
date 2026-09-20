@@ -1,4 +1,5 @@
 import CascadeKit
+import DashboardAI
 import DashboardPersistence
 import DashboardPersistenceFluent
 import DashboardService
@@ -56,6 +57,14 @@ public enum AIConfigStoreKey: ServiceKey {
 
 public enum AIConfigCommandsKey: ServiceKey {
     public typealias Value = any AIConfigCommands
+}
+
+public enum AIProviderRegistryKey: ServiceKey {
+    public typealias Value = AIProviderRegistry
+}
+
+public enum AssistantCommandsKey: ServiceKey {
+    public typealias Value = any AssistantCommands
 }
 
 public enum ChangeBroadcasterKey: ServiceKey {

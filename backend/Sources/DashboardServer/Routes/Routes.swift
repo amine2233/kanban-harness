@@ -7,6 +7,8 @@ extension Settings: Content {}
 extension AIConfigDTO: Content {}
 extension UpsertAIProviderRequest: Content {}
 extension SetDefaultAIProviderRequest: Content {}
+extension DraftTicketRequest: Content {}
+extension DraftTicketResponse: Content {}
 extension UpdateSettingsRequest: Content {}
 extension BoardResponse: Content {}
 extension ColumnResponse: Content {}
@@ -33,6 +35,7 @@ func routes(_ app: Vapor.Application, config: ServerConfig) async throws {
     try api.register(collection: ProjectsController())
     try api.register(collection: SettingsController())
     try api.register(collection: AIConfigController())
+    try api.register(collection: AssistantController())
     try api.register(collection: EventsController())
     try app.register(collection: try await MCPHost.start(app))
     try api.grouped("projects", ":project", "kanban", "v1").register(collection: KanbanController())

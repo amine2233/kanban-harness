@@ -336,6 +336,38 @@ struct CLI {
         #expect((structured["items"] as? [[String: Any]])?.first?["name"] as? String == "MCP demo")
     }
 
+    @Test func aiTicketDraftsAndOptionallyCreatesACard() throws {
+        let cli = try CLI()
+        let dir = NSTemporaryDirectory() + "claude-stub-" + UUID().uuidString
+        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let stub = dir + "/claude"
+        try "#!/bin/sh\ncat > /dev/null\necho '{\"is_error\":false,\"result\":\"\",\"structured_output\":{\"title\":\"Drafted by CLI\",\"acceptance_criteria\":[\"ok\"],\"priority\":\"low\"}}'\n".write(toFile: stub, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub)
+        _ = try cli.json("project", "add", cli.tempFolder("ai"), "--name", "AI demo")
+        _ = try cli.json("ai", "providers", "add", "cc", "--kind", "claude_code", "--model", "sonnet")
+
+        let process = { (args: [String]) throws -> [String: Any] in
+            let p = Process()
+            p.executableURL = CLI.binary
+            p.arguments = ["--home", cli.home, "--local"] + args
+            p.environment = ProcessInfo.processInfo.environment.merging(["MVP_DASHBOARD_CLAUDE_BIN": stub]) { $1 }
+            let out = Pipe()
+            p.standardOutput = out
+            p.standardError = Pipe()
+            try p.run()
+            let data = out.fileHandleForReading.readDataToEndOfFile()
+            p.waitUntilExit()
+            return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        }
+        let drafted = try process(["ai", "ticket", "AI demo", "password reset"])
+        #expect((drafted["draft"] as? [String: Any])?["title"] as? String == "Drafted by CLI")
+        #expect(drafted["provider"] as? String == "cc")
+        let created = try process(["ai", "ticket", "AI demo", "password reset", "--create", "--column", "To do"])
+        #expect(created["key"] as? String == "task-1")
+        let boards = try #require(try cli.json("project", "boards", "AI demo") as? [[String: Any]])
+        #expect(boards.count == 1)
+    }
+
     @Test func helpListsSubcommands() throws {
         let result = try CLI().run("--help")
         #expect(result.status == 0)

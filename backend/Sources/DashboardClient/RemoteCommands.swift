@@ -1,3 +1,4 @@
+import DashboardAI
 import DashboardAPI
 import DashboardDomain
 import DashboardService
@@ -213,5 +214,27 @@ public struct RemoteBoardCommands: BoardCommands {
         card.updatedAt = r.updatedAt
         card.completedAt = r.completedAt
         return card
+    }
+}
+
+public struct RemoteAssistantCommands: AssistantCommands {
+    private let client: DashboardClient
+    private let projects: RemoteProjectCommands
+
+    public init(client: DashboardClient) {
+        self.client = client
+        projects = RemoteProjectCommands(client: client)
+    }
+
+    public func draftTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) async throws(ServiceError) -> DraftedTicket {
+        let id = try await projects.get(project).id
+        let response = try await client.send(
+            "POST", "api/projects/\(id.uuidString)/ai/tickets/draft",
+            body: DraftTicketRequest(idea: idea, boardId: boardId, provider: providerId), as: DraftTicketResponse.self
+        )
+        return DraftedTicket(
+            draft: response.draft, providerId: response.provider, model: response.model,
+            usage: CompletionUsage(inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens, costUSD: response.usage.costUSD)
+        )
     }
 }

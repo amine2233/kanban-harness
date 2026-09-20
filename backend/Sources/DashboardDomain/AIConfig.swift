@@ -5,9 +5,11 @@ public enum AIProviderKind: String, Codable, Sendable, CaseIterable {
     case anthropic
     case openaiCompatible = "openai_compatible"
     case ollama
+    /// The Claude Code CLI in headless mode: uses the machine's Claude login, no API key.
+    case claudeCode = "claude_code"
 
     /// Whether requests need an API key at all.
-    public var requiresAPIKey: Bool { self != .ollama }
+    public var requiresAPIKey: Bool { self == .anthropic || self == .openaiCompatible }
 }
 
 /// One configured AI provider. `apiKey` is a secret: it is persisted in the

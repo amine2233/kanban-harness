@@ -1,13 +1,15 @@
 import ArgumentParser
+import DashboardAI
 import DashboardDomain
 import DashboardRuntime
 import DashboardService
+import Foundation
 
 struct AICommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "ai",
         abstract: "AI assistant configuration (providers live in config.json / config.yaml).",
-        subcommands: [Providers.self]
+        subcommands: [Providers.self, Ticket.self]
     )
 
     struct Providers: AsyncParsableCommand {
@@ -128,6 +130,77 @@ struct AICommand: AsyncParsableCommand {
                     try Output.json(View(try await Runtime.run(global) { try await $0.make(AIConfigCommandsKey.self).setDefault(id) }))
                 }
             }
+        }
+    }
+}
+
+extension AICommand {
+    struct Ticket: AsyncParsableCommand {
+        static let configuration = CommandConfiguration(
+            commandName: "ticket",
+            abstract: "Draft a ticket from an idea with the configured AI provider; --create turns it into a card."
+        )
+
+        @OptionGroup var global: GlobalOptions
+
+        @Argument(help: "Project name or id.")
+        var project: String
+
+        @Argument(help: "The idea, in a sentence or two.")
+        var idea: String
+
+        @Option(help: "Board name or id (default: the project's first board).")
+        var board: String?
+
+        @Option(help: "Provider id (default: the configured default provider).")
+        var provider: String?
+
+        @Option(help: "Column name or id for --create (default: the board's first column).")
+        var column: String?
+
+        @Flag(help: "Create the card right away instead of only printing the draft.")
+        var create = false
+
+        func run() async throws {
+            try await failing {
+                try await Runtime.run(global) { services in
+                    let boards = services.make(BoardCommandsKey.self)
+                    let ref = ProjectRef.parse(project)
+                    let all = try await boards.boards(ref)
+                    guard let target = board.map({ b in all.first { $0.name.caseInsensitiveCompare(b) == .orderedSame || $0.id.uuidString.caseInsensitiveCompare(b) == .orderedSame } }) ?? all.first else {
+                        throw ServiceError.domain(.notFound(board ?? "board"))
+                    }
+                    let drafted = try await services.make(AssistantCommandsKey.self)
+                        .draftTicket(project: ref, boardId: target.id, idea: idea, providerId: provider)
+                    if create {
+                        let columns = try await boards.columns(ref, boardId: target.id)
+                        guard let destination = column.map({ c in columns.first { $0.name.caseInsensitiveCompare(c) == .orderedSame || $0.id.uuidString.caseInsensitiveCompare(c) == .orderedSame } }) ?? columns.first else {
+                            throw ServiceError.domain(.notFound(column ?? "column"))
+                        }
+                        let card = try await boards.createCard(ref, columnId: destination.id, title: drafted.draft.title, description: drafted.draft.cardDescription, priority: drafted.draft.priority)
+                        try Output.json(CreatedView(draft: drafted, card: card))
+                    } else {
+                        try Output.json(DraftView(drafted))
+                    }
+                }
+            }
+        }
+
+        struct DraftView: Encodable {
+            let draft: TicketDraft
+            let provider: String
+            let model: String
+            let costUSD: Double?
+            enum CodingKeys: String, CodingKey { case draft, provider, model; case costUSD = "cost_usd" }
+            init(_ d: DraftedTicket) { draft = d.draft; provider = d.providerId; model = d.model; costUSD = d.usage.costUSD }
+        }
+
+        struct CreatedView: Encodable {
+            let draft: DraftView
+            let cardId: String
+            let key: String
+            enum CodingKeys: String, CodingKey { case draft, key; case cardId = "card_id" }
+            init(draft: DraftedTicket, card: Card) { self.draft = DraftView(draft); cardId = card.id.uuidString.lowercased(); key = "\(card.prefix)-\(card.cardNumber)" }
         }
     }
 }

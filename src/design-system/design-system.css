@@ -58,8 +58,20 @@ body {
 }
 
 .ds-main {
-  padding: 28px 32px 40px;
+  padding: 28px 32px 24px;
   min-width: 0;
+  height: calc(100vh - var(--ds-topbar-height));
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A page that owns the remaining height (the kanban board) instead of scrolling the main area. */
+.ds-page--fill {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .ds-nav-link {
@@ -221,19 +233,30 @@ body {
 
 /* --- Kanban board ---------------------------------------------------------- */
 
+.ds-board-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Fills the rest of the page: wheel/trackpad scrolling works anywhere in it,
+   and the horizontal scrollbar sits at the bottom of the viewport. */
 .ds-board {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 8px;
 }
 
 .ds-column {
   flex: 0 0 300px;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - var(--ds-topbar-height) - 200px);
+  max-height: 100%;
   background: #eef1f6;
   border-radius: 12px;
   border: 2px solid transparent;

@@ -32,7 +32,7 @@ export function ProjectPage() {
   }
 
   return (
-    <>
+    <div className="ds-page--fill">
       <PageHeader
         title={project.name}
         description={project.path}
@@ -65,6 +65,6 @@ export function ProjectPage() {
         }
       />
       <KanbanBoard projectId={project.id} />
-    </>
+    </div>
   )
 }

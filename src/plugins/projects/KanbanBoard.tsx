@@ -31,7 +31,7 @@ export function KanbanBoard({ projectId }: { projectId: string }) {
   }
 
   return (
-    <>
+    <div className="ds-board-view">
       <BoardTabs
         projectId={projectId}
         boards={boardList}
@@ -39,7 +39,7 @@ export function KanbanBoard({ projectId }: { projectId: string }) {
         onSelect={setSelected}
       />
       <BoardColumns projectId={projectId} boardId={boardId} />
-    </>
+    </div>
   )
 }
 

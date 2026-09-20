@@ -341,7 +341,7 @@ struct CLI {
         let dir = NSTemporaryDirectory() + "claude-stub-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         let stub = dir + "/claude"
-        try "#!/bin/sh\ncat > /dev/null\necho '{\"is_error\":false,\"result\":\"\",\"structured_output\":{\"title\":\"Drafted by CLI\",\"acceptance_criteria\":[\"ok\"],\"priority\":\"low\"}}'\n".write(toFile: stub, atomically: true, encoding: .utf8)
+        try "#!/bin/sh\ncat > /dev/null\necho '{\"is_error\":false,\"result\":\"\",\"structured_output\":{\"title\":\"Drafted by CLI\",\"acceptance_criteria\":[\"ok\"],\"priority\":\"low\",\"subtasks\":[{\"title\":\"Part one\"},{\"title\":\"Part two\",\"points\":2}]}}'\n".write(toFile: stub, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub)
         let folder = cli.tempFolder("ai")
         _ = try cli.json("project", "add", folder, "--name", "AI demo")
@@ -373,6 +373,8 @@ struct CLI {
         #expect(created["key"] as? String == "task-1")
         let file = try String(contentsOfFile: folder + "/kanban.json", encoding: .utf8)
         #expect(file.contains(#""ai_cost""#) && file.contains(#""provider" : "cc""#), "the created card remembers its draft cost")
+        #expect(file.contains("Part one") && file.contains("Part two"), "sub-tasks are created with the card")
+        #expect(file.components(separatedBy: #""source" :"#).count == 3, "two spawns edges link them to the parent")
         let boards = try #require(try cli.json("project", "boards", "AI demo") as? [[String: Any]])
         #expect(boards.count == 1)
     }

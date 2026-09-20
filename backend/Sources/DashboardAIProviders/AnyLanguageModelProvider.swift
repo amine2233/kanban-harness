@@ -18,6 +18,18 @@ struct GeneratedTicket {
     var priority: String
     @Guide(description: "Story points 0-255; omit when unsure")
     var points: Int?
+    @Guide(description: "Child cards only when the idea needs several independent pieces of work; otherwise empty", .maximumCount(8))
+    var subtasks: [GeneratedSubtask]
+}
+
+@Generable(description: "A child card of the ticket")
+struct GeneratedSubtask {
+    @Guide(description: "Short imperative title")
+    var title: String
+    @Guide(description: "One or two sentences: what exactly to do")
+    var description: String?
+    @Guide(description: "Story points 0-255; omit when unsure")
+    var points: Int?
 }
 
 /// One adapter for every AnyLanguageModel backend. Adding a vendor is one

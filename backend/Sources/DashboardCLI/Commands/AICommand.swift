@@ -193,7 +193,7 @@ extension AICommand {
                         guard let destination = column.map({ c in columns.first { $0.name.caseInsensitiveCompare(c) == .orderedSame || $0.id.uuidString.caseInsensitiveCompare(c) == .orderedSame } }) ?? columns.first else {
                             throw ServiceError.domain(.notFound(column ?? "column"))
                         }
-                        let card = try await boards.createCard(ref, columnId: destination.id, title: drafted.draft.title, description: drafted.draft.cardDescription, priority: drafted.draft.priority, aiCost: drafted.aiCost, subtasks: [])
+                        let card = try await boards.createCard(ref, columnId: destination.id, title: drafted.draft.title, description: drafted.draft.cardDescription, priority: drafted.draft.priority, aiCost: drafted.aiCost, subtasks: drafted.draft.subtasks.map(\.spec))
                         try Output.json(CreatedView(draft: drafted, card: card))
                     } else {
                         try Output.json(DraftView(drafted))

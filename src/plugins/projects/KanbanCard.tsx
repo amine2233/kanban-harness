@@ -1,7 +1,6 @@
 import type { DragEvent, ReactNode } from 'react'
-import { Button, checklistProgress, cx, Icon } from '@/design-system'
-import { formatCost } from './assistantApi'
-import { cardColor, neighbourColumns } from './board'
+import { Button, cx, Icon } from '@mvp/design-system'
+import { cardColor, checklistProgress, formatCost, neighbourColumns } from '@mvp/kanban-model'
 import type { Card, Column } from './kanbanApi'
 
 interface Props {

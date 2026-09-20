@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
-import { Button, ConfirmModal, Input, Menu, Modal } from '@/design-system'
+import { Button, ConfirmModal, Input, Menu, Modal } from '@mvp/design-system'
 import { ColumnDialog } from './ColumnDialog'
 import {
   useCloneBoardMutation,

@@ -1,5 +1,5 @@
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { cx, Icon } from '@/design-system'
+import { cx, Icon } from '@mvp/design-system'
 import { selectTheme, setTheme, THEMES, type Theme } from './settingsSlice'
 
 const LABELS: Record<Theme, string> = { system: 'System', light: 'Light', dark: 'Dark' }

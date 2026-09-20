@@ -1,7 +1,7 @@
 dist
 coverage
 pnpm-lock.yaml
-src/design-system/purple3.min.css
+packages/design-system/src/purple3.min.css
 backend/.build
 backend/target
 backend/Tests/**/Fixtures

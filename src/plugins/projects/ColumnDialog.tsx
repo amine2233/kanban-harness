@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
-import { Button, Input, Modal, Select } from '@/design-system'
+import { Button, Input, Modal, Select } from '@mvp/design-system'
 import {
   useCreateColumnMutation,
   useUpdateColumnMutation,

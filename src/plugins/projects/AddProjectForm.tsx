@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { errorMessage } from '@/app/api'
-import { Button, Input, Select } from '@/design-system'
+import { Button, Input, Select } from '@mvp/design-system'
 import { folderName } from './paths'
 import { useGetServerSettingsQuery } from '@/plugins/settings/settingsApi'
 import { useCreateProjectMutation, type StorageKind } from './projectsApi'

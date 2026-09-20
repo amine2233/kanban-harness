@@ -9,7 +9,7 @@ import {
   setServerUrl,
 } from '@/core/settings/settingsSlice'
 import { ThemePicker } from '@/core/settings/ThemePicker'
-import { Banner, Button, Card, Input, PageHeader, type Tone } from '@/design-system'
+import { Banner, Button, Card, Input, PageHeader, type Tone } from '@mvp/design-system'
 import { AIProvidersCard } from './AIProvidersCard'
 import { ServerSettingsCard } from './ServerSettingsCard'
 

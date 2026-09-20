@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router'
 import { errorMessage } from '@/app/api'
-import { Icon, Spinner } from '@/design-system'
+import { Icon, Spinner } from '@mvp/design-system'
 import { AddProjectForm } from './AddProjectForm'
 import { useListProjectsQuery } from './projectsApi'
 

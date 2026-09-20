@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction, type WithSlice } from '@reduxjs/toolkit'
 import { rootReducer, type RootState } from '@/app/reducer'
 import { apiBaseUrl, selectServerUrl } from '@/core/settings/settingsSlice'
-import type { DraftTicketResponse, PartialTicketDraft, Usage } from './assistantApi'
+import type { DraftTicketResponse, PartialTicketDraft, Usage } from '@mvp/kanban-model'
 import { readEventStream } from './sse'
 
 export type Step = 'resolve' | 'context' | 'wait' | 'stream' | 'validate' | 'done'

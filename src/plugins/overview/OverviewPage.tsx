@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { errorMessage } from '@/app/api'
-import { Banner, Icon, PageHeader, Spinner } from '@/design-system'
+import { Banner, Icon, PageHeader, Spinner } from '@mvp/design-system'
 import { AddProjectForm } from '@/plugins/projects/AddProjectForm'
 import { useListBoardsQuery } from '@/plugins/projects/kanbanApi'
 import { useListProjectsQuery, type Project } from '@/plugins/projects/projectsApi'

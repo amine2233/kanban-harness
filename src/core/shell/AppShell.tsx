@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router'
 import { useAppSelector } from '@/app/hooks'
 import { useTheme } from '@/core/settings/useTheme'
-import { cx } from '@/design-system'
+import { cx } from '@mvp/design-system'
 import type { PluginRegistry } from '@/core/plugin/registry'
 import { selectSidebarCollapsed } from './shellSlice'
 import { Sidebar } from './Sidebar'

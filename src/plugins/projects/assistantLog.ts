@@ -1,4 +1,4 @@
-import { formatCost, formatTokens } from './assistantApi'
+import { formatCost, formatTokens } from '@mvp/kanban-model'
 import type { AssistantState } from './assistantSlice'
 
 /** Plain-text version of the panel, for issues and support. */

@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
-import { Banner, Button, Card, Select, Spinner, Textarea } from '@/design-system'
+import { Banner, Button, Card, Select, Spinner, Textarea } from '@mvp/design-system'
 import type { StorageKind } from '@/plugins/projects/projectsApi'
 import { splitOrigins } from './origins'
 import {

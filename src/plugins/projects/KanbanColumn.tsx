@@ -1,5 +1,5 @@
 import { useState, type DragEvent } from 'react'
-import { cx, Icon } from '@/design-system'
+import { cx, Icon } from '@mvp/design-system'
 import { CardDialog } from './CardDialog'
 import { CARD_MIME, draggedCard, serialiseCardDrag } from './dragAndDrop'
 import { KanbanCard } from './KanbanCard'

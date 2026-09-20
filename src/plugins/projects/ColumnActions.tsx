@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ConfirmModal, Menu } from '@/design-system'
+import { ConfirmModal, Menu } from '@mvp/design-system'
 import { ColumnDialog } from './ColumnDialog'
 import { useDeleteColumnMutation, useUpdateColumnMutation, type Column } from './kanbanApi'
 

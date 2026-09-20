@@ -1,6 +1,6 @@
 import { useAppDispatch } from '@/app/hooks'
 import { ThemePicker } from '@/core/settings/ThemePicker'
-import { Icon } from '@/design-system'
+import { Icon } from '@mvp/design-system'
 import { ServerStatus } from './ServerStatus'
 import { toggleSidebar } from './shellSlice'
 

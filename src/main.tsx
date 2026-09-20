@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import '@/design-system'
+import '@mvp/design-system'
 import { App } from '@/app/App'
 
 const root = document.getElementById('root')

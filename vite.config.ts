@@ -39,7 +39,10 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
-    coverage: { include: ['src/**'], exclude: ['src/**/*.test.*', 'src/test/**', 'src/main.tsx'] },
+    include: ['src/**/*.test.{ts,tsx}', 'packages/*/src/**/*.test.{ts,tsx}'],
+    coverage: {
+      include: ['src/**', 'packages/*/src/**'],
+      exclude: ['**/*.test.*', 'src/test/**', 'src/main.tsx'],
+    },
   },
 })

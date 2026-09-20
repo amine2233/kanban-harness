@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { Button, cx, Select, Spinner, Textarea } from '@/design-system'
+import { Button, cx, Select, Spinner, Textarea } from '@mvp/design-system'
 import { useGetAIConfigQuery } from '@/plugins/settings/aiConfigApi'
-import { costOf, draftPatch, formatCost, formatTokens, type DraftPatch } from './assistantApi'
+import { costOf, draftPatch, formatCost, formatTokens, type DraftPatch } from '@mvp/kanban-model'
 import { logText } from './assistantLog'
 import {
   phaseDurations,

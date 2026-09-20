@@ -1,4 +1,4 @@
-import type { AICost, CardPriority } from './kanbanApi'
+import type { AICost, CardPriority } from './types'
 
 export interface SubtaskDraft {
   title: string

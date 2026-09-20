@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { createStore } from '@/app/store'
 import { stubApi } from '@/test/fakeApi'
-import { draftDescription } from './assistantApi'
+import { draftDescription } from '@mvp/kanban-model'
 import { CardDialog } from './CardDialog'
 
 afterEach(() => {

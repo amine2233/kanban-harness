@@ -1,0 +1,10 @@
+{
+  "name": "@mvp/kanban-model",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Kanban wire types and pure board logic: grouping, hierarchy, colours, checklists, AI draft helpers. No React, no Redux.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

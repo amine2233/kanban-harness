@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router'
 import { errorMessage } from '@/app/api'
-import { Banner, Button, PageHeader, Select, Spinner } from '@/design-system'
+import { Banner, Button, PageHeader, Select, Spinner } from '@mvp/design-system'
 import { KanbanBoard } from './KanbanBoard'
 import {
   useDeleteProjectMutation,

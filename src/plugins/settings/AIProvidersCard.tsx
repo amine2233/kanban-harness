@@ -11,7 +11,7 @@ import {
   Modal,
   Select,
   Spinner,
-} from '@/design-system'
+} from '@mvp/design-system'
 import {
   KEYED_KINDS,
   KIND_BASE_URL,

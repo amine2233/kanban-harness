@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { CARD_COLORS, cardColor, groupCardsByColumn, neighbourColumns } from './board'
-import type { Card, Column } from './kanbanApi'
+import type { Card, Column } from './types'
 
 const column = (id: string, position: number): Column => ({
   id,

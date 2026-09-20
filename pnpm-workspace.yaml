@@ -1,2 +1,5 @@
+packages:
+  - packages/*
+
 minimumReleaseAgeExclude:
   - eslint@10.11.0

@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { Markdown } from '@/design-system'
+import { Markdown } from '@mvp/design-system'
 
 interface Props {
   value: string

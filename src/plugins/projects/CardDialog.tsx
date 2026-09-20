@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from 'react'
 import { errorMessage } from '@/app/api'
-import { Button, ConfirmModal, cx, Input, Modal, Select } from '@/design-system'
-import { formatCost, formatTokens } from './assistantApi'
+import { Button, ConfirmModal, cx, Input, Modal, Select } from '@mvp/design-system'
+import { formatCost, formatTokens } from '@mvp/kanban-model'
 import { DescriptionField } from './DescriptionField'
 import { DraftWithAI } from './DraftWithAI'
 import {

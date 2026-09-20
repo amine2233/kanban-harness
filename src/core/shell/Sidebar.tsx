@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 import { NavLink } from 'react-router'
-import { Icon } from '@/design-system'
+import { Icon } from '@mvp/design-system'
 import type { NavItem } from '@/core/plugin/types'
 
 export interface SidebarProps {

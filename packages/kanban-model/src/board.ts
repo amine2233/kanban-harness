@@ -1,4 +1,4 @@
-import type { Card, Column } from './kanbanApi'
+import type { Card, Column } from './types'
 
 export function groupCardsByColumn(columns: Column[], cards: Card[]): Map<string, Card[]> {
   const grouped = new Map<string, Card[]>(columns.map((c) => [c.id, []]))

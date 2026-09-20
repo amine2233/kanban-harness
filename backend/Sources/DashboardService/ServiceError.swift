@@ -14,7 +14,7 @@ public enum ServiceError: Error, Sendable {
     public var isNotFound: Bool {
         switch self {
         case .domain(.notFound), .domain(.idNotFound), .domain(.boardNotFound),
-             .domain(.columnNotFound), .domain(.cardNotFound): true
+             .domain(.columnNotFound), .domain(.cardNotFound), .domain(.providerNotFound): true
         case let .remote(code, _): code == "NOT_FOUND"
         default: false
         }

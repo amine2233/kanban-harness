@@ -41,6 +41,7 @@ extension Vapor.Request {
     public var requestId: UUID { services.make(RequestIdKey.self) }
     public var projects: ProjectService { services.make(ProjectServiceKey.self) }
     public var settings: SettingsService { services.make(SettingsServiceKey.self) }
+    public var aiConfig: any AIConfigCommands { services.make(AIConfigCommandsKey.self) }
 }
 
 func registerServices(_ app: Vapor.Application, config: ServerConfig) async throws {

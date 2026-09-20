@@ -94,6 +94,26 @@ import Vapor
         }
     }
 
+    @Test func aiConfigCommandsRoundTripWithRedactedKeys() async throws {
+        try await withServer { client, _ in
+            let ai = RemoteAIConfigCommands(client: client)
+            #expect(try await ai.current() == .empty)
+            let claude = try AIProviderConfig(id: "claude", kind: .anthropic, name: "Claude", model: "claude-sonnet-5", apiKey: "sk-1")
+            let config = try await ai.upsert(claude)
+            #expect(config.defaultProviderId == "claude")
+            #expect(config.provider("claude")?.apiKey == RemoteAIConfigCommands.redactedKey, "server never returns the key")
+            _ = try await ai.upsert(try AIProviderConfig(id: "local", kind: .ollama, name: "Ollama", model: "llama3.2"))
+            #expect(try await ai.setDefault("local").defaultProviderId == "local")
+            #expect(try await ai.remove("claude").providers.map(\.id) == ["local"])
+            do {
+                _ = try await ai.remove("ghost")
+                Issue.record("expected not found")
+            } catch let error as ServiceError {
+                #expect(error.isNotFound)
+            }
+        }
+    }
+
     @Test func unreachableServerIsReportedAsSuch() async {
         let projects = RemoteProjectCommands(client: DashboardClient(baseURL: URL(string: "http://127.0.0.1:1")!, timeout: 1))
         do {

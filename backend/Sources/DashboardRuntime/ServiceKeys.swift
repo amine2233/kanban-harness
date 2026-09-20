@@ -46,6 +46,14 @@ public enum SettingsCommandsKey: ServiceKey {
     public typealias Value = any SettingsCommands
 }
 
+public enum AIConfigStoreKey: ServiceKey {
+    public typealias Value = any AIConfigStore
+}
+
+public enum AIConfigCommandsKey: ServiceKey {
+    public typealias Value = any AIConfigCommands
+}
+
 public enum ChangeBroadcasterKey: ServiceKey {
     public typealias Value = ChangeBroadcaster
 }

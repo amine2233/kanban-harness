@@ -8,6 +8,7 @@ public struct ChangeEventDTO: Codable, Equatable, Sendable {
         case projectsChanged = "projects_changed"
         case workspaceChanged = "workspace_changed"
         case settingsChanged = "settings_changed"
+        case aiConfigChanged = "ai_config_changed"
     }
 
     public let kind: Kind

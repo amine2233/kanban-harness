@@ -1,4 +1,5 @@
 import CascadeKit
+import DashboardPersistenceConfig
 import DashboardPersistenceFluent
 import DashboardPersistenceJSON
 import DashboardService
@@ -54,6 +55,12 @@ public enum DashboardRuntime {
         }
         container.register(SettingsServiceKey.self) { c in
             SettingsService(store: c.make(SettingsStoreKey.self), changes: c.make(ChangeBroadcasterKey.self))
+        }
+        container.register(AIConfigStoreKey.self) { c in
+            ConfigFileAIConfigStore(path: c.make(RuntimeConfigKey.self).configPath)
+        }
+        container.register(AIConfigCommandsKey.self) { c in
+            AIConfigService(store: c.make(AIConfigStoreKey.self), changes: c.make(ChangeBroadcasterKey.self))
         }
         container.register(ProjectCommandsKey.self) { c in
             LocalProjectCommands(projects: c.make(ProjectServiceKey.self), settings: c.make(SettingsServiceKey.self))

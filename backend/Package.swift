@@ -1,9 +1,9 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.1
 import PackageDescription
 
 let package = Package(
     name: "mvp-dashboard-backend",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v15)],
     products: [
         .executable(name: "dashboard", targets: ["DashboardCLI"]),
         .library(name: "DashboardServer", targets: ["DashboardServer"]),
@@ -15,11 +15,21 @@ let package = Package(
         .package(url: "https://github.com/vapor/fluent.git", from: "4.13.0"),
         .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.9.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.6.0"),
+        .package(url: "https://github.com/apple/swift-configuration.git", from: "1.2.0", traits: ["JSON", "YAML"]),
+        .package(url: "https://github.com/jpsim/Yams.git", from: "5.4.0"),
     ],
     targets: [
         .target(name: "DashboardDomain"),
         .target(name: "DashboardPersistence", dependencies: ["DashboardDomain"]),
         .target(name: "DashboardPersistenceJSON", dependencies: ["DashboardPersistence"]),
+        .target(
+            name: "DashboardPersistenceConfig",
+            dependencies: [
+                "DashboardPersistence",
+                .product(name: "Configuration", package: "swift-configuration"),
+                .product(name: "Yams", package: "Yams"),
+            ]
+        ),
         .target(
             name: "DashboardPersistenceFluent",
             dependencies: [
@@ -45,6 +55,7 @@ let package = Package(
             dependencies: [
                 "DashboardService",
                 "DashboardPersistenceJSON",
+                "DashboardPersistenceConfig",
                 "DashboardPersistenceFluent",
                 .product(name: "CascadeKit", package: "cascade-kit"),
             ]
@@ -75,6 +86,7 @@ let package = Package(
             dependencies: ["DashboardPersistenceJSON"],
             resources: [.copy("Fixtures")]
         ),
+        .testTarget(name: "DashboardPersistenceConfigTests", dependencies: ["DashboardPersistenceConfig"]),
         .testTarget(
             name: "DashboardPersistenceFluentTests",
             dependencies: ["DashboardPersistenceFluent", "DashboardPersistenceJSON"],

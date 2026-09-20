@@ -8,6 +8,8 @@ public enum ChangeEvent: Equatable, Sendable {
     case workspaceChanged(projectId: UUID)
     /// settings.json changed.
     case settingsChanged
+    /// The AI provider configuration changed.
+    case aiConfigChanged
 }
 
 /// Fan-out of change events to any number of subscribers (one per WebSocket).

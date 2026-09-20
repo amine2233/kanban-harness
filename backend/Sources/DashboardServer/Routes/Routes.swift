@@ -4,6 +4,9 @@ import Vapor
 
 extension Project: Content {}
 extension Settings: Content {}
+extension AIConfigDTO: Content {}
+extension UpsertAIProviderRequest: Content {}
+extension SetDefaultAIProviderRequest: Content {}
 extension UpdateSettingsRequest: Content {}
 extension BoardResponse: Content {}
 extension ColumnResponse: Content {}
@@ -29,6 +32,7 @@ func routes(_ app: Vapor.Application, config: ServerConfig) throws {
     api.get("health") { _ in Health() }
     try api.register(collection: ProjectsController())
     try api.register(collection: SettingsController())
+    try api.register(collection: AIConfigController())
     try api.register(collection: EventsController())
     try api.grouped("projects", ":project", "kanban", "v1").register(collection: KanbanController())
 

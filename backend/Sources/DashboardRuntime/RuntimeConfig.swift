@@ -6,6 +6,7 @@ import Foundation
 public struct RuntimeConfig: Sendable, Equatable {
     public static let registryFileName = "projects.sqlite"
     public static let settingsFileName = "settings.json"
+    public static let configFileNames = ["config.yaml", "config.yml", "config.json"]
 
     public var home: String
 
@@ -19,5 +20,11 @@ public struct RuntimeConfig: Sendable, Equatable {
 
     public var settingsPath: String {
         (home as NSString).appendingPathComponent(Self.settingsFileName)
+    }
+
+    /// `config.yaml`/`config.yml` when one exists, otherwise `config.json` (created on first save).
+    public var configPath: String {
+        let candidates = Self.configFileNames.map { (home as NSString).appendingPathComponent($0) }
+        return candidates.first { FileManager.default.fileExists(atPath: $0) } ?? candidates[candidates.count - 1]
     }
 }

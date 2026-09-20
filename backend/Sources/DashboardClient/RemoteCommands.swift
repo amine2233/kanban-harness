@@ -72,3 +72,50 @@ public struct RemoteSettingsCommands: SettingsCommands {
         )
     }
 }
+
+public struct RemoteAIConfigCommands: AIConfigCommands {
+    private let client: DashboardClient
+
+    public init(client: DashboardClient) {
+        self.client = client
+    }
+
+    public func current() async throws(ServiceError) -> AIConfig {
+        try Self.config(try await client.send("GET", "api/settings/ai", body: Empty?.none, as: AIConfigDTO.self))
+    }
+
+    public func upsert(_ provider: AIProviderConfig) async throws(ServiceError) -> AIConfig {
+        let body = UpsertAIProviderRequest(
+            kind: provider.kind, name: provider.name, model: provider.model,
+            baseURL: provider.baseURL, apiKey: provider.apiKey, maxTokens: provider.maxTokens
+        )
+        return try Self.config(try await client.send("PUT", "api/settings/ai/providers/\(provider.id)", body: body, as: AIConfigDTO.self))
+    }
+
+    public func remove(_ id: String) async throws(ServiceError) -> AIConfig {
+        try Self.config(try await client.send("DELETE", "api/settings/ai/providers/\(id)", body: Empty?.none, as: AIConfigDTO.self))
+    }
+
+    public func setDefault(_ id: String) async throws(ServiceError) -> AIConfig {
+        try Self.config(try await client.send("PUT", "api/settings/ai/default", body: SetDefaultAIProviderRequest(providerId: id), as: AIConfigDTO.self))
+    }
+
+    /// The server never returns keys; the remote view carries `hasAPIKey` through a placeholder.
+    private static func config(_ dto: AIConfigDTO) throws(ServiceError) -> AIConfig {
+        do {
+            return try AIConfig(
+                providers: dto.providers.map { p in
+                    try AIProviderConfig(
+                        id: p.id, kind: p.kind, name: p.name, model: p.model, baseURL: p.baseURL,
+                        apiKey: p.hasAPIKey ? RemoteAIConfigCommands.redactedKey : nil, maxTokens: p.maxTokens
+                    )
+                },
+                defaultProviderId: dto.defaultProvider
+            )
+        } catch {
+            throw .remote(code: "BAD_RESPONSE", message: String(describing: error))
+        }
+    }
+
+    public static let redactedKey = "••••••••"
+}

@@ -280,6 +280,23 @@ struct CLI {
         #expect(fallback.isEmpty, "without --remote the CLI falls back to local files")
     }
 
+    @Test func aiProvidersAreEditedThroughTheCLIAndStoredInConfigJSON() throws {
+        let cli = try CLI()
+        #expect(((try cli.json("ai", "providers", "list") as? [String: Any])?["providers"] as? [Any])?.isEmpty == true)
+        let added = try #require(try cli.json("ai", "providers", "add", "claude", "--kind", "anthropic", "--model", "claude-sonnet-5", "--api-key", "sk-cli") as? [String: Any])
+        #expect(added["default_provider"] as? String == "claude")
+        let provider = try #require((added["providers"] as? [[String: Any]])?.first)
+        #expect(provider["has_api_key"] as? Bool == true)
+        #expect(provider["api_key"] == nil, "the key is never printed")
+        #expect(try String(contentsOfFile: cli.home + "/config.json", encoding: .utf8).contains("sk-cli"))
+
+        _ = try cli.json("ai", "providers", "add", "local", "--kind", "ollama", "--model", "llama3.2", "--base-url", "http://127.0.0.1:11434")
+        #expect((try cli.json("ai", "providers", "default", "local") as? [String: Any])?["default_provider"] as? String == "local")
+        #expect(((try cli.json("ai", "providers", "remove", "claude") as? [String: Any])?["providers"] as? [Any])?.count == 1)
+        #expect(try cli.run("ai", "providers", "add", "Bad Id", "--kind", "ollama", "--model", "m").status == 1)
+        #expect(try cli.run("ai", "providers", "add", "x", "--kind", "magic", "--model", "m").status != 0)
+    }
+
     @Test func helpListsSubcommands() throws {
         let result = try CLI().run("--help")
         #expect(result.status == 0)

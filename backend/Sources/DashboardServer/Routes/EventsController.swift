@@ -38,6 +38,7 @@ extension ChangeEventDTO {
         switch event {
         case .projectsChanged: self.init(kind: .projectsChanged)
         case .settingsChanged: self.init(kind: .settingsChanged)
+        case .aiConfigChanged: self.init(kind: .aiConfigChanged)
         case let .workspaceChanged(projectId): self.init(kind: .workspaceChanged, projectId: projectId)
         }
     }

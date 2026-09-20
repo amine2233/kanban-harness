@@ -53,6 +53,14 @@ public protocol SettingsCommands: Sendable {
     func update(defaultStorage: StorageKind?, corsOrigins: [String]?) async throws(ServiceError) -> Settings
 }
 
+/// AI provider configuration, editable from the web and the CLI alike.
+public protocol AIConfigCommands: Sendable {
+    func current() async throws(ServiceError) -> AIConfig
+    func upsert(_ provider: AIProviderConfig) async throws(ServiceError) -> AIConfig
+    func remove(_ id: String) async throws(ServiceError) -> AIConfig
+    func setDefault(_ id: String) async throws(ServiceError) -> AIConfig
+}
+
 extension SettingsService: SettingsCommands {}
 
 /// Local implementation: owns the files. `storage: nil` falls back to the settings default.

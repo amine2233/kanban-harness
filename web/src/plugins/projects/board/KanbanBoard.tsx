@@ -2,18 +2,20 @@ import { useEffect, useMemo, useState } from 'react'
 import { BoardTabs } from './BoardTabs'
 import { ColumnActions } from './ColumnActions'
 import { KanbanColumn } from './KanbanColumn'
+import { QuickAddCard } from './QuickAddCard'
 import {
   errorMessage,
   useListBoardsQuery,
   useListCardsQuery,
   useListColumnsQuery,
 } from '@mvp/state'
-import { Banner, Spinner } from '@mvp/design-system'
+import { Banner, Icon, Spinner } from '@mvp/design-system'
 import { buildBoardIndex, groupCardsByColumn } from '@mvp/kanban-model'
 
 export function KanbanBoard({ projectId }: { projectId: string }) {
   const boards = useListBoardsQuery(projectId)
   const [selected, setSelected] = useState<string>()
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
   const boardList = boards.data ?? []
   const boardId = boardList.some((b) => b.id === selected) ? selected : boardList[0]?.id
 
@@ -48,6 +50,29 @@ export function KanbanBoard({ projectId }: { projectId: string }) {
         onSelect={setSelected}
       />
       <BoardColumns key={`${projectId}-${boardId}`} projectId={projectId} boardId={boardId} />
+      {boardId && (
+        <>
+          <button
+            type="button"
+            className="ds-fab"
+            aria-label="Quick add card"
+            title="Quick add card"
+            onClick={() => {
+              setShowQuickAdd(true)
+            }}
+          >
+            <Icon name="plus" size={20} />
+          </button>
+          {showQuickAdd && (
+            <QuickAddCard
+              scope={{ projectId, boardId }}
+              onClose={() => {
+                setShowQuickAdd(false)
+              }}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }

@@ -1378,3 +1378,40 @@ body {
 .ds-align-stretch {
   align-items: stretch;
 }
+
+/* --- Floating Action Button ------------------------------------------------ */
+
+.ds-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ds-purple);
+  color: white;
+  box-shadow: 0 4px 12px var(--ds-shadow-strong), 0 2px 4px var(--ds-shadow);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ds-fab:hover {
+  background: var(--ds-purple-strong);
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px var(--ds-shadow-strong), 0 4px 8px var(--ds-shadow);
+}
+
+.ds-fab:active {
+  transform: scale(0.95);
+}
+
+.ds-fab:focus-visible {
+  outline: 3px solid var(--ds-purple);
+  outline-offset: 3px;
+}

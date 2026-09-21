@@ -83,8 +83,26 @@ import Vapor
         }
     }
 
+    @Test func huggingFaceUsesChatCompletionsWithTheToken() async throws {
+        let chunk = { (text: String) in
+            #"data: {"id":"x","object":"chat.completion.chunk","created":0,"model":"Qwen/Qwen2.5-7B-Instruct","choices":[{"index":0,"delta":{"content":"\#(text)"},"finish_reason":null}]}"#
+        }
+        let sse = [chunk(#"{\"title\":\"Hub"#), chunk(#" model\",\"description\":\"d\",\"acceptance_criteria\":[\"a\",\"b\"],\"priority\":\"low\"}"#), "data: [DONE]"].joined(separator: "\n\n") + "\n\n"
+        try await withStub(sse, contentType: .init(type: "text", subType: "event-stream")) { base, recorder in
+            let config = try AIProviderConfig(id: "hf", kind: .huggingface, name: "HF", model: "Qwen/Qwen2.5-7B-Instruct", baseURL: base.absoluteString, apiKey: "hf_token")
+            let events = try await collect(try AIProviderRegistry.standard().make(config))
+            #expect(snapshots(events).first?.title == "Hub")
+            guard case let .done(json, _) = try #require(events.last) else { Issue.record("no done event"); return }
+            #expect(try TicketDraft.parse(json).title == "Hub model")
+            let sent = try #require(await recorder.first())
+            #expect(sent.path == "/chat/completions")
+            #expect(sent.headers["authorization"] == "Bearer hf_token")
+            #expect(sent.body["model"] as? String == "Qwen/Qwen2.5-7B-Instruct")
+        }
+    }
+
     @Test func keyedVendorsWithoutAKeyAreNotConfigured() async throws {
-        for kind in [AIProviderKind.anthropic, .gemini] {
+        for kind in [AIProviderKind.anthropic, .gemini, .huggingface] {
             let config = try AIProviderConfig(id: "a", kind: kind, name: "A", model: "m")
             await #expect(throws: AIProviderError.notConfigured("A has no API key")) {
                 _ = try await collect(try AIProviderRegistry.standard().make(config))

@@ -46,6 +46,12 @@ extension AIProviderRegistry {
                 OllamaLanguageModel(baseURL: Self.url(config.baseURL, default: "http://127.0.0.1:11434"), model: config.model)
             }
         }
+        registry.register(.huggingface) { config in
+            AnyLanguageModelProvider(config: config) {
+                guard let key = config.apiKey else { throw AIProviderError.notConfigured("\(config.name) has no API key") }
+                return OpenAILanguageModel(baseURL: Self.url(config.baseURL, default: "https://router.huggingface.co/v1"), apiKey: key, model: config.model, apiVariant: .chatCompletions)
+            }
+        }
         registry.register(.claudeCode) { ClaudeCodeProvider(config: $0, executable: claudeExecutable) }
         return registry
     }

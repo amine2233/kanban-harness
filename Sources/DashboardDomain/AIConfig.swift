@@ -9,16 +9,18 @@ public enum AIProviderKind: String, Codable, Sendable, CaseIterable {
     case openai
     case gemini
     case ollama
+    /// Hugging Face Inference Providers (OpenAI-compatible router): free monthly credits with a token.
+    case huggingface
     /// The Claude Code CLI in headless mode: uses the machine's Claude login, no API key.
     case claudeCode = "claude_code"
 
     /// Whether requests need an API key at all.
-    /// Runs on this machine: a draft costs nothing.
-    public var isFree: Bool { self == .apple || self == .ollama }
+    /// No bill per draft: local runtimes, or Hugging Face's free credits (set `pricing` if you pay).
+    public var isFree: Bool { self == .apple || self == .ollama || self == .huggingface }
 
     public var requiresAPIKey: Bool {
         switch self {
-        case .anthropic, .openai, .gemini: true
+        case .anthropic, .openai, .gemini, .huggingface: true
         case .apple, .ollama, .claudeCode: false
         }
     }

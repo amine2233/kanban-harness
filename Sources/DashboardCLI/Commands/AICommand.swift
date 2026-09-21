@@ -82,7 +82,7 @@ struct AICommand: AsyncParsableCommand {
             @Argument(help: "Provider id (a-z, 0-9, _), e.g. claude, local.")
             var id: String
 
-            @Option(help: "apple, anthropic, openai, gemini, ollama or claude_code.")
+            @Option(help: "apple, anthropic, openai, gemini, ollama, huggingface or claude_code.")
             var kind: AIProviderKind
 
             @Option(help: "Model name, e.g. claude-sonnet-5, gpt-4o, llama3.2.")

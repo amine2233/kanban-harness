@@ -15,6 +15,13 @@ the default and any draft can pick another.
 | `openai`      | Any OpenAI-compatible `/v1` endpoint — OpenAI, Mistral, Groq, LM Studio… | API key (or none)  | from pricing  |
 | `gemini`      | Google Gemini                                                            | API key            | from pricing  |
 | `ollama`      | Local Ollama (`http://127.0.0.1:11434` by default)                       | Ollama running     | free          |
+| `huggingface` | Hugging Face Inference Providers router (OpenAI-compatible)              | HF token (free)    | free¹         |
+
+¹ Hugging Face gives every account free monthly inference credits; the draft is reported as
+free unless you set `pricing`. Model ids are Hub ids (`Qwen/Qwen2.5-7B-Instruct`,
+`meta-llama/Llama-3.1-8B-Instruct`…); append `:provider` (e.g. `:groq`) to pin a backend.
+Create a token with the _Inference Providers_ permission at
+[huggingface.co/settings/tokens](https://huggingface.co/settings/tokens).
 
 Everything but `claude_code` goes through
 [AnyLanguageModel](https://github.com/mattt/AnyLanguageModel); adding a vendor is one line
@@ -30,6 +37,8 @@ Settings → **AI providers** → _Add provider_, or:
 dashboard ai providers add cc    --kind claude_code --model sonnet --name "Claude Code"
 dashboard ai providers add apple --kind apple       --model system --name "Apple Intelligence"
 dashboard ai providers add local --kind ollama      --model llama3.2
+dashboard ai providers add hf    --kind huggingface --model Qwen/Qwen2.5-7B-Instruct \
+    --api-key hf_...                          # or MVP_DASHBOARD_AI_PROVIDERS_HF_API_KEY
 dashboard ai providers add claude --kind anthropic  --model claude-sonnet-5 \
     --input-price 3 --output-price 15         # key: MVP_DASHBOARD_AI_PROVIDERS_CLAUDE_API_KEY
 dashboard ai providers default cc

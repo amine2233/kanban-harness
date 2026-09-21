@@ -1,6 +1,7 @@
 import { baseApi } from '../api/baseApi'
 
-export type AIProviderKind = 'apple' | 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'claude_code'
+export type AIProviderKind =
+  'apple' | 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'huggingface' | 'claude_code'
 
 /** USD per million tokens; prices a draft when the vendor reports no cost. */
 export interface AIPricing {
@@ -41,11 +42,17 @@ export const KIND_LABELS: Record<AIProviderKind, string> = {
   openai: 'OpenAI-compatible (OpenAI, Mistral, Groq, LM Studio…)',
   gemini: 'Google Gemini',
   ollama: 'Ollama (local)',
+  huggingface: 'Hugging Face (Inference Providers, free credits)',
   claude_code: 'Claude Code CLI (your Claude login)',
 }
 
 /** Kinds that authenticate with an API key; the others use a local runtime or login. */
-export const KEYED_KINDS: ReadonlySet<AIProviderKind> = new Set(['anthropic', 'openai', 'gemini'])
+export const KEYED_KINDS: ReadonlySet<AIProviderKind> = new Set([
+  'anthropic',
+  'openai',
+  'gemini',
+  'huggingface',
+])
 
 export const KIND_BASE_URL: Record<AIProviderKind, string | null> = {
   apple: null,
@@ -53,6 +60,7 @@ export const KIND_BASE_URL: Record<AIProviderKind, string | null> = {
   openai: 'https://api.openai.com/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta',
   ollama: 'http://127.0.0.1:11434',
+  huggingface: 'https://router.huggingface.co/v1',
   claude_code: null,
 }
 

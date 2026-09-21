@@ -159,6 +159,7 @@ const MODEL_PLACEHOLDER: Record<AIProviderKind, string> = {
   openai: 'gpt-5',
   gemini: 'gemini-2.5-flash',
   ollama: 'llama3.2',
+  huggingface: 'Qwen/Qwen2.5-7B-Instruct',
   claude_code: 'sonnet',
 }
 

@@ -29,6 +29,7 @@ const sidebars: SidebarsConfig = {
         'conceptions/ai-agents',
         'conceptions/mcp-servers',
         'conceptions/huggingface-provider',
+        'conceptions/provider-sign-in',
       ],
     },
   ],

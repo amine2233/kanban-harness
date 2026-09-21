@@ -129,6 +129,10 @@ suffix pins a backend (`:groq`, `:cerebras`), and one `dashboard ai providers ad
 
 ## Not in scope
 
+- Browser sign-in instead of pasting a token, and where tokens are stored: see
+  [Provider sign-in](provider-sign-in.md). The pasted `hf_…` token goes through the same
+  `api_key` / env var path as every other kind.
+
 - Listing available models in the UI (would need a call to the router's `/models`).
 - Hugging Face **Endpoints** (dedicated, paid) — they are OpenAI-compatible too; use
   `kind: openai` with the endpoint's URL.

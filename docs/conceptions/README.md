@@ -4,10 +4,11 @@ Design notes written before the code. Each one states the scope that is built fi
 what is deliberately left for later, and how the later part is meant to work so it can be
 picked up without re-deciding anything.
 
-| Document                                | Status                                  |
-| --------------------------------------- | --------------------------------------- |
-| [AI agents](ai-agents.md)               | Global scope planned; per project later |
-| [MCP servers and tools](mcp-servers.md) | Global scope planned; per project later |
+| Document                                         | Status                                  |
+| ------------------------------------------------ | --------------------------------------- |
+| [AI agents](ai-agents.md)                        | Global scope planned; per project later |
+| [MCP servers and tools](mcp-servers.md)          | Global scope planned; per project later |
+| [Hugging Face provider](huggingface-provider.md) | Planned; implemented by hand            |
 
 Conventions used in these notes:
 

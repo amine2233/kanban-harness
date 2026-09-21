@@ -25,7 +25,11 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Conceptions',
-      items: ['conceptions/ai-agents', 'conceptions/mcp-servers'],
+      items: [
+        'conceptions/ai-agents',
+        'conceptions/mcp-servers',
+        'conceptions/huggingface-provider',
+      ],
     },
   ],
 }

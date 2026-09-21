@@ -55,6 +55,7 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
           style={{ color }}
           aria-label={`Open parent ${parent.title}`}
           title={parent.title}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation()
             onOpen(parent)
@@ -111,6 +112,7 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
                 size="sm"
                 variant="tertiary"
                 aria-label={`Move ${card.title} to ${previous.name}`}
+                onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation()
                   onMove(card, previous.id)
@@ -124,6 +126,7 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
                 size="sm"
                 variant="tertiary"
                 aria-label={`Move ${card.title} to ${next.name}`}
+                onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation()
                   onMove(card, next.id)

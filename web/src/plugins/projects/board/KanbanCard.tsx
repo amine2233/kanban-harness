@@ -46,6 +46,7 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
           style={{ color }}
           aria-label={`Open parent ${parent.title}`}
           title={parent.title}
+          draggable={false}
           onClick={() => {
             onOpen(parent)
           }}
@@ -58,6 +59,7 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
         type="button"
         className="ds-card__body"
         aria-label={`Open ${card.title}`}
+        draggable={false}
         onClick={() => {
           onOpen(card)
         }}
@@ -108,6 +110,7 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
                 size="sm"
                 variant="tertiary"
                 aria-label={`Move ${card.title} to ${previous.name}`}
+                draggable={false}
                 onClick={() => {
                   onMove(card, previous.id)
                 }}
@@ -120,6 +123,7 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
                 size="sm"
                 variant="tertiary"
                 aria-label={`Move ${card.title} to ${next.name}`}
+                draggable={false}
                 onClick={() => {
                   onMove(card, next.id)
                 }}

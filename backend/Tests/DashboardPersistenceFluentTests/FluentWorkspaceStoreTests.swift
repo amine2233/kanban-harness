@@ -1,6 +1,7 @@
 import DashboardDomain
 import DashboardPersistence
 import DashboardPersistenceJSON
+import FluentSQLiteDriver
 import Foundation
 import Testing
 @testable import DashboardPersistenceFluent
@@ -46,6 +47,22 @@ import Testing
             throw error
         }
         try await current.shutdown()
+    }
+
+    @Test func aiCostMigrationSkipsFilesThatAlreadyHaveTheColumn() async throws {
+        let path = try tempDir() + "/kanban.sqlite"
+        let old = try SQLiteDatabase(path: path, migrations: [CreateWorkspaceSchema()])
+        try await old.migrate()
+        try await old.shutdown()
+        let plain = try SQLiteDatabase(path: path, migrations: [])
+        let sql = try #require(plain.database as? any SQLDatabase)
+        try await sql.raw("ALTER TABLE cards ADD COLUMN ai_cost TEXT").run()
+        try await plain.shutdown()
+
+        let pool = SQLiteDatabasePool()
+        _ = try await pool.database(at: path)
+        try await StoreContract.verify(SQLiteWorkspaceStore(path: path, pool: pool))
+        await pool.shutdownAll()
     }
 
     @Test func pooledStoreSatisfiesContractAndReusesOneDatabase() async throws {

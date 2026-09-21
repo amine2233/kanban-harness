@@ -195,9 +195,10 @@ struct KanbanController: RouteCollection {
     func deleteCard(req: Request) async throws -> HTTPStatus {
         let boardId = try req.uuid("board")
         let cardId = try req.uuid("card")
+        let withChildren = req.query[Bool.self, at: "with_children"] ?? false
         try await req.projects.mutate(req.projectRef) { workspace, _ in
             try Self.requireCard(cardId, in: boardId, workspace)
-            try workspace.deleteCard(cardId)
+            try workspace.deleteCard(cardId, includingChildren: withChildren)
         }
         return .noContent
     }

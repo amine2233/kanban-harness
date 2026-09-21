@@ -1,6 +1,7 @@
 import DashboardDomain
 import DashboardPersistence
 import FluentKit
+import FluentSQLiteDriver
 import Foundation
 
 /// Table mappings for the kanban workspace. Timestamps are stored as RFC 3339
@@ -295,7 +296,15 @@ public struct AddCardAICost: AsyncMigration {
     public init() {}
 
     public func prepare(on database: any Database) async throws {
+        // Files created by an early build already carry the column without the migration row.
+        if try await hasColumn(database) { return }
         try await database.schema(CardModel.schema).field("ai_cost", .string).update()
+    }
+
+    private func hasColumn(_ database: any Database) async throws -> Bool {
+        guard let sql = database as? any SQLDatabase else { return false }
+        let rows = try await sql.raw("PRAGMA table_info(\(unsafeRaw: CardModel.schema))").all()
+        return try rows.contains { try $0.decode(column: "name", as: String.self) == "ai_cost" }
     }
 
     public func revert(on database: any Database) async throws {

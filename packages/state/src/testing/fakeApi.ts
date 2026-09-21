@@ -8,14 +8,14 @@ export type Routes = Record<string, Handler>
  * A handler returning `sse` answers with those `[event, data]` frames as an event stream.
  */
 export function stubApi(routes: Routes) {
-  const calls: { key: string; body: unknown }[] = []
+  const calls: { key: string; body: unknown; search: string }[] = []
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : new Request(input, init)
-    const path = new URL(request.url).pathname
-    const key = `${request.method} ${path}`
+    const url = new URL(request.url)
+    const key = `${request.method} ${url.pathname}`
     const text = await request.text()
     const body = text ? (JSON.parse(text) as unknown) : undefined
-    calls.push({ key, body })
+    calls.push({ key, body, search: url.search })
     const handler = routes[key]
     if (!handler) {
       return new Response(JSON.stringify({ code: 'NOT_FOUND', message: `no route ${key}` }), {

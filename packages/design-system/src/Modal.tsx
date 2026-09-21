@@ -57,6 +57,7 @@ export interface ConfirmModalProps {
   busy?: boolean
   onConfirm: () => void
   onClose: () => void
+  children?: ReactNode
 }
 
 export function ConfirmModal({
@@ -66,6 +67,7 @@ export function ConfirmModal({
   busy = false,
   onConfirm,
   onClose,
+  children,
 }: ConfirmModalProps) {
   return (
     <Modal
@@ -83,6 +85,7 @@ export function ConfirmModal({
       }
     >
       <p className="ma0">{message}</p>
+      {children}
     </Modal>
   )
 }

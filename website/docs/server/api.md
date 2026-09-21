@@ -45,7 +45,7 @@ Prefix: `/projects/{id}/kanban/v1`.
 | `GET`    | `/boards/{b}/cards`                 | every card of the board                                       |
 | `POST`   | `/columns/{c}/cards`                | `{title, description?, priority?, ai_cost?, subtasks?}` → 201 |
 | `PATCH`  | `/boards/{b}/cards/{card}`          | fields; `column_id` moves; `board_id` moves to another board  |
-| `DELETE` | `/boards/{b}/cards/{card}`          |                                                               |
+| `DELETE` | `/boards/{b}/cards/{card}`          | `?with_children=true` also deletes its sub-tasks; else they are detached |
 | `GET`    | `/boards/{b}/cards/{card}/children` | the card's sub-tasks                                          |
 | `PUT`    | `/boards/{b}/cards/{card}/parent`   | `{parent_id}` links, `{parent_id: null}` detaches             |
 

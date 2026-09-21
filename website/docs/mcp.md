@@ -45,7 +45,7 @@ App's To do column, priority high"_, _"break task-4 down into sub-tasks"_.
 | `create_card`        | `project, board, title, column?, description?, priority?`                            | a card (first column by default)                                 |
 | `update_card`        | `project, board, card, title?, description?, priority?, status?, points?, due_date?` | change fields; omitted ones are kept                             |
 | `move_card`          | `project, board, card, column`                                                       | move; status follows the column's rules                          |
-| `delete_card`        | `project, board, card`                                                               | delete permanently                                               |
+| `delete_card`        | `project, board, card, with_children?`                                               | delete permanently; `with_children` removes its sub-tasks too    |
 | `create_subtasks`    | `project, board, card, subtasks: [{title, description?, priority?, points?}]`        | children in the parent's column, linked                          |
 | `list_card_children` | `project, board, card`                                                               | a card's sub-tasks with column and status                        |
 | `set_card_parent`    | `project, board, card, parent`                                                       | make a card a sub-task (one parent, same board, no cycles)       |

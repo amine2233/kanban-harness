@@ -52,6 +52,7 @@ export function CardDialog({
     initialCardForm(card, scope, columns, columnId),
   )
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleteChildren, setDeleteChildren] = useState(false)
   const [createCard, create] = useCreateCardMutation()
   const [updateCard, update] = useUpdateCardMutation()
   const [deleteCard, remove] = useDeleteCardMutation()
@@ -76,15 +77,21 @@ export function CardDialog({
 
   const confirmDelete = async () => {
     if (!card) return
-    const result = await deleteCard({ ...scope, cardId: card.id })
+    const result = await deleteCard({ ...scope, cardId: card.id, withChildren: deleteChildren })
     if (!('error' in result)) onClose()
   }
 
   if (confirmingDelete && card) {
+    const subtasks = card.children.total
     return (
       <ConfirmModal
         title={`Delete "${card.title}"?`}
-        message="This cannot be undone."
+        message={
+          subtasks > 0
+            ? `This card has ${String(subtasks)} sub-task${subtasks === 1 ? '' : 's'}. This cannot be undone.`
+            : 'This cannot be undone.'
+        }
+        confirmLabel={deleteChildren ? `Delete ${String(subtasks + 1)} cards` : 'Delete'}
         busy={remove.isLoading}
         onConfirm={() => {
           void confirmDelete()
@@ -92,7 +99,21 @@ export function CardDialog({
         onClose={() => {
           setConfirmingDelete(false)
         }}
-      />
+      >
+        {subtasks > 0 && (
+          <label className="flex items-center mt3">
+            <input
+              type="checkbox"
+              className="mr2"
+              checked={deleteChildren}
+              onChange={(e) => {
+                setDeleteChildren(e.target.checked)
+              }}
+            />
+            Also delete its sub-tasks (otherwise they stay on the board, unlinked)
+          </label>
+        )}
+      </ConfirmModal>
     )
   }
 

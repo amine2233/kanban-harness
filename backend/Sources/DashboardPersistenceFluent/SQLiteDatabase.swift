@@ -79,7 +79,12 @@ public actor SQLiteDatabasePool {
     public func database(at path: String) async throws -> any Database {
         if let existing = open[path] { return existing.database }
         let database = try make(path)
-        try await database.migrate()
+        do {
+            try await database.migrate()
+        } catch {
+            try? await database.shutdown()
+            throw error
+        }
         open[path] = database
         return database.database
     }

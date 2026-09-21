@@ -222,6 +222,35 @@ describe('KanbanBoard', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  test('deleting a parent offers to delete its sub-tasks too', async () => {
+    let cards = [
+      { ...cardOf('c1', 'todo', 'Epic'), children: { total: 2, done: 0 } },
+      { ...cardOf('c2', 'todo', 'Part one'), parent_id: 'c1' },
+      { ...cardOf('c3', 'todo', 'Part two'), parent_id: 'c1' },
+    ]
+    const api = boardRoutes(cards, {
+      [`DELETE ${base}/boards/b1/cards/c1`]: () => {
+        cards = []
+        return { status: 204 }
+      },
+      [`GET ${base}/boards/b1/cards`]: () => ({ body: page(cards) }),
+    })
+    renderBoard()
+    await userEvent.click(await screen.findByRole('button', { name: 'Open Epic' }))
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }),
+    )
+    const confirm = screen.getByRole('dialog', { name: 'Delete "Epic"?' })
+    expect(within(confirm).getByText(/has 2 sub-tasks/)).toBeInTheDocument()
+    await userEvent.click(within(confirm).getByRole('checkbox'))
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Delete 3 cards' }))
+    await waitFor(() => {
+      expect(screen.queryByText('Epic')).not.toBeInTheDocument()
+    })
+    const call = api.calls.find((c) => c.key === `DELETE ${base}/boards/b1/cards/c1`)
+    expect(call?.search).toBe('?with_children=true')
+  })
+
   test('sub-tasks sit in their own column with a parent breadcrumb; the parent lists them', async () => {
     const parent = { ...cardOf('c1', 'todo', 'Epic'), children: { total: 2, done: 1 } }
     const one = { ...cardOf('c2', 'done', 'Part one'), status: 'done', parent_id: 'c1' }

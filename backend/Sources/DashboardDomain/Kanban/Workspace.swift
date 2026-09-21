@@ -261,7 +261,13 @@ public struct Workspace: Equatable, Sendable {
         return card
     }
 
-    public mutating func deleteCard(_ id: UUID, now: Date = .timestamp()) throws {
+    /// `includingChildren` deletes the whole sub-task tree; otherwise children are detached and kept.
+    public mutating func deleteCard(_ id: UUID, includingChildren: Bool = false, now: Date = .timestamp()) throws {
+        if includingChildren {
+            for child in children(of: id) {
+                try deleteCard(child.id, includingChildren: true, now: now)
+            }
+        }
         let index = try cardIndex(id)
         let columnId = cards[index].columnId
         cards.remove(at: index)

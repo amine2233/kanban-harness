@@ -133,7 +133,8 @@ public protocol BoardCommands: Sendable {
     /// Creates the card and, in the same step, its `subtasks` as linked children.
     func createCard(_ project: ProjectRef, columnId: UUID, title: String, description: String?, priority: CardPriority, aiCost: AICost?, subtasks: [SubtaskSpec]) async throws(ServiceError) -> Card
     func updateCard(_ project: ProjectRef, boardId: UUID, cardId: UUID, changes: CardChanges) async throws(ServiceError) -> Card
-    func deleteCard(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError)
+    /// `includingChildren` removes the sub-task tree too; otherwise children are kept and detached.
+    func deleteCard(_ project: ProjectRef, boardId: UUID, cardId: UUID, includingChildren: Bool) async throws(ServiceError)
     func children(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError) -> [Card]
     /// `parentId` nil detaches the card from its parent.
     func setParent(_ project: ProjectRef, boardId: UUID, cardId: UUID, parentId: UUID?) async throws(ServiceError) -> Card
@@ -224,10 +225,10 @@ public struct LocalBoardCommands: BoardCommands {
         }
     }
 
-    public func deleteCard(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError) {
+    public func deleteCard(_ project: ProjectRef, boardId: UUID, cardId: UUID, includingChildren: Bool) async throws(ServiceError) {
         try await projects.mutate(project) { workspace, _ in
             guard try workspace.card(cardId).boardId == boardId else { throw DomainError.cardNotFound(cardId) }
-            try workspace.deleteCard(cardId)
+            try workspace.deleteCard(cardId, includingChildren: includingChildren)
         }
     }
 }

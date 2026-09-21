@@ -189,8 +189,9 @@ public struct RemoteBoardCommands: BoardCommands {
         return card
     }
 
-    public func deleteCard(_ project: ProjectRef, boardId: UUID, cardId: UUID) async throws(ServiceError) {
-        try await client.send("DELETE", "\(try await base(project))/boards/\(boardId.uuidString)/cards/\(cardId.uuidString)", body: Empty?.none)
+    public func deleteCard(_ project: ProjectRef, boardId: UUID, cardId: UUID, includingChildren: Bool) async throws(ServiceError) {
+        let query = includingChildren ? "?with_children=true" : ""
+        try await client.send("DELETE", "\(try await base(project))/boards/\(boardId.uuidString)/cards/\(cardId.uuidString)\(query)", body: Empty?.none)
     }
 
     private static func patch<T: Codable & Sendable & Equatable>(_ value: T??) -> Patch<T> {

@@ -70,8 +70,8 @@ public enum KanbanTools {
             inputSchema: schema(["project": project, "board": board, "card": prop("string", "Card id, number or key"), "column": prop("string", "Destination column name or id")], required: ["project", "board", "card", "column"])
         ),
         Tool(
-            name: "delete_card", description: "Delete a card permanently.",
-            inputSchema: schema(["project": project, "board": board, "card": prop("string", "Card id, number or key")], required: ["project", "board", "card"])
+            name: "delete_card", description: "Delete a card permanently. Its sub-tasks are kept (detached) unless with_children is true.",
+            inputSchema: schema(["project": project, "board": board, "card": prop("string", "Card id, number or key"), "with_children": prop("boolean", "Also delete the card's sub-tasks (default false)")], required: ["project", "board", "card"])
         ),
         Tool(
             name: "create_subtasks", description: "Break a card down: create child cards in the parent's column, linked to it.",
@@ -195,7 +195,7 @@ public struct KanbanToolDispatcher: Sendable {
         case "delete_card":
             let (project, board) = try await resolveBoard(args)
             let card = try Self.findCard(try await boards.cards(project, boardId: board.id), try args.string("card"))
-            try await boards.deleteCard(project, boardId: board.id, cardId: card.id)
+            try await boards.deleteCard(project, boardId: board.id, cardId: card.id, includingChildren: args.bool("with_children") ?? false)
             return .object(["deleted": .string(card.id.uuidString.lowercased()), "key": .string("\(card.prefix)-\(card.cardNumber)")])
         case "create_subtasks":
             let (project, board) = try await resolveBoard(args)

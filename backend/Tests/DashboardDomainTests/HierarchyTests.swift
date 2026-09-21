@@ -66,6 +66,20 @@ import Testing
         #expect(workspace.spawns.allSatisfy { !$0.isActive })
     }
 
+    @Test func deletingWithChildrenRemovesTheWholeTree() throws {
+        var (workspace, _, column) = board()
+        let parent = try workspace.createCard(columnId: column.id, title: "P")
+        let child = try workspace.createCard(columnId: column.id, title: "C")
+        let grandchild = try workspace.createCard(columnId: column.id, title: "G")
+        let bystander = try workspace.createCard(columnId: column.id, title: "B")
+        try workspace.attach(child.id, to: parent.id)
+        try workspace.attach(grandchild.id, to: child.id)
+        try workspace.deleteCard(parent.id, includingChildren: true)
+        #expect(workspace.cards.map(\.id) == [bystander.id])
+        #expect(workspace.cards[0].position == 0)
+        #expect(workspace.spawns.allSatisfy { !$0.isActive })
+    }
+
     @Test func subtasksAreCreatedInTheParentsColumnAtomically() throws {
         var (workspace, _, column) = board()
         let parent = try workspace.createCard(columnId: column.id, title: "P", priority: .high)

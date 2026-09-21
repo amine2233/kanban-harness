@@ -193,9 +193,9 @@ export const kanbanApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { boardId }) => [{ type: 'Card', id: boardId }],
     }),
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- 204 has no body
-    deleteCard: build.mutation<void, BoardScope & { cardId: string }>({
-      query: ({ projectId, boardId, cardId }) => ({
-        url: `${kanban(projectId)}/boards/${boardId}/cards/${cardId}`,
+    deleteCard: build.mutation<void, BoardScope & { cardId: string; withChildren?: boolean }>({
+      query: ({ projectId, boardId, cardId, withChildren }) => ({
+        url: `${kanban(projectId)}/boards/${boardId}/cards/${cardId}${withChildren ? '?with_children=true' : ''}`,
         method: 'DELETE',
       }),
       invalidatesTags: (_result, _error, { boardId }) => [{ type: 'Card', id: boardId }],

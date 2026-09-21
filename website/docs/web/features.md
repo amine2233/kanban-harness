@@ -40,7 +40,8 @@ A card shows what matters at a glance, never the whole description:
 
 - **Drag** a card to another column, or use the ← → arrows that appear on hover.
 - Click a card to open it: title, description (see below), priority, status, board, column,
-  due date, points; **Delete** with confirmation.
+  due date, points; **Delete** asks for confirmation — a parent card offers a checkbox to
+  delete its sub-tasks too (otherwise they stay on the board, unlinked).
 - Moving a card into a column that has a default status applies it (moving into _Done_
   sets `done` and the completion date, exactly like kanban-rs).
 

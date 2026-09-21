@@ -23,6 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
+# Security
+.env*
+!.env.dist
+
 # Local dev data and personal env (see mise.toml)
 .local/
 .env.local

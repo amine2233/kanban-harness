@@ -27,6 +27,14 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
   const due = card.due_date ? dueLabel(card.due_date, card.status === 'done') : null
   const color = index.color(card)
 
+  const handleClick = (event: React.MouseEvent) => {
+    // Don't open if clicking on interactive elements
+    if ((event.target as HTMLElement).closest('button')) {
+      return
+    }
+    onOpen(card)
+  }
+
   return (
     <li
       className="ds-card"
@@ -38,6 +46,7 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
           : `${card.title} (${card.priority})`
       }
       onDragStart={onDragStart(card)}
+      onClick={handleClick}
     >
       {parent && (
         <button
@@ -46,8 +55,8 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
           style={{ color }}
           aria-label={`Open parent ${parent.title}`}
           title={parent.title}
-          draggable={false}
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation()
             onOpen(parent)
           }}
         >
@@ -55,17 +64,9 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
           <span className="truncate"> · {parent.title}</span>
         </button>
       )}
-      <button
-        type="button"
-        className="ds-card__body"
-        aria-label={`Open ${card.title}`}
-        draggable={false}
-        onClick={() => {
-          onOpen(card)
-        }}
-      >
+      <div className="ds-card__body">
         <span className="ds-card__title">{card.title}</span>
-      </button>
+      </div>
       <footer className="ds-card__footer">
         <span className="ds-card__meta">
           <span className={`ds-priority ds-priority--${card.priority}`} title={card.priority} />
@@ -110,8 +111,8 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
                 size="sm"
                 variant="tertiary"
                 aria-label={`Move ${card.title} to ${previous.name}`}
-                draggable={false}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   onMove(card, previous.id)
                 }}
               >
@@ -123,8 +124,8 @@ export function KanbanCard({ card, columns, index, onOpen, onMove, onDragStart, 
                 size="sm"
                 variant="tertiary"
                 aria-label={`Move ${card.title} to ${next.name}`}
-                draggable={false}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation()
                   onMove(card, next.id)
                 }}
               >

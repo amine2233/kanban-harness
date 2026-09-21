@@ -16,9 +16,10 @@ let package = Package(
         .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.9.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.6.0"),
         .package(url: "https://github.com/apple/swift-configuration.git", from: "1.2.0", traits: ["JSON", "YAML"]),
-        .package(url: "https://github.com/jpsim/Yams.git", from: "5.4.0"),
+        .package(url: "https://github.com/jpsim/Yams.git", from: "6.2.2"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.0"),
         .package(url: "https://github.com/mattt/AnyLanguageModel.git", from: "0.13.0", traits: ["AsyncHTTPClient"]),
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.0.0"),
     ],
     targets: [
         .target(name: "DashboardDomain"),
@@ -48,7 +49,11 @@ let package = Package(
             ]
         ),
         .target(name: "DashboardAPI", dependencies: ["DashboardDomain"]),
-        .target(name: "DashboardAI", dependencies: ["DashboardDomain", "DashboardService"]),
+        .target(
+            name: "DashboardOAuth",
+            dependencies: ["DashboardDomain", .product(name: "Crypto", package: "swift-crypto")]
+        ),
+        .target(name: "DashboardAI", dependencies: ["DashboardDomain", "DashboardService", "DashboardOAuth"]),
         .target(
             name: "DashboardAIProviders",
             dependencies: [
@@ -56,6 +61,14 @@ let package = Package(
                 .product(name: "AnyLanguageModel", package: "AnyLanguageModel"),
                 .product(name: "Logging", package: "swift-log"),
             ]
+        ),
+        .target(
+            name: "DashboardProviderHuggingFace",
+            dependencies: ["DashboardAIProviders", "DashboardOAuth", .product(name: "AnyLanguageModel", package: "AnyLanguageModel")]
+        ),
+        .target(
+            name: "DashboardProviderOpenRouter",
+            dependencies: ["DashboardAIProviders", "DashboardOAuth", .product(name: "AnyLanguageModel", package: "AnyLanguageModel")]
         ),
         .target(
             name: "DashboardMCP",
@@ -78,6 +91,8 @@ let package = Package(
                 "DashboardPersistenceConfig",
                 "DashboardAI",
                 "DashboardAIProviders",
+                "DashboardProviderHuggingFace",
+                "DashboardProviderOpenRouter",
                 "DashboardPersistenceFluent",
                 .product(name: "CascadeKit", package: "cascade-kit"),
             ]
@@ -122,6 +137,11 @@ let package = Package(
         ),
         .testTarget(name: "DashboardRuntimeTests", dependencies: ["DashboardRuntime"]),
         .testTarget(name: "DashboardMCPTests", dependencies: ["DashboardMCP", "DashboardPersistence"]),
+        .testTarget(name: "DashboardOAuthTests", dependencies: ["DashboardOAuth"]),
+        .testTarget(
+            name: "DashboardProviderTests",
+            dependencies: ["DashboardProviderHuggingFace", "DashboardProviderOpenRouter", .product(name: "Vapor", package: "vapor")]
+        ),
         .testTarget(name: "DashboardAITests", dependencies: ["DashboardAI", "DashboardPersistence"]),
         .testTarget(
             name: "DashboardAIProvidersTests",

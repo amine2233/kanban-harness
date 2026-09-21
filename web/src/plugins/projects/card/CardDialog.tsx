@@ -135,12 +135,30 @@ export function CardDialog({
           </p>
         )}
         {!card && (
-          <DraftWithAI
-            scope={scope}
-            onDraft={(patch) => {
-              dispatch({ type: 'applyDraft', patch })
-            }}
-          />
+          <>
+            <DraftWithAI
+              scope={scope}
+              onDraft={(patch) => {
+                dispatch({ type: 'applyDraft', patch })
+              }}
+            />
+            <label className="flex items-center mb3 f6">
+              <input
+                type="checkbox"
+                className="mr2"
+                checked={form.generateSubtasks}
+                onChange={(e) => {
+                  dispatch({ type: 'setGenerateSubtasks', value: e.target.checked })
+                }}
+              />
+              <span>
+                Generate sub-tasks with AI{' '}
+                <span className="gray">
+                  (when unchecked, AI will only draft the main ticket)
+                </span>
+              </span>
+            </label>
+          </>
         )}
         {card && index && <CardRelations card={card} index={index} onOpenCard={onOpenCard} />}
         <CardFields
@@ -150,6 +168,7 @@ export function CardDialog({
           boards={boards}
           boardId={scope.boardId}
           editing={card !== undefined}
+          scope={scope}
           onDescriptionToggle={
             card
               ? (next) => {
@@ -159,7 +178,7 @@ export function CardDialog({
           }
         />
         {!card && form.subtasks.length > 0 && (
-          <SubtaskRows rows={form.subtasks} includedCount={included} dispatch={dispatch} />
+          <SubtaskRows rows={form.subtasks} includedCount={included} dispatch={dispatch} scope={scope} />
         )}
         {error && <p className="f6 red mt0 mb2">{errorMessage(error)}</p>}
         <Row className="justify-between">

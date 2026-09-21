@@ -30,6 +30,7 @@ export interface CardForm {
   points: string
   aiCost: AICost | undefined
   subtasks: SubtaskRow[]
+  generateSubtasks: boolean // Whether to generate subtasks when using AI
 }
 
 export type CardFormAction =
@@ -40,9 +41,11 @@ export type CardFormAction =
     }
   | { type: 'setPriority'; value: CardPriority }
   | { type: 'setStatus'; value: CardStatus }
+  | { type: 'setGenerateSubtasks'; value: boolean }
   | { type: 'applyDraft'; patch: DraftPatch }
   | { type: 'subtask.add' }
   | { type: 'subtask.title'; key: number; value: string }
+  | { type: 'subtask.description'; key: number; value: string }
   | { type: 'subtask.include'; key: number; value: boolean }
   | { type: 'subtask.remove'; key: number }
 
@@ -63,6 +66,7 @@ export function initialCardForm(
     points: card?.points === null || card === undefined ? '' : String(card.points),
     aiCost: undefined,
     subtasks: [],
+    generateSubtasks: true, // Default: generate subtasks with AI
   }
 }
 
@@ -74,6 +78,8 @@ export function cardFormReducer(form: CardForm, action: CardFormAction): CardFor
       return { ...form, priority: action.value }
     case 'setStatus':
       return { ...form, status: action.value }
+    case 'setGenerateSubtasks':
+      return { ...form, generateSubtasks: action.value }
     case 'applyDraft': {
       const { patch } = action
       return {
@@ -83,7 +89,7 @@ export function cardFormReducer(form: CardForm, action: CardFormAction): CardFor
         ...(patch.priority !== undefined ? { priority: patch.priority } : {}),
         ...(patch.points !== undefined ? { points: String(patch.points) } : {}),
         ...(patch.aiCost !== undefined ? { aiCost: patch.aiCost } : {}),
-        ...(patch.subtasks !== undefined
+        ...(patch.subtasks !== undefined && form.generateSubtasks
           ? { subtasks: patch.subtasks.map((s, key) => ({ key, ...s, include: true })) }
           : {}),
       }
@@ -107,6 +113,13 @@ export function cardFormReducer(form: CardForm, action: CardFormAction): CardFor
         ...form,
         subtasks: form.subtasks.map((s) =>
           s.key === action.key ? { ...s, title: action.value } : s,
+        ),
+      }
+    case 'subtask.description':
+      return {
+        ...form,
+        subtasks: form.subtasks.map((s) =>
+          s.key === action.key ? { ...s, description: action.value } : s,
         ),
       }
     case 'subtask.include':

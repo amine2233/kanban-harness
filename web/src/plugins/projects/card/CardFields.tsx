@@ -16,6 +16,8 @@ interface Props {
   editing: boolean
   /** Saves a checklist toggle made in the description preview straight away. */
   onDescriptionToggle: ((value: string) => void) | undefined
+  /** For AI description regeneration */
+  scope?: { projectId: string; boardId: string }
 }
 
 export function CardFields({
@@ -26,6 +28,7 @@ export function CardFields({
   boardId,
   editing,
   onDescriptionToggle,
+  scope,
 }: Props) {
   const set =
     (field: 'title' | 'columnId' | 'boardId' | 'dueDate' | 'points') =>
@@ -49,6 +52,11 @@ export function CardFields({
           dispatch({ type: 'set', field: 'description', value })
         }}
         onToggle={onDescriptionToggle}
+        aiContext={
+          scope && form.title.trim()
+            ? { scope, title: form.title }
+            : undefined
+        }
       />
       <Row className="mb2">
         <Select

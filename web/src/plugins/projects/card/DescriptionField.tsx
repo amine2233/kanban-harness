@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { Markdown } from '@mvp/design-system'
+import { RegenerateDescription } from '../assistant/RegenerateDescription'
 
 interface Props {
   value: string
@@ -8,10 +9,15 @@ interface Props {
   onToggle?: ((value: string) => void) | undefined
   /** Open on the preview when there is something to read. */
   initialMode?: 'write' | 'preview'
+  /** For AI regeneration: project/board scope and card title for context */
+  aiContext?: {
+    scope: { projectId: string; boardId: string }
+    title: string
+  }
 }
 
 /** Markdown description with Write / Preview tabs; checklists are clickable in the preview. */
-export function DescriptionField({ value, onChange, onToggle, initialMode }: Props) {
+export function DescriptionField({ value, onChange, onToggle, initialMode, aiContext }: Props) {
   const [mode, setMode] = useState<'write' | 'preview'>(
     initialMode ?? (value.trim() ? 'preview' : 'write'),
   )
@@ -23,21 +29,33 @@ export function DescriptionField({ value, onChange, onToggle, initialMode }: Pro
       </label>
       <div className="ds-desc">
         <div className="ds-desc__tabs" role="tablist" aria-label="Description mode">
-          {(['write', 'preview'] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              className="ds-desc__tab"
-              aria-selected={mode === tab}
-              onClick={() => {
-                setMode(tab)
-              }}
-            >
-              {tab === 'write' ? 'Write' : 'Preview'}
-            </button>
-          ))}
-          <span className="flex-auto tr f7 gray pt1 pr1">markdown · `- [ ]` makes a checklist</span>
+          <div className="flex items-center flex-auto">
+            {(['write', 'preview'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                className="ds-desc__tab"
+                aria-selected={mode === tab}
+                onClick={() => {
+                  setMode(tab)
+                }}
+              >
+                {tab === 'write' ? 'Write' : 'Preview'}
+              </button>
+            ))}
+            <span className="flex-auto tr f7 gray pt1 pr1">markdown · `- [ ]` makes a checklist</span>
+          </div>
+          {aiContext && mode === 'write' && (
+            <div className="ml2">
+              <RegenerateDescription
+                scope={aiContext.scope}
+                title={aiContext.title}
+                currentDescription={value}
+                onDescription={onChange}
+              />
+            </div>
+          )}
         </div>
         {mode === 'write' ? (
           <textarea

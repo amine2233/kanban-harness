@@ -19,7 +19,7 @@ let package = Package(
         .package(url: "https://github.com/jpsim/Yams.git", from: "6.2.2"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.0"),
         .package(url: "https://github.com/mattt/AnyLanguageModel.git", from: "0.13.0", traits: ["AsyncHTTPClient"]),
-        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.0.0"),
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.2"),
     ],
     targets: [
         .target(name: "DashboardDomain"),

@@ -52,11 +52,7 @@ export function CardFields({
           dispatch({ type: 'set', field: 'description', value })
         }}
         onToggle={onDescriptionToggle}
-        aiContext={
-          scope && form.title.trim()
-            ? { scope, title: form.title }
-            : undefined
-        }
+        aiContext={scope && form.title.trim() ? { scope, title: form.title } : undefined}
       />
       <Row className="mb2">
         <Select

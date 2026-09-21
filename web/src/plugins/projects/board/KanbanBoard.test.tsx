@@ -123,7 +123,7 @@ describe('KanbanBoard', () => {
       },
     })
     renderBoard()
-    await userEvent.click(await screen.findByRole('button', { name: 'Open Editable' }))
+    await userEvent.click(await screen.findByRole('listitem', { name: 'Editable (medium)' }))
     const dialog = screen.getByRole('dialog', { name: 'task-1' })
     await userEvent.clear(within(dialog).getByLabelText('Title'))
     await userEvent.type(within(dialog).getByLabelText('Title'), 'Edited')
@@ -161,7 +161,7 @@ describe('KanbanBoard', () => {
       }),
     })
     renderBoard()
-    await userEvent.click(await screen.findByRole('button', { name: 'Open Traveller' }))
+    await userEvent.click(await screen.findByRole('listitem', { name: 'Traveller (medium)' }))
     const dialog = screen.getByRole('dialog', { name: 'task-1' })
     await userEvent.selectOptions(within(dialog).getByLabelText('Board'), 'b2')
     expect(within(dialog).queryByLabelText('Column')).not.toBeInTheDocument()
@@ -207,7 +207,7 @@ describe('KanbanBoard', () => {
       [`GET ${base}/boards/b1/cards`]: () => ({ body: page(cards) }),
     })
     renderBoard()
-    await userEvent.click(await screen.findByRole('button', { name: 'Open Doomed' }))
+    await userEvent.click(await screen.findByRole('listitem', { name: 'Doomed (medium)' }))
     await userEvent.click(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }),
     )
@@ -236,7 +236,7 @@ describe('KanbanBoard', () => {
       [`GET ${base}/boards/b1/cards`]: () => ({ body: page(cards) }),
     })
     renderBoard()
-    await userEvent.click(await screen.findByRole('button', { name: 'Open Epic' }))
+    await userEvent.click(await screen.findByRole('listitem', { name: 'Epic (medium)' }))
     await userEvent.click(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }),
     )
@@ -343,7 +343,7 @@ describe('KanbanBoard', () => {
     expect(within(tile).getByLabelText('1 of 2 criteria done')).toHaveTextContent('1/2')
     expect(within(tile).queryByText(/Acceptance/)).not.toBeInTheDocument()
 
-    await userEvent.click(within(tile).getByRole('button', { name: 'Open Reset flow' }))
+    await userEvent.click(within(tile).getByText('Reset flow'))
     const dialog = screen.getByRole('dialog', { name: 'task-1' })
     expect(within(dialog).getByRole('tab', { name: 'Preview' })).toHaveAttribute(
       'aria-selected',

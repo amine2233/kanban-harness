@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { CardDialog } from '../card/CardDialog'
 import { useListColumnsQuery } from '@mvp/state'
 import { Spinner } from '@mvp/design-system'
@@ -13,13 +14,17 @@ interface Props {
  */
 export function QuickAddCard({ scope, onClose }: Props) {
   const columns = useListColumnsQuery(scope)
+  const first = columns.data?.[0]
+  const unusable = !columns.isLoading && first === undefined
+
+  useEffect(() => {
+    if (unusable) onClose()
+  }, [unusable, onClose])
 
   if (columns.isLoading) {
     return <Spinner />
   }
-
-  if (columns.error || !columns.data || columns.data.length === 0) {
-    onClose()
+  if (!columns.data || first === undefined) {
     return null
   }
 
@@ -28,7 +33,7 @@ export function QuickAddCard({ scope, onClose }: Props) {
       scope={scope}
       columns={columns.data}
       boards={[]}
-      columnId={columns.data[0].id}
+      columnId={first.id}
       onClose={onClose}
     />
   )

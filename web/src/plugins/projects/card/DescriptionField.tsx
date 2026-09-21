@@ -10,10 +10,12 @@ interface Props {
   /** Open on the preview when there is something to read. */
   initialMode?: 'write' | 'preview'
   /** For AI regeneration: project/board scope and card title for context */
-  aiContext?: {
-    scope: { projectId: string; boardId: string }
-    title: string
-  }
+  aiContext?:
+    | {
+        scope: { projectId: string; boardId: string }
+        title: string
+      }
+    | undefined
 }
 
 /** Markdown description with Write / Preview tabs; checklists are clickable in the preview. */
@@ -44,7 +46,9 @@ export function DescriptionField({ value, onChange, onToggle, initialMode, aiCon
                 {tab === 'write' ? 'Write' : 'Preview'}
               </button>
             ))}
-            <span className="flex-auto tr f7 gray pt1 pr1">markdown · `- [ ]` makes a checklist</span>
+            <span className="flex-auto tr f7 gray pt1 pr1">
+              markdown · `- [ ]` makes a checklist
+            </span>
           </div>
           {aiContext && mode === 'write' && (
             <div className="ml2">

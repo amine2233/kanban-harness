@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { BoardTabs } from './BoardTabs'
 import { ColumnActions } from './ColumnActions'
 import { KanbanColumn } from './KanbanColumn'
@@ -18,11 +18,6 @@ export function KanbanBoard({ projectId }: { projectId: string }) {
   const [showQuickAdd, setShowQuickAdd] = useState(false)
   const boardList = boards.data ?? []
   const boardId = boardList.some((b) => b.id === selected) ? selected : boardList[0]?.id
-
-  // Reset selected board when project changes
-  useEffect(() => {
-    setSelected(undefined)
-  }, [projectId])
 
   if (boards.isLoading) return <Spinner />
   if (boards.error) {

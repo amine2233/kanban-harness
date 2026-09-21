@@ -64,7 +64,7 @@ export function ProjectPage() {
           </>
         }
       />
-      <KanbanBoard projectId={project.id} />
+      <KanbanBoard key={project.id} projectId={project.id} />
     </div>
   )
 }

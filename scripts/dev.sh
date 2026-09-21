@@ -30,7 +30,7 @@ free_port() { # port, name-of-our-process
 free_port "$PORT" dashboard
 free_port "$WEB_PORT" node
 
-BIN=backend/.build/debug/dashboard
+BIN=.build/debug/dashboard
 [[ -x "$BIN" ]] || { echo "backend not built — run: mise run backend:build" >&2; exit 1; }
 
 "$BIN" serve --port "$PORT" &

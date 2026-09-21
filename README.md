@@ -34,7 +34,7 @@ If it won't start: `mise run doctor` reports toolchain, build outputs and who ho
 mise run serve        # builds the web app and a release binary, then serves both on :5175
 ```
 
-Equivalent by hand: `pnpm build && backend/.build/release/dashboard serve --static-dir dist`.
+Equivalent by hand: `pnpm build && ./.build/release/dashboard serve --static-dir web/dist`.
 
 ### Reaching it from another machine
 
@@ -89,7 +89,7 @@ Each provider can carry `pricing: {input_per_million, output_per_million}` (USD)
 
 ### CLI
 
-`mise run cli -- <args>` during development, or `backend/.build/release/dashboard` after `mise run backend:release`. All output is JSON; errors go to stderr as `{"error": {"message": …}}` with exit code 1.
+`mise run cli -- <args>` during development, or `./.build/release/dashboard` after `mise run backend:release`. All output is JSON; errors go to stderr as `{"error": {"message": …}}` with exit code 1.
 
 **Where commands go.** If a dashboard server answers (`--server URL`, else `$MVP_DASHBOARD_URL`, else `http://127.0.0.1:$MVP_DASHBOARD_PORT`), the CLI talks to it over the same `/api` the web app uses — the server stays the single writer and every change is pushed to connected browsers. With no server running it falls back to the files directly. `--remote` fails instead of falling back; `--local` forces the files even if a server is up.
 
@@ -166,36 +166,38 @@ then "in project Demo, move task-12 to In progress" just works, with your Claude
 | `mise run web:dev` / `web:test` / `web:check` / `web:build`                     | Web-only tasks                                         |
 | `mise run backend:build` / `backend:test` / `backend:serve` / `backend:release` | Backend-only tasks                                     |
 | `mise run cli -- …`                                                             | Run the dashboard CLI from source                      |
-| `mise run clean`                                                                | Remove `dist/`, `coverage/`, `backend/.build/`         |
+| `mise run clean`                                                                | Remove `web/dist/`, `web/coverage/`, `.build/`         |
 
 ## Architecture
 
-Dependencies point inward everywhere: interface → service → persistence → domain.
+The repository is one Swift package at the root (`Package.swift`, `Sources/`, `Tests/`) plus a pnpm
+workspace for the web side (`web/` app, `web/packages/*` libraries, `website/` docs). Dependencies
+point inward everywhere: interface → service → persistence → domain.
 
-| Path                                         | Role                                                                                                                                                                                                |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/design-system/`                    | `@mvp/design-system`: reusable components over purple3 (`Button`, `Card`, `Modal`, `Markdown`, …). The only layer that knows `hk-*` classes; no state.                                              |
-| `packages/kanban-model/`                     | `@mvp/kanban-model`: wire types and pure functions over the board (grouping, hierarchy index, colours, checklists, AI draft helpers). No React, no Redux.                                           |
-| `packages/state/`                            | `@mvp/state`: the Redux store — RTK Query endpoints, browser settings, the live socket, the AI stream. No components. `@mvp/state/testing` stubs the server for tests.                              |
-| `src/core/plugin/`                           | `DashboardPlugin` contract (`nav`, `routes`, optional `sidebar`) + registry.                                                                                                                        |
-| `src/core/shell/`, `src/core/settings/`      | App chrome; theme hook and picker.                                                                                                                                                                  |
-| `src/app/`                                   | Composition root: router, store provider, plugin list. See [docs/frontend-architecture.md](docs/frontend-architecture.md).                                                                          |
-| `src/plugins/projects/`                      | Sidebar project list, project page; `board/` (columns, cards, drag and drop), `card/` (dialog over a pure form reducer), `assistant/` (Draft with AI + activity panel).                             |
-| `src/plugins/settings/`                      | Settings page: browser card + server card.                                                                                                                                                          |
-| `backend/Sources/DashboardDomain`            | `Project`, `ProjectRegistry`, `Settings`, and the kanban `Workspace` aggregate (numbering, WIP, status rules). Pure.                                                                                |
-| `backend/Sources/DashboardPersistence`       | `ProjectStore` / `WorkspaceStore` / `SettingsStore` protocols, in-memory stores, shared contract tests, RFC 3339 codec.                                                                             |
-| `backend/Sources/DashboardPersistenceJSON`   | `KanbanJSONStore` (kanban-rs v18 envelope), JSON registry and settings stores; atomic writes.                                                                                                       |
-| `backend/Sources/DashboardPersistenceConfig` | `config.json`/`config.yaml` AI provider store: swift-configuration reads (file + env), atomic private writes.                                                                                       |
-| `backend/Sources/DashboardPersistenceFluent` | Fluent SQLite stores for the registry and workspaces; `SQLiteDatabasePool`.                                                                                                                         |
-| `backend/Sources/DashboardService`           | `ProjectService`, `SettingsService` actors; clock/ids via cascade-kit `@Dependency`.                                                                                                                |
-| `backend/Sources/DashboardAI`                | `AIProvider` streaming contract, `AssistantService` (board context → prompt → partial drafts → validated `TicketDraft`), `JSONCompleter` for half-typed JSON.                                       |
-| `backend/Sources/DashboardAIProviders`       | `AnyLanguageModelProvider` (apple/anthropic/openai/gemini/ollama) and `ClaudeCodeProvider` (headless `claude -p`, stream-json).                                                                     |
-| `backend/Sources/DashboardAPI`               | Wire DTOs (kanban-api shapes, `Page`, `ApiError`, `AssistantFrame` + `SSEParser`).                                                                                                                  |
-| `backend/Sources/DashboardClient`            | HTTP implementations of the command protocols (what the CLI uses when a server is running), including the event-stream client.                                                                      |
-| `backend/Sources/DashboardMCP`               | MCP tool catalogue and dispatcher over the same command protocols.                                                                                                                                  |
-| `backend/Sources/DashboardRuntime`           | Composition root shared by CLI and server: cascade-kit `ServiceKey`s, `DashboardRuntime.register/shutdown`, `RuntimeConfig`; `WorkspaceStores.factory` is the single `StorageKind` → store mapping. |
-| `backend/Sources/DashboardServer`            | Vapor app: routes, error envelope (+ `X-Request-Id`), live CORS, app and per-request cascade-kit containers.                                                                                        |
-| `backend/Sources/DashboardCLI`               | `dashboard` executable; one runtime container per invocation, `--verbose` bound through `\.logger`.                                                                                                 |
+| Path                                        | Role                                                                                                                                                                                                |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `web/packages/design-system/`               | `@mvp/design-system`: reusable components over purple3 (`Button`, `Card`, `Modal`, `Markdown`, …). The only layer that knows `hk-*` classes; no state.                                              |
+| `web/packages/kanban-model/`                | `@mvp/kanban-model`: wire types and pure functions over the board (grouping, hierarchy index, colours, checklists, AI draft helpers). No React, no Redux.                                           |
+| `web/packages/state/`                       | `@mvp/state`: the Redux store — RTK Query endpoints, browser settings, the live socket, the AI stream. No components. `@mvp/state/testing` stubs the server for tests.                              |
+| `web/src/core/plugin/`                      | `DashboardPlugin` contract (`nav`, `routes`, optional `sidebar`) + registry.                                                                                                                        |
+| `web/src/core/shell/`, `src/core/settings/` | App chrome; theme hook and picker.                                                                                                                                                                  |
+| `web/src/app/`                              | Composition root: router, store provider, plugin list. See [Web architecture](website/docs/web/architecture.md).                                                                                    |
+| `web/src/plugins/projects/`                 | Sidebar project list, project page; `board/` (columns, cards, drag and drop), `card/` (dialog over a pure form reducer), `assistant/` (Draft with AI + activity panel).                             |
+| `web/src/plugins/settings/`                 | Settings page: browser card + server card.                                                                                                                                                          |
+| `Sources/DashboardDomain`                   | `Project`, `ProjectRegistry`, `Settings`, and the kanban `Workspace` aggregate (numbering, WIP, status rules). Pure.                                                                                |
+| `Sources/DashboardPersistence`              | `ProjectStore` / `WorkspaceStore` / `SettingsStore` protocols, in-memory stores, shared contract tests, RFC 3339 codec.                                                                             |
+| `Sources/DashboardPersistenceJSON`          | `KanbanJSONStore` (kanban-rs v18 envelope), JSON registry and settings stores; atomic writes.                                                                                                       |
+| `Sources/DashboardPersistenceConfig`        | `config.json`/`config.yaml` AI provider store: swift-configuration reads (file + env), atomic private writes.                                                                                       |
+| `Sources/DashboardPersistenceFluent`        | Fluent SQLite stores for the registry and workspaces; `SQLiteDatabasePool`.                                                                                                                         |
+| `Sources/DashboardService`                  | `ProjectService`, `SettingsService` actors; clock/ids via cascade-kit `@Dependency`.                                                                                                                |
+| `Sources/DashboardAI`                       | `AIProvider` streaming contract, `AssistantService` (board context → prompt → partial drafts → validated `TicketDraft`), `JSONCompleter` for half-typed JSON.                                       |
+| `Sources/DashboardAIProviders`              | `AnyLanguageModelProvider` (apple/anthropic/openai/gemini/ollama) and `ClaudeCodeProvider` (headless `claude -p`, stream-json).                                                                     |
+| `Sources/DashboardAPI`                      | Wire DTOs (kanban-api shapes, `Page`, `ApiError`, `AssistantFrame` + `SSEParser`).                                                                                                                  |
+| `Sources/DashboardClient`                   | HTTP implementations of the command protocols (what the CLI uses when a server is running), including the event-stream client.                                                                      |
+| `Sources/DashboardMCP`                      | MCP tool catalogue and dispatcher over the same command protocols.                                                                                                                                  |
+| `Sources/DashboardRuntime`                  | Composition root shared by CLI and server: cascade-kit `ServiceKey`s, `DashboardRuntime.register/shutdown`, `RuntimeConfig`; `WorkspaceStores.factory` is the single `StorageKind` → store mapping. |
+| `Sources/DashboardServer`                   | Vapor app: routes, error envelope (+ `X-Request-Id`), live CORS, app and per-request cascade-kit containers.                                                                                        |
+| `Sources/DashboardCLI`                      | `dashboard` executable; one runtime container per invocation, `--verbose` bound through `\.logger`.                                                                                                 |
 
 ### Source of truth
 
@@ -214,9 +216,9 @@ JSON and SQLite are interchangeable by construction: both stores implement the s
 
 ## Adding a web plugin
 
-1. Create `src/plugins/<name>/index.tsx` exporting a `DashboardPlugin` (`id`, `name`, `nav`, `routes`, optional `sidebar`).
-2. Server data and local state live in `packages/state` (`api/<resource>.ts` with `baseApi.injectEndpoints`, or a slice added to `reducer.ts`), exported from its `index.ts`.
-3. Add it to the list in `src/app/plugins.ts`.
+1. Create `web/src/plugins/<name>/index.tsx` exporting a `DashboardPlugin` (`id`, `name`, `nav`, `routes`, optional `sidebar`).
+2. Server data and local state live in `web/packages/state` (`api/<resource>.ts` with `baseApi.injectEndpoints`, or a slice added to `reducer.ts`), exported from its `index.ts`.
+3. Add it to the list in `web/src/app/plugins.ts`.
 
 ## CI
 

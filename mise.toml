@@ -24,7 +24,7 @@ _.file = ".env.local"
 
 [tasks.setup]
 description = "Install web dependencies and resolve Swift packages"
-run = ["pnpm install --frozen-lockfile", "swift package --package-path backend resolve"]
+run = ["pnpm install --frozen-lockfile", "swift package resolve"]
 
 # --- Web ---------------------------------------------------------------------
 
@@ -60,22 +60,18 @@ run = "pnpm --filter website build"
 
 [tasks."backend:build"]
 description = "Build the Swift package (server + dashboard CLI)"
-dir = "backend"
 run = "swift build"
 
 [tasks."backend:test"]
 description = "Run the Swift test suites"
-dir = "backend"
 run = "swift test"
 
 [tasks."backend:serve"]
 description = "Run the API server on $MVP_DASHBOARD_PORT"
-dir = "backend"
 run = "swift run dashboard serve --hostname $MVP_DASHBOARD_HOST --port $MVP_DASHBOARD_PORT"
 
 [tasks."backend:release"]
-description = "Build an optimized dashboard binary into backend/.build/release/"
-dir = "backend"
+description = "Build an optimized dashboard binary into .build/release/"
 run = "swift build -c release"
 
 # --- Whole project -----------------------------------------------------------
@@ -101,16 +97,15 @@ depends = ["web:check", "web:test", "web:build", "backend:test"]
 [tasks.serve]
 description = "Serve the built web app and the API from one process"
 depends = ["web:build", "backend:release"]
-run = "backend/.build/release/dashboard serve --hostname $MVP_DASHBOARD_HOST --port $MVP_DASHBOARD_PORT --static-dir dist"
+run = ".build/release/dashboard serve --hostname $MVP_DASHBOARD_HOST --port $MVP_DASHBOARD_PORT --static-dir web/dist"
 
 [tasks."serve:lan"]
 description = "Like serve, but reachable from other machines (http://<your-ip>:$MVP_DASHBOARD_PORT)"
 depends = ["web:build", "backend:release"]
-run = "backend/.build/release/dashboard serve --hostname 0.0.0.0 --port $MVP_DASHBOARD_PORT --static-dir dist"
+run = ".build/release/dashboard serve --hostname 0.0.0.0 --port $MVP_DASHBOARD_PORT --static-dir web/dist"
 
 [tasks.cli]
 description = "Run the dashboard CLI, e.g. `mise run cli -- project list`"
-dir = "backend"
 run = "swift run -q dashboard"
 
 [tasks.stop]
@@ -128,8 +123,8 @@ run = "scripts/doctor.sh"
 
 [tasks.clean]
 description = "Remove build outputs (keeps .local dev data)"
-run = ["rm -rf dist coverage backend/.build"]
+run = ["rm -rf web/dist web/coverage .build"]
 
 [tasks."backend:test:linux"]
 description = "Run the Swift tests in the swift:6.3.3 Linux container (needs docker/colima)"
-run = 'docker run --rm -v "$PWD/backend:/src" -v mvp-dashboard-linux-build:/src/.build-linux -w /src swift:6.3.3-noble swift test --scratch-path /src/.build-linux'
+run = 'docker run --rm -v "$PWD:/src" -v mvp-dashboard-linux-build:/src/.build-linux -w /src swift:6.3.3-noble swift test --scratch-path /src/.build-linux'

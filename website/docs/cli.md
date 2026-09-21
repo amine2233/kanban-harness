@@ -6,7 +6,7 @@ title: CLI
 
 `dashboard` is the same binary as the server. During development run it with
 `mise run cli -- <args>`; after `mise run backend:release` it is
-`backend/.build/release/dashboard`.
+`./.build/release/dashboard` at the repository root.
 
 All output is **JSON on stdout**, so it composes with `jq` and scripts. Errors go to stderr
 as `{"error": {"message": …}}` with exit code 1. Progress narration (`--stream`, `--verbose`)

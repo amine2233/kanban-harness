@@ -1,5 +1,0 @@
-.build/
-.swiftpm/
-target/
-core
-core.*

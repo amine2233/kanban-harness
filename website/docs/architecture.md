@@ -95,10 +95,10 @@ The web app is a pnpm workspace with three library packages and one application;
 ## Repository layout
 
 ```
-backend/            Swift package (targets above) and its tests
-src/                web app: shell, router, plugins
-packages/           @mvp/kanban-model · @mvp/state · @mvp/design-system
+Package.swift       the Swift package: Sources/ (targets above) and Tests/
+web/                the web app (Vite): src/ shell, router, plugins
+web/packages/       @mvp/kanban-model · @mvp/state · @mvp/design-system
 website/            this documentation (Docusaurus)
-docs/               design notes: conceptions, front-end architecture
-mise.toml           toolchain and tasks
+docs/conceptions/   design notes
+mise.toml           toolchain and tasks; pnpm-workspace.yaml lists web, web/packages/*, website
 ```

@@ -33,9 +33,6 @@ jobs:
       matrix:
         os: [macos-26, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v5
       # The same toolchain mise pins locally (mise.toml), on both platforms.
@@ -45,7 +42,7 @@ jobs:
       - run: swift --version
       - uses: actions/cache@v4
         with:
-          path: backend/.build
-          key: spm-${{ runner.os }}-${{ hashFiles('backend/Package.resolved') }}
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
       - run: swift build --build-tests
       - run: swift test

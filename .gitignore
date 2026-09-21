@@ -23,11 +23,16 @@ dist-ssr
 *.sln
 *.sw?
 
-# Rust
-backend/.build
-
 # Local dev data and personal env (see mise.toml)
 .local/
 .env.local
 website/build
 website/.docusaurus
+
+# Swift
+.build/
+.build-linux/
+.swiftpm/
+core
+core.*
+target/

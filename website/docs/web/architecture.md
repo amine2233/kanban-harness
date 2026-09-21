@@ -8,13 +8,13 @@ The web app is a pnpm workspace: three library packages and one application. Dep
 only point downwards; a package never imports from the one above it.
 
 ```text
-src/                    the app: shell, router, plugins (components only)
+web/src/                the app: shell, router, plugins (components only)
   │
-  ├── @mvp/state        packages/state        Redux store, API endpoints, live socket, AI stream
+  ├── @mvp/state        web/packages/state    Redux store, API endpoints, live socket, AI stream
   │      │
-  │      └── @mvp/kanban-model   packages/kanban-model   wire types + pure functions over the board
+  │      └── @mvp/kanban-model   web/packages/kanban-model   wire types + pure functions over the board
   │
-  └── @mvp/design-system   packages/design-system   UI components over purple3, no state
+  └── @mvp/design-system   web/packages/design-system   UI components over purple3, no state
 ```
 
 | Package              | Depends on          | Knows about                                   | Never contains                 |
@@ -46,9 +46,9 @@ domain, `state` cannot import React components, and the app must import packages
 never by path. A wrong import fails `pnpm lint` (and CI) with a one-line explanation.
 
 Each package has its own `tsconfig.json` (extending `tsconfig.base.json`) so it type-checks
-alone: `pnpm exec tsc -p packages/state/tsconfig.json --noEmit`.
+alone: `pnpm --filter mvp-dashboard exec tsc -p packages/state/tsconfig.json --noEmit`.
 
-## The app (`src/`)
+## The app (`web/src/`)
 
 ```text
 src/app/            App.tsx (router + store provider), plugins.ts (the plugin list)

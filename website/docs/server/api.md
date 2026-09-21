@@ -31,23 +31,23 @@ against this server.
 
 Prefix: `/projects/{id}/kanban/v1`.
 
-| Method   | Path                                | Body / notes                                                  |
-| -------- | ----------------------------------- | ------------------------------------------------------------- |
-| `GET`    | `/boards`                           |                                                               |
-| `POST`   | `/boards`                           | `{name, card_prefix?, with_default_columns?}`                 |
-| `PATCH`  | `/boards/{b}`                       | `{name?, description?, position?}`                            |
-| `DELETE` | `/boards/{b}`                       |                                                               |
-| `POST`   | `/boards/{b}/clone`                 | `{name?}` — deep copy                                         |
-| `GET`    | `/boards/{b}/columns`               |                                                               |
-| `POST`   | `/boards/{b}/columns`               | `{name, wip_limit?, default_status?}`                         |
-| `PATCH`  | `/boards/{b}/columns/{c}`           | `{name?, wip_limit?, default_status?, position?}`             |
-| `DELETE` | `/boards/{b}/columns/{c}`           | refused on the last column                                    |
-| `GET`    | `/boards/{b}/cards`                 | every card of the board                                       |
-| `POST`   | `/columns/{c}/cards`                | `{title, description?, priority?, ai_cost?, subtasks?}` → 201 |
-| `PATCH`  | `/boards/{b}/cards/{card}`          | fields; `column_id` moves; `board_id` moves to another board  |
+| Method   | Path                                | Body / notes                                                             |
+| -------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| `GET`    | `/boards`                           |                                                                          |
+| `POST`   | `/boards`                           | `{name, card_prefix?, with_default_columns?}`                            |
+| `PATCH`  | `/boards/{b}`                       | `{name?, description?, position?}`                                       |
+| `DELETE` | `/boards/{b}`                       |                                                                          |
+| `POST`   | `/boards/{b}/clone`                 | `{name?}` — deep copy                                                    |
+| `GET`    | `/boards/{b}/columns`               |                                                                          |
+| `POST`   | `/boards/{b}/columns`               | `{name, wip_limit?, default_status?}`                                    |
+| `PATCH`  | `/boards/{b}/columns/{c}`           | `{name?, wip_limit?, default_status?, position?}`                        |
+| `DELETE` | `/boards/{b}/columns/{c}`           | refused on the last column                                               |
+| `GET`    | `/boards/{b}/cards`                 | every card of the board                                                  |
+| `POST`   | `/columns/{c}/cards`                | `{title, description?, priority?, ai_cost?, subtasks?}` → 201            |
+| `PATCH`  | `/boards/{b}/cards/{card}`          | fields; `column_id` moves; `board_id` moves to another board             |
 | `DELETE` | `/boards/{b}/cards/{card}`          | `?with_children=true` also deletes its sub-tasks; else they are detached |
-| `GET`    | `/boards/{b}/cards/{card}/children` | the card's sub-tasks                                          |
-| `PUT`    | `/boards/{b}/cards/{card}/parent`   | `{parent_id}` links, `{parent_id: null}` detaches             |
+| `GET`    | `/boards/{b}/cards/{card}/children` | the card's sub-tasks                                                     |
+| `PUT`    | `/boards/{b}/cards/{card}/parent`   | `{parent_id}` links, `{parent_id: null}` detaches                        |
 
 A card:
 

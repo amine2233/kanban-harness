@@ -135,30 +135,16 @@ export function CardDialog({
           </p>
         )}
         {!card && (
-          <>
-            <DraftWithAI
-              scope={scope}
-              onDraft={(patch) => {
-                dispatch({ type: 'applyDraft', patch })
-              }}
-            />
-            <label className="flex items-center mb3 f6">
-              <input
-                type="checkbox"
-                className="mr2"
-                checked={form.generateSubtasks}
-                onChange={(e) => {
-                  dispatch({ type: 'setGenerateSubtasks', value: e.target.checked })
-                }}
-              />
-              <span>
-                Generate sub-tasks with AI{' '}
-                <span className="gray">
-                  (when unchecked, AI will only draft the main ticket)
-                </span>
-              </span>
-            </label>
-          </>
+          <DraftWithAI
+            scope={scope}
+            onDraft={(patch) => {
+              dispatch({ type: 'applyDraft', patch })
+            }}
+            generateSubtasks={form.generateSubtasks}
+            onGenerateSubtasksChange={(value) => {
+              dispatch({ type: 'setGenerateSubtasks', value })
+            }}
+          />
         )}
         {card && index && <CardRelations card={card} index={index} onOpenCard={onOpenCard} />}
         <CardFields

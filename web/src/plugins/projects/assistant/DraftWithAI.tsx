@@ -16,10 +16,13 @@ interface Props {
   scope: { projectId: string; boardId: string }
   /** Called with each partial and the final draft; the user still reviews and creates. */
   onDraft: (patch: DraftPatch) => void
+  /** Whether to generate subtasks */
+  generateSubtasks: boolean
+  onGenerateSubtasksChange: (value: boolean) => void
 }
 
 /** Collapsible "✨ Draft with AI" block for the card dialog, streaming as the model types. */
-export function DraftWithAI({ scope, onDraft }: Props) {
+export function DraftWithAI({ scope, onDraft, generateSubtasks, onGenerateSubtasksChange }: Props) {
   const { data: ai } = useGetAIConfigQuery()
   const dispatch = useAppDispatch()
   const assistant = useAppSelector(selectAssistant)
@@ -114,6 +117,23 @@ export function DraftWithAI({ scope, onDraft }: Props) {
             }}
             className="mb2"
           />
+          <label className="flex items-center mb2 f6">
+            <input
+              type="checkbox"
+              className="mr2"
+              checked={generateSubtasks}
+              disabled={running}
+              onChange={(e) => {
+                onGenerateSubtasksChange(e.target.checked)
+              }}
+            />
+            <span>
+              Generate sub-tasks with AI{' '}
+              <span className="gray">
+                (when unchecked, AI will only draft the main ticket)
+              </span>
+            </span>
+          </label>
           <Row align="end">
             {providers.length > 1 && (
               <Select

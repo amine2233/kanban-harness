@@ -30,6 +30,7 @@ const sidebars: SidebarsConfig = {
         'conceptions/mcp-servers',
         'conceptions/huggingface-provider',
         'conceptions/provider-sign-in',
+        'conceptions/live-connection',
       ],
     },
   ],

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BoardTabs } from './BoardTabs'
 import { ColumnActions } from './ColumnActions'
 import { KanbanColumn } from './KanbanColumn'
@@ -16,6 +16,11 @@ export function KanbanBoard({ projectId }: { projectId: string }) {
   const [selected, setSelected] = useState<string>()
   const boardList = boards.data ?? []
   const boardId = boardList.some((b) => b.id === selected) ? selected : boardList[0]?.id
+
+  // Reset selected board when project changes
+  useEffect(() => {
+    setSelected(undefined)
+  }, [projectId])
 
   if (boards.isLoading) return <Spinner />
   if (boards.error) {
@@ -42,7 +47,7 @@ export function KanbanBoard({ projectId }: { projectId: string }) {
         selectedId={boardId}
         onSelect={setSelected}
       />
-      <BoardColumns projectId={projectId} boardId={boardId} />
+      <BoardColumns key={`${projectId}-${boardId}`} projectId={projectId} boardId={boardId} />
     </div>
   )
 }

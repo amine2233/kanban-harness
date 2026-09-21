@@ -85,6 +85,11 @@ public actor SQLiteDatabasePool {
             try? await database.shutdown()
             throw error
         }
+        // ponytail: double-check cache, shutdown duplicate if another task won the race
+        if let existing = open[path] {
+            try await database.shutdown()
+            return existing.database
+        }
         open[path] = database
         return database.database
     }

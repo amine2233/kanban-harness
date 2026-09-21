@@ -88,7 +88,7 @@ public struct RemoteAIConfigCommands: AIConfigCommands {
     public func upsert(_ provider: AIProviderConfig) async throws(ServiceError) -> AIConfig {
         let body = UpsertAIProviderRequest(
             kind: provider.kind, name: provider.name, model: provider.model,
-            baseURL: provider.baseURL, apiKey: provider.apiKey, maxTokens: provider.maxTokens, pricing: provider.pricing
+            baseURL: provider.baseURL, apiKey: provider.apiKey, maxTokens: provider.maxTokens, pricing: provider.pricing, oauth: provider.oauth
         )
         return try Self.config(try await client.send("PUT", "api/settings/ai/providers/\(provider.id)", body: body, as: AIConfigDTO.self))
     }
@@ -108,7 +108,8 @@ public struct RemoteAIConfigCommands: AIConfigCommands {
                 providers: dto.providers.map { p in
                     try AIProviderConfig(
                         id: p.id, kind: p.kind, name: p.name, model: p.model, baseURL: p.baseURL,
-                        apiKey: p.hasAPIKey ? RemoteAIConfigCommands.redactedKey : nil, maxTokens: p.maxTokens, pricing: p.pricing
+                        apiKey: p.hasAPIKey ? RemoteAIConfigCommands.redactedKey : nil, maxTokens: p.maxTokens, pricing: p.pricing,
+                        oauth: p.oauthClientId.map { OAuthClientSettings(clientId: $0) }
                     )
                 },
                 defaultProviderId: dto.defaultProvider
@@ -119,6 +120,32 @@ public struct RemoteAIConfigCommands: AIConfigCommands {
     }
 
     public static let redactedKey = "••••••••"
+}
+
+/// `SignInCommands` over the server: the server owns the callback, so the CLI only opens the URL.
+public struct RemoteSignInCommands: SignInCommands {
+    private let client: DashboardClient
+
+    public init(client: DashboardClient) {
+        self.client = client
+    }
+
+    public func begin(providerId: String, callback: URL) async throws(ServiceError) -> URL {
+        let response = try await client.send("POST", "api/settings/ai/providers/\(providerId)/sign-in", body: Empty?.none, as: SignInResponse.self)
+        guard let url = URL(string: response.url) else { throw .remote(code: "BAD_RESPONSE", message: "sign-in URL is not a URL") }
+        return url
+    }
+
+    public func complete(state: String, code: String) async throws(ServiceError) -> String {
+        throw .remote(code: "SIGN_IN_FAILED", message: "the callback is handled by the server")
+    }
+
+    public func signOut(providerId: String) async throws(ServiceError) {
+        _ = try await client.send("DELETE", "api/settings/ai/providers/\(providerId)/credential", body: Empty?.none, as: AIConfigDTO.self)
+    }
+
+    /// The server refreshes before every draft; nothing to do on this side.
+    public func refreshed(_ config: AIProviderConfig) async throws(ServiceError) -> AIProviderConfig { config }
 }
 
 /// `BoardCommands` over the server's `/kanban/v1` API. Domain values are

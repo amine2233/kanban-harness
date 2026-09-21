@@ -42,22 +42,25 @@ flowchart TB
 
 One Swift package, one target per layer. A target may only import targets below it.
 
-| Target                       | Role                                                                                                                                                                                    |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DashboardDomain`            | `Project`, `Settings`, `AIConfig`, `TicketDraft`, and the kanban `Workspace` aggregate: boards, columns, cards, parent/child links, numbering, WIP, status rules. Pure Swift, no I/O.   |
-| `DashboardPersistence`       | Store protocols (`ProjectStore`, `WorkspaceStore`, `SettingsStore`, `AIConfigStore`), in-memory stores, the **contract tests** every store must pass, RFC 3339 codec.                   |
-| `DashboardPersistenceJSON`   | `kanban.json` (kanban-rs v18 envelope), the project registry and settings files; atomic writes.                                                                                         |
-| `DashboardPersistenceFluent` | The same stores on SQLite through Fluent; a database pool per project file.                                                                                                             |
-| `DashboardPersistenceConfig` | `config.yaml` / `config.json` for AI providers, read with swift-configuration (file + environment).                                                                                     |
-| `DashboardService`           | `ProjectService`, `SettingsService`, `AIConfigService` actors; the **command protocols** every client speaks (`ProjectCommands`, `BoardCommands`, `AssistantCommands`…); change events. |
-| `DashboardAI`                | The `AIProvider` streaming contract, `AssistantService` (board context → prompt → partial drafts → validated draft), prompt builder, partial-JSON completer.                            |
-| `DashboardAIProviders`       | `AnyLanguageModelProvider` (apple, anthropic, openai, gemini, ollama) and `ClaudeCodeProvider`.                                                                                         |
-| `DashboardAPI`               | Wire DTOs: request/response shapes, `Page`, `ApiError`, the SSE frames of a draft.                                                                                                      |
-| `DashboardServer`            | The Vapor app: routes, error envelope with `X-Request-Id`, CORS from live settings, the events socket, the MCP HTTP endpoint.                                                           |
-| `DashboardClient`            | The command protocols implemented over HTTP — what the CLI and MCP use when a server is running.                                                                                        |
-| `DashboardMCP`               | The MCP tool catalogue and dispatcher over the command protocols.                                                                                                                       |
-| `DashboardRuntime`           | Composition root shared by server and CLI: the cascade-kit container, service keys, shutdown hooks.                                                                                     |
-| `DashboardCLI`               | The `dashboard` executable.                                                                                                                                                             |
+| Target                         | Role                                                                                                                                                                                    |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DashboardDomain`              | `Project`, `Settings`, `AIConfig`, `TicketDraft`, and the kanban `Workspace` aggregate: boards, columns, cards, parent/child links, numbering, WIP, status rules. Pure Swift, no I/O.   |
+| `DashboardPersistence`         | Store protocols (`ProjectStore`, `WorkspaceStore`, `SettingsStore`, `AIConfigStore`), in-memory stores, the **contract tests** every store must pass, RFC 3339 codec.                   |
+| `DashboardPersistenceJSON`     | `kanban.json` (kanban-rs v18 envelope), the project registry and settings files; atomic writes.                                                                                         |
+| `DashboardPersistenceFluent`   | The same stores on SQLite through Fluent; a database pool per project file.                                                                                                             |
+| `DashboardPersistenceConfig`   | `config.yaml` / `config.json` for AI providers, read with swift-configuration (file + environment).                                                                                     |
+| `DashboardService`             | `ProjectService`, `SettingsService`, `AIConfigService` actors; the **command protocols** every client speaks (`ProjectCommands`, `BoardCommands`, `AssistantCommands`…); change events. |
+| `DashboardAI`                  | The `AIProvider` streaming contract, `AssistantService` (board context → prompt → partial drafts → validated draft), prompt builder, partial-JSON completer.                            |
+| `DashboardAIProviders`         | `AnyLanguageModelProvider` (apple, anthropic, openai, gemini, ollama) and `ClaudeCodeProvider`.                                                                                         |
+| `DashboardOAuth`               | Vendor-agnostic browser sign-in: PKCE, `ProviderSignIn`, `OAuthCodeFlow`, `SignInSessions`, `HTTPTransport`.                                                                            |
+| `DashboardProviderHuggingFace` | Hugging Face: provider over the OpenAI-compatible router + OAuth sign-in. One module per vendor.                                                                                        |
+| `DashboardProviderOpenRouter`  | OpenRouter: provider + PKCE sign-in that returns an API key.                                                                                                                            |
+| `DashboardAPI`                 | Wire DTOs: request/response shapes, `Page`, `ApiError`, the SSE frames of a draft.                                                                                                      |
+| `DashboardServer`              | The Vapor app: routes, error envelope with `X-Request-Id`, CORS from live settings, the events socket, the MCP HTTP endpoint.                                                           |
+| `DashboardClient`              | The command protocols implemented over HTTP — what the CLI and MCP use when a server is running.                                                                                        |
+| `DashboardMCP`                 | The MCP tool catalogue and dispatcher over the command protocols.                                                                                                                       |
+| `DashboardRuntime`             | Composition root shared by server and CLI: the cascade-kit container, service keys, shutdown hooks.                                                                                     |
+| `DashboardCLI`                 | The `dashboard` executable.                                                                                                                                                             |
 
 ### Interchangeable storage
 

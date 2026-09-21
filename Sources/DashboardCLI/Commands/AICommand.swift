@@ -16,7 +16,7 @@ struct AICommand: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "providers",
             abstract: "List, add, remove AI providers and pick the default.",
-            subcommands: [List.self, Add.self, Remove.self, Default.self]
+            subcommands: [List.self, Add.self, Remove.self, Default.self, Login.self, Logout.self]
         )
 
         /// Printable view: never shows the key itself.
@@ -82,7 +82,7 @@ struct AICommand: AsyncParsableCommand {
             @Argument(help: "Provider id (a-z, 0-9, _), e.g. claude, local.")
             var id: String
 
-            @Option(help: "apple, anthropic, openai, gemini, ollama or claude_code.")
+            @Option(help: "apple, anthropic, openai, gemini, ollama, huggingface, openrouter or claude_code.")
             var kind: AIProviderKind
 
             @Option(help: "Model name, e.g. claude-sonnet-5, gpt-4o, llama3.2.")
@@ -106,13 +106,20 @@ struct AICommand: AsyncParsableCommand {
             @Option(name: .customLong("output-price"), help: "USD per million output tokens.")
             var outputPrice: Double?
 
+            @Option(name: .customLong("oauth-client-id"), help: "Client id of the OAuth app registered at the vendor (Hugging Face); enables `login`.")
+            var oauthClientId: String?
+
+            @Option(name: .customLong("oauth-client-secret"), help: "Client secret of that app, when the vendor issued one.")
+            var oauthClientSecret: String?
+
             func run() async throws {
                 try await failing {
                     let pricing = try (inputPrice ?? outputPrice).map { _ in
                         try AIPricing(inputPerMillion: inputPrice ?? 0, outputPerMillion: outputPrice ?? 0)
                     }
                     let provider = try AIProviderConfig(
-                        id: id, kind: kind, name: name ?? id, model: model, baseURL: baseURL, apiKey: apiKey, maxTokens: maxTokens, pricing: pricing
+                        id: id, kind: kind, name: name ?? id, model: model, baseURL: baseURL, apiKey: apiKey, maxTokens: maxTokens, pricing: pricing,
+                        oauth: oauthClientId.map { OAuthClientSettings(clientId: $0, clientSecret: oauthClientSecret) }
                     )
                     try Output.json(View(try await Runtime.run(global) { try await $0.make(AIConfigCommandsKey.self).upsert(provider) }))
                 }

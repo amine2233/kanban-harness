@@ -9,16 +9,20 @@ public enum AIProviderKind: String, Codable, Sendable, CaseIterable {
     case openai
     case gemini
     case ollama
+    /// Hugging Face Inference Providers (OpenAI-compatible router): free monthly credits; token or OAuth sign-in.
+    case huggingface
+    /// OpenRouter (OpenAI-compatible): hundreds of models, the `:free` ones cost nothing; key or PKCE sign-in.
+    case openrouter
     /// The Claude Code CLI in headless mode: uses the machine's Claude login, no API key.
     case claudeCode = "claude_code"
 
     /// Whether requests need an API key at all.
-    /// Runs on this machine: a draft costs nothing.
-    public var isFree: Bool { self == .apple || self == .ollama }
+    /// No bill per draft: local runtimes, or Hugging Face's free credits (set `pricing` if you pay).
+    public var isFree: Bool { self == .apple || self == .ollama || self == .huggingface }
 
     public var requiresAPIKey: Bool {
         switch self {
-        case .anthropic, .openai, .gemini: true
+        case .anthropic, .openai, .gemini, .huggingface, .openrouter: true
         case .apple, .ollama, .claudeCode: false
         }
     }
@@ -64,9 +68,11 @@ public struct AIProviderConfig: Codable, Equatable, Sendable {
     public var apiKey: String?
     public var maxTokens: Int?
     public var pricing: AIPricing?
+    /// Settings of the OAuth app registered at the vendor, for kinds that sign in through the browser.
+    public var oauth: OAuthClientSettings?
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, name, model, pricing
+        case id, kind, name, model, pricing, oauth
         case baseURL = "base_url"
         case apiKey = "api_key"
         case maxTokens = "max_tokens"
@@ -74,7 +80,8 @@ public struct AIProviderConfig: Codable, Equatable, Sendable {
 
     public init(
         id: String, kind: AIProviderKind, name: String, model: String,
-        baseURL: String? = nil, apiKey: String? = nil, maxTokens: Int? = nil, pricing: AIPricing? = nil
+        baseURL: String? = nil, apiKey: String? = nil, maxTokens: Int? = nil, pricing: AIPricing? = nil,
+        oauth: OAuthClientSettings? = nil
     ) throws {
         guard Self.isValidId(id) else { throw DomainError.invalidProviderId(id) }
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -95,6 +102,7 @@ public struct AIProviderConfig: Codable, Equatable, Sendable {
         self.apiKey = apiKey?.isEmpty == true ? nil : apiKey
         self.maxTokens = maxTokens
         self.pricing = pricing
+        self.oauth = oauth
     }
 
     public var hasAPIKey: Bool { apiKey?.isEmpty == false }

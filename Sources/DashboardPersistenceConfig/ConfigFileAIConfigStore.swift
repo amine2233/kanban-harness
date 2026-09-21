@@ -8,7 +8,9 @@ import Yams
 /// AI provider configuration in the dashboard's config file (`config.json` or
 /// `config.yaml`), read through swift-configuration so environment variables
 /// override the file — e.g. `MVP_DASHBOARD_AI_PROVIDERS_CLAUDE_API_KEY` supplies
-/// a secret that never has to be written to disk. Writes go to the file only,
+/// a secret that never has to be written to disk. Secrets are kept in the
+/// `CredentialStore`, not in this file: resolution is environment → credential
+/// store → a legacy `api_key` left in the file. Writes go to the file only,
 /// atomically, and leave every other top-level section untouched.
 ///
 /// Layout (swift-configuration flattens nested keys; arrays hold primitives only):
@@ -24,9 +26,15 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
 
     public let path: String
     private let environment: [String: String]
+    private let credentials: any CredentialStore
 
-    public init(path: String, environment: [String: String] = ProcessInfo.processInfo.environment) {
+    public init(
+        path: String,
+        credentials: any CredentialStore = InMemoryCredentialStore(),
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
         self.path = path
+        self.credentials = credentials
         self.environment = environment
     }
 
@@ -46,6 +54,8 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
             guard let kindRaw = scope.string(forKey: "kind"), let kind = AIProviderKind(configValue: kindRaw) else {
                 throw PersistenceError.corrupt(path: path, reason: "ai.providers.\(id).kind is missing or unknown")
             }
+            let stored = try await credentials.get(id)?.secret
+            let apiKey = environmentAPIKey(for: id) ?? stored ?? scope.string(forKey: "api_key", isSecret: true)
             do {
                 providers.append(try AIProviderConfig(
                     id: id,
@@ -53,9 +63,10 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
                     name: scope.string(forKey: "name", default: id),
                     model: scope.string(forKey: "model", default: ""),
                     baseURL: scope.string(forKey: "base_url"),
-                    apiKey: scope.string(forKey: "api_key", isSecret: true),
+                    apiKey: apiKey,
                     maxTokens: scope.int(forKey: "max_tokens"),
-                    pricing: try Self.pricing(scope.scoped(to: "pricing"))
+                    pricing: try Self.pricing(scope.scoped(to: "pricing")),
+                    oauth: Self.oauth(scope.scoped(to: "oauth"))
                 ))
             } catch {
                 throw PersistenceError.corrupt(path: path, reason: "ai.providers.\(id): \(error.localizedDescription)")
@@ -76,6 +87,11 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         )
     }
 
+    private static func oauth(_ scope: ConfigReader) -> OAuthClientSettings? {
+        guard let clientId = scope.string(forKey: "client_id") else { return nil }
+        return OAuthClientSettings(clientId: clientId, clientSecret: scope.string(forKey: "client_secret", isSecret: true))
+    }
+
     private func reader() async throws -> ConfigReader {
         let env = EnvironmentVariablesProvider(environmentVariables: environment).prefixKeys(with: ConfigKey([Self.envPrefix]))
         let file: any ConfigProvider
@@ -91,7 +107,7 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         return ConfigReader(providers: [env, file])
     }
 
-    // MARK: Write (file only; env overrides stay in the environment)
+    // MARK: Write (settings to the file, secrets to the credential store; env values stay in the environment)
 
     public func save(_ config: AIConfig) async throws {
         var document = try readDocument()
@@ -103,23 +119,34 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         for provider in config.providers {
             var entry: [String: Any] = ["kind": provider.kind.rawValue, "name": provider.name, "model": provider.model]
             if let baseURL = provider.baseURL { entry["base_url"] = baseURL }
-            if let apiKey = provider.apiKey {
-                if apiKey == environmentAPIKey(for: provider.id) {
-                    // Came from the environment: keep whatever the file had, never persist the env value.
-                    if let fileKey = (existing[provider.id] as? [String: Any])?["api_key"] { entry["api_key"] = fileKey }
-                } else {
-                    entry["api_key"] = apiKey
-                }
-            }
+            try await storeSecret(provider.apiKey, for: provider.id)
             if let maxTokens = provider.maxTokens { entry["max_tokens"] = maxTokens }
             if let pricing = provider.pricing {
                 entry["pricing"] = ["input_per_million": pricing.inputPerMillion, "output_per_million": pricing.outputPerMillion]
             }
+            if let oauth = provider.oauth {
+                var settings: [String: Any] = ["client_id": oauth.clientId]
+                if let secret = oauth.clientSecret { settings["client_secret"] = secret }
+                entry["oauth"] = settings
+            }
             providers[provider.id] = entry
+        }
+        for removed in existing.keys where providers[removed] == nil {
+            try await credentials.remove(removed)
         }
         ai["providers"] = providers
         document["ai"] = ai
         try write(document)
+    }
+
+    /// A key that came from the environment is never persisted; a pasted one
+    /// replaces the stored credential only when it actually changed, so an
+    /// OAuth token's refresh data survives a settings edit.
+    private func storeSecret(_ apiKey: String?, for id: String) async throws {
+        guard let apiKey else { return try await credentials.remove(id) }
+        if apiKey == environmentAPIKey(for: id) { return }
+        if try await credentials.get(id)?.secret == apiKey { return }
+        try await credentials.set(Credential(secret: apiKey), for: id)
     }
 
     private func environmentAPIKey(for id: String) -> String? {

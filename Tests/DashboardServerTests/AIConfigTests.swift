@@ -25,8 +25,10 @@ import VaporTesting
             #expect((provider["pricing"] as? [String: Double])?["input_per_million"] == 3)
 
             let raw = try String(contentsOfFile: home + "/config.json", encoding: .utf8)
-            #expect(raw.contains("\"api_key\" : \"sk-secret\""), "the file is the source of truth")
+            #expect(!raw.contains("sk-secret"), "the config file never holds secrets")
             #expect(raw.contains("\"provider_ids\""))
+            let credentials = try String(contentsOfFile: home + "/credentials.json", encoding: .utf8)
+            #expect(credentials.contains("sk-secret"), "secrets live in credentials.json")
 
             _ = try await app.json(.PUT, "/api/settings/ai/providers/local", body: ["kind": "ollama", "name": "Ollama", "model": "llama3.2", "base_url": "http://127.0.0.1:11434"])
             let (_, switched) = try await app.json(.PUT, "/api/settings/ai/default", body: ["provider_id": "local"])

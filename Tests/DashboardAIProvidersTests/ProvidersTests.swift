@@ -171,7 +171,7 @@ import Vapor
 
     @Test func standardRegistryCoversEveryKind() throws {
         let registry = AIProviderRegistry.standard(claudeExecutable: "/stub/claude")
-        #expect(Set(registry.kinds) == Set(AIProviderKind.allCases))
+        #expect(Set(registry.kinds) == Set(AIProviderKind.allCases).subtracting([.huggingface, .openrouter]), "vendor modules register the rest")
         #expect((try registry.make(AIProviderConfig(id: "x", kind: .claudeCode, name: "x", model: "sonnet")) as? ClaudeCodeProvider)?.executable == "/stub/claude")
         #expect(try registry.make(AIProviderConfig(id: "x", kind: .apple, name: "x", model: "system")) is AnyLanguageModelProvider)
     }

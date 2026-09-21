@@ -11,12 +11,15 @@ public struct AIProviderDTO: Codable, Equatable, Sendable {
     public let maxTokens: Int?
     public let pricing: AIPricing?
     public let hasAPIKey: Bool
+    /// The registered OAuth app's client id (the secret never leaves the server).
+    public let oauthClientId: String?
 
     enum CodingKeys: String, CodingKey {
         case id, kind, name, model, pricing
         case baseURL = "base_url"
         case maxTokens = "max_tokens"
         case hasAPIKey = "has_api_key"
+        case oauthClientId = "oauth_client_id"
     }
 
     public init(_ provider: AIProviderConfig) {
@@ -28,6 +31,7 @@ public struct AIProviderDTO: Codable, Equatable, Sendable {
         maxTokens = provider.maxTokens
         pricing = provider.pricing
         hasAPIKey = provider.hasAPIKey
+        oauthClientId = provider.oauth?.clientId
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -40,6 +44,7 @@ public struct AIProviderDTO: Codable, Equatable, Sendable {
         try c.encode(maxTokens, forKey: .maxTokens)
         try c.encode(pricing, forKey: .pricing)
         try c.encode(hasAPIKey, forKey: .hasAPIKey)
+        try c.encode(oauthClientId, forKey: .oauthClientId)
     }
 }
 
@@ -74,15 +79,16 @@ public struct UpsertAIProviderRequest: Codable, Sendable {
     public var apiKey: String?
     public var maxTokens: Int?
     public var pricing: AIPricing?
+    public var oauth: OAuthClientSettings?
 
     enum CodingKeys: String, CodingKey {
-        case kind, name, model, pricing
+        case kind, name, model, pricing, oauth
         case baseURL = "base_url"
         case apiKey = "api_key"
         case maxTokens = "max_tokens"
     }
 
-    public init(kind: AIProviderKind, name: String, model: String, baseURL: String? = nil, apiKey: String? = nil, maxTokens: Int? = nil, pricing: AIPricing? = nil) {
+    public init(kind: AIProviderKind, name: String, model: String, baseURL: String? = nil, apiKey: String? = nil, maxTokens: Int? = nil, pricing: AIPricing? = nil, oauth: OAuthClientSettings? = nil) {
         self.kind = kind
         self.name = name
         self.model = model
@@ -90,6 +96,7 @@ public struct UpsertAIProviderRequest: Codable, Sendable {
         self.apiKey = apiKey
         self.maxTokens = maxTokens
         self.pricing = pricing
+        self.oauth = oauth
     }
 
     /// Builds the domain value, carrying over a key the request did not touch.
@@ -99,7 +106,16 @@ public struct UpsertAIProviderRequest: Codable, Sendable {
         case .some(""): nil
         case let .some(value): value
         }
-        return try AIProviderConfig(id: id, kind: kind, name: name, model: model, baseURL: baseURL, apiKey: key, maxTokens: maxTokens, pricing: pricing)
+        return try AIProviderConfig(id: id, kind: kind, name: name, model: model, baseURL: baseURL, apiKey: key, maxTokens: maxTokens, pricing: pricing, oauth: oauth)
+    }
+}
+
+/// Where the browser must go to sign a provider in.
+public struct SignInResponse: Codable, Equatable, Sendable {
+    public let url: String
+
+    public init(url: String) {
+        self.url = url
     }
 }
 

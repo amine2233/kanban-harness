@@ -1,4 +1,5 @@
 import CascadeKit
+import DashboardAI
 import DashboardRuntime
 import DashboardService
 import Vapor
@@ -42,6 +43,7 @@ extension Vapor.Request {
     public var projects: ProjectService { services.make(ProjectServiceKey.self) }
     public var settings: SettingsService { services.make(SettingsServiceKey.self) }
     public var aiConfig: any AIConfigCommands { services.make(AIConfigCommandsKey.self) }
+    public var signIn: any SignInCommands { services.make(SignInCommandsKey.self) }
 }
 
 func registerServices(_ app: Vapor.Application, config: ServerConfig) async throws {

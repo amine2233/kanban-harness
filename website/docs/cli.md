@@ -54,8 +54,11 @@ dashboard settings set [--default-storage sqlite] [--cors-origin URL ...] [--cle
 dashboard ai providers list
 dashboard ai providers add <id> --kind K --model M [--name N] [--base-url URL] [--api-key KEY] \
                                [--max-tokens N] [--input-price USD --output-price USD]
+                               [--oauth-client-id ID [--oauth-client-secret S]]
 dashboard ai providers remove <id>
 dashboard ai providers default <id>
+dashboard ai providers login <id> [--no-open] [--timeout S]   # browser sign-in (openrouter, huggingface)
+dashboard ai providers logout <id>
 
 dashboard ai ticket <project> "idea" [--board B] [--provider P] [--stream] [--create [--column C]]
 ```

@@ -6,9 +6,13 @@ import {
   KEYED_KINDS,
   KIND_BASE_URL,
   KIND_LABELS,
+  OAUTH_APP_KINDS,
+  SIGN_IN_KINDS,
+  useBeginSignInMutation,
   useGetAIConfigQuery,
   useRemoveAIProviderMutation,
   useSetDefaultAIProviderMutation,
+  useSignOutMutation,
   useUpsertAIProviderMutation,
 } from '@mvp/state'
 import {
@@ -35,9 +39,16 @@ export function AIProvidersCard() {
   const { data, isLoading, error } = useGetAIConfigQuery()
   const [setDefault] = useSetDefaultAIProviderMutation()
   const [remove, removal] = useRemoveAIProviderMutation()
+  const [beginSignIn, signIn] = useBeginSignInMutation()
+  const [signOut] = useSignOutMutation()
   const [dialog, setDialog] = useState<Dialog>()
+  const landing = signInLanding()
   const close = () => {
     setDialog(undefined)
+  }
+  const startSignIn = async (id: string) => {
+    const outcome = await beginSignIn(id)
+    if (outcome.data) window.open(outcome.data.url, '_blank', 'noopener')
   }
 
   return (
@@ -65,6 +76,21 @@ export function AIProvidersCard() {
       {error && (
         <Banner tone="danger" title="Cannot load AI providers">
           {errorMessage(error)}
+        </Banner>
+      )}
+      {landing?.signedIn && (
+        <Banner tone="success" title={`Signed in: ${landing.signedIn}`}>
+          The provider can draft now.
+        </Banner>
+      )}
+      {landing?.error && (
+        <Banner tone="danger" title="Sign-in failed">
+          {landing.error}
+        </Banner>
+      )}
+      {signIn.error && (
+        <Banner tone="danger" title="Cannot start the sign-in">
+          {errorMessage(signIn.error)}
         </Banner>
       )}
       {data?.providers.length === 0 && <p className="f5 gray ma0">No provider configured yet.</p>}
@@ -101,6 +127,23 @@ export function AIProvidersCard() {
                     ? 'key set'
                     : 'no key'}
               </Badge>
+              {SIGN_IN_KINDS.has(provider.kind) && !provider.has_api_key && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={OAUTH_APP_KINDS.has(provider.kind) && !provider.oauth_client_id}
+                  title={
+                    OAUTH_APP_KINDS.has(provider.kind) && !provider.oauth_client_id
+                      ? 'Set the OAuth app client id first (Edit)'
+                      : undefined
+                  }
+                  onClick={() => {
+                    void startSignIn(provider.id)
+                  }}
+                >
+                  Sign in
+                </Button>
+              )}
               <Menu
                 label={`${provider.name} actions`}
                 items={[
@@ -110,6 +153,16 @@ export function AIProvidersCard() {
                       setDialog({ kind: 'edit', provider })
                     },
                   },
+                  ...(SIGN_IN_KINDS.has(provider.kind) && provider.has_api_key
+                    ? [
+                        {
+                          label: 'Sign out',
+                          onSelect: () => {
+                            void signOut(provider.id)
+                          },
+                        },
+                      ]
+                    : []),
                   {
                     label: 'Make default',
                     disabled: data.default_provider === provider.id,
@@ -159,7 +212,18 @@ const MODEL_PLACEHOLDER: Record<AIProviderKind, string> = {
   openai: 'gpt-5',
   gemini: 'gemini-2.5-flash',
   ollama: 'llama3.2',
+  huggingface: 'Qwen/Qwen2.5-7B-Instruct',
+  openrouter: 'meta-llama/llama-3.3-70b-instruct:free',
   claude_code: 'sonnet',
+}
+
+/** What `/api/auth/callback` appended when it sent the browser back here. */
+function signInLanding(): { signedIn?: string; error?: string } | undefined {
+  const params = new URLSearchParams(window.location.search)
+  const signedIn = params.get('signed_in')
+  const error = params.get('sign_in_error')
+  if (!signedIn && !error) return undefined
+  return { ...(signedIn ? { signedIn } : {}), ...(error ? { error } : {}) }
 }
 
 function ProviderDialog({
@@ -176,6 +240,8 @@ function ProviderDialog({
   const [baseUrl, setBaseUrl] = useState(provider?.base_url ?? '')
   const [apiKey, setApiKey] = useState('')
   const [clearKey, setClearKey] = useState(false)
+  const [oauthClientId, setOauthClientId] = useState(provider?.oauth_client_id ?? '')
+  const [oauthClientSecret, setOauthClientSecret] = useState('')
   const [maxTokens, setMaxTokens] = useState(
     provider?.max_tokens === null || !provider ? '' : String(provider.max_tokens),
   )
@@ -207,6 +273,14 @@ function ProviderDialog({
               output_per_million: Number(outputPrice || 0),
             },
       ...(clearKey ? { api_key: '' } : apiKey ? { api_key: apiKey } : {}),
+      ...(OAUTH_APP_KINDS.has(kind) && oauthClientId.trim() !== ''
+        ? {
+            oauth: {
+              client_id: oauthClientId.trim(),
+              ...(oauthClientSecret ? { client_secret: oauthClientSecret } : {}),
+            },
+          }
+        : {}),
     }
     const outcome = await upsert({ id, body })
     if (outcome.data) onClose()
@@ -314,7 +388,37 @@ function ProviderDialog({
                 Clear the stored key
               </label>
             )}
+            {SIGN_IN_KINDS.has(kind) && (
+              <p className="f6 gray mt0 mb2">
+                Or leave it empty and use <b>Sign in</b> on the provider once saved.
+              </p>
+            )}
           </>
+        )}
+        {OAUTH_APP_KINDS.has(kind) && (
+          <Row className="mb2">
+            <Input
+              name="provider-oauth-client-id"
+              label="OAuth app client id (for Sign in)"
+              placeholder="from huggingface.co/settings/applications"
+              value={oauthClientId}
+              className="flex-auto"
+              onChange={(e) => {
+                setOauthClientId(e.target.value)
+              }}
+            />
+            <Input
+              name="provider-oauth-client-secret"
+              label="OAuth app secret (optional)"
+              type="password"
+              autoComplete="off"
+              value={oauthClientSecret}
+              className="flex-auto"
+              onChange={(e) => {
+                setOauthClientSecret(e.target.value)
+              }}
+            />
+          </Row>
         )}
         <Row className="mb2">
           <Input

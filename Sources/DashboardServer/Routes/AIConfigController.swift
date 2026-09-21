@@ -1,3 +1,4 @@
+import DashboardAI
 import DashboardAPI
 import DashboardDomain
 import DashboardRuntime
@@ -11,6 +12,44 @@ struct AIConfigController: RouteCollection {
         ai.put("default", use: setDefault)
         ai.put("providers", ":provider", use: upsert)
         ai.delete("providers", ":provider", use: remove)
+        ai.post("providers", ":provider", "sign-in", use: beginSignIn)
+        ai.delete("providers", ":provider", "credential", use: signOut)
+        routes.get("auth", "callback", use: completeSignIn)
+    }
+
+    // MARK: Browser sign-in (OAuth / PKCE)
+
+    /// The vendor sends the user back to this server's own `/api/auth/callback`.
+    func beginSignIn(req: Request) async throws -> SignInResponse {
+        let id = req.parameters.get("provider") ?? ""
+        let host = req.headers.first(name: .host) ?? "127.0.0.1"
+        guard let callback = URL(string: "http://\(host)/api/auth/callback") else { throw Abort(.badRequest, reason: "bad Host header") }
+        return SignInResponse(url: try await req.signIn.begin(providerId: id, callback: callback).absoluteString)
+    }
+
+    /// Top-level navigation from the vendor: lands the user back in Settings either way.
+    func completeSignIn(req: Request) async throws -> Response {
+        let state: String? = req.query["state"]
+        let code: String? = req.query["code"]
+        let error: String? = req.query["error_description"] ?? req.query["error"]
+        guard let state, let code, error == nil else {
+            return req.redirect(to: "/settings?sign_in_error=" + Self.encode(error ?? "the vendor sent no code"))
+        }
+        do {
+            let id = try await req.signIn.complete(state: state, code: code)
+            return req.redirect(to: "/settings?signed_in=" + Self.encode(id))
+        } catch {
+            return req.redirect(to: "/settings?sign_in_error=" + Self.encode(error.localizedDescription))
+        }
+    }
+
+    func signOut(req: Request) async throws -> AIConfigDTO {
+        try await req.signIn.signOut(providerId: req.parameters.get("provider") ?? "")
+        return AIConfigDTO(try await req.aiConfig.current())
+    }
+
+    private static func encode(_ text: String) -> String {
+        text.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
     }
 
     func show(req: Request) async throws -> AIConfigDTO {

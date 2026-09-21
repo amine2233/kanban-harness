@@ -25,6 +25,11 @@ public struct RuntimeConfig: Sendable, Equatable {
         (home as NSString).appendingPathComponent(Self.settingsFileName)
     }
 
+    /// Provider secrets (API keys, OAuth tokens), kept apart from the shareable config file.
+    public var credentialsPath: String {
+        (home as NSString).appendingPathComponent("credentials.json")
+    }
+
     /// `config.yaml`/`config.yml` when one exists, otherwise `config.json` (created on first save).
     public var configPath: String {
         let candidates = Self.configFileNames.map { (home as NSString).appendingPathComponent($0) }

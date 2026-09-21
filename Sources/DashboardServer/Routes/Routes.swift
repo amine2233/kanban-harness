@@ -7,6 +7,7 @@ extension Settings: Content {}
 extension AIConfigDTO: Content {}
 extension UpsertAIProviderRequest: Content {}
 extension SetDefaultAIProviderRequest: Content {}
+extension SignInResponse: Content {}
 extension DraftTicketRequest: Content {}
 extension DraftTicketResponse: Content {}
 extension UpdateSettingsRequest: Content {}

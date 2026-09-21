@@ -77,11 +77,13 @@ public actor AssistantService: AssistantCommands {
     private let aiConfig: any AIConfigCommands
     private let boards: any BoardCommands
     private let registry: AIProviderRegistry
+    private let signIn: (any SignInCommands)?
 
-    public init(aiConfig: any AIConfigCommands, boards: any BoardCommands, registry: AIProviderRegistry) {
+    public init(aiConfig: any AIConfigCommands, boards: any BoardCommands, registry: AIProviderRegistry, signIn: (any SignInCommands)? = nil) {
         self.aiConfig = aiConfig
         self.boards = boards
         self.registry = registry
+        self.signIn = signIn
     }
 
     public nonisolated func streamTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) -> AsyncThrowingStream<AssistantEvent, any Error> {
@@ -194,7 +196,8 @@ public actor AssistantService: AssistantCommands {
             chosen = config.defaultProvider
             guard chosen != nil else { throw .remote(code: "AI_NOT_CONFIGURED", message: "no AI provider configured — add one in Settings → AI providers") }
         }
-        let selected = chosen!
+        var selected = chosen!
+        if let signIn { selected = try await signIn.refreshed(selected) }
         do {
             return (try registry.make(selected), selected)
         } catch {

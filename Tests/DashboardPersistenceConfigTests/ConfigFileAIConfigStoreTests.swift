@@ -24,7 +24,8 @@ import Testing
         let ai = try #require(raw["ai"] as? [String: Any])
         #expect(ai["default_provider"] as? String == "claude")
         #expect(ai["provider_ids"] as? [String] == ["claude"])
-        #expect(((ai["providers"] as? [String: Any])?["claude"] as? [String: Any])?["api_key"] as? String == "sk-1")
+        #expect(((ai["providers"] as? [String: Any])?["claude"] as? [String: Any])?["api_key"] == nil, "secrets go to the credential store")
+        #expect(try await store.load().provider("claude")?.apiKey == "sk-1")
         #expect((((ai["providers"] as? [String: Any])?["claude"] as? [String: Any])?["pricing"] as? [String: Double])?["output_per_million"] == 15)
         #expect(try await store.load().provider("claude")?.pricing?.inputPerMillion == 3)
         let mode = try #require(FileManager.default.attributesOfItem(atPath: store.path)[.posixPermissions] as? Int)
@@ -73,6 +74,37 @@ import Testing
         try await withEnv.save(try await withEnv.load())
         let raw = try String(contentsOfFile: file, encoding: .utf8)
         #expect(!raw.contains("sk-from-env"), "a key that came from the environment is not written to disk")
+    }
+
+    @Test func secretsResolveEnvironmentThenStoreThenLegacyFile() async throws {
+        let file = try path("config.json")
+        try #"{"ai": {"provider_ids": ["hf"], "providers": {"hf": {"kind": "huggingface", "model": "m", "api_key": "hf_legacy", "oauth": {"client_id": "app1"}}}}}"#
+            .write(toFile: file, atomically: true, encoding: .utf8)
+        let credentials = InMemoryCredentialStore()
+        let store = ConfigFileAIConfigStore(path: file, credentials: credentials, environment: [:])
+        #expect(try await store.load().provider("hf")?.apiKey == "hf_legacy")
+        #expect(try await store.load().provider("hf")?.oauth == OAuthClientSettings(clientId: "app1"))
+
+        try await credentials.set(Credential(secret: "hf_stored", refreshToken: "r"), for: "hf")
+        #expect(try await store.load().provider("hf")?.apiKey == "hf_stored")
+        let env = ConfigFileAIConfigStore(path: file, credentials: credentials, environment: ["MVP_DASHBOARD_AI_PROVIDERS_HF_API_KEY": "hf_env"])
+        #expect(try await env.load().provider("hf")?.apiKey == "hf_env")
+
+        try await store.save(try await store.load())
+        #expect(!(try String(contentsOfFile: file, encoding: .utf8)).contains("hf_legacy"), "a save moves the legacy key out of the file")
+        #expect(try await credentials.get("hf")?.refreshToken == "r", "an unchanged secret keeps its refresh data")
+
+        try await store.save(.empty)
+        #expect(try await credentials.get("hf") == nil, "removing a provider forgets its credential")
+    }
+
+    @Test func fileCredentialStoreSatisfiesContractWithPrivatePermissions() async throws {
+        let store = FileCredentialStore(path: try path("credentials.json"))
+        try await StoreContract.verify(store)
+        try await store.set(Credential(secret: "x"), for: "p")
+        let mode = try #require(FileManager.default.attributesOfItem(atPath: store.path)[.posixPermissions] as? Int)
+        #expect(mode & 0o777 == 0o600)
+        try await StoreContract.verify(InMemoryCredentialStore())
     }
 
     @Test func saveKeepsOtherTopLevelSections() async throws {

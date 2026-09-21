@@ -54,20 +54,27 @@ ai:
         output_per_million: 15
 ```
 
-| Field        | Meaning                                                                                              |
-| ------------ | ---------------------------------------------------------------------------------------------------- |
-| `kind`       | `apple`, `anthropic`, `openai`, `gemini`, `ollama`, `claude_code` — see [Providers](../ai/providers) |
-| `model`      | passed to the vendor (`sonnet`, `gpt-5`, `llama3.2`, `system` for Apple)                             |
-| `base_url`   | optional; the vendor default otherwise (OpenAI-compatible servers: their `/v1` URL)                  |
-| `api_key`    | written to the file with mode `0600`; never returned by the API (only `has_api_key`)                 |
-| `max_tokens` | response limit                                                                                       |
-| `pricing`    | USD per million input / output tokens; prices a draft when the vendor reports no cost                |
+| Field        | Meaning                                                                                                                           |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`       | `apple`, `anthropic`, `openai`, `gemini`, `ollama`, `huggingface`, `openrouter`, `claude_code` — see [Providers](../ai/providers) |
+| `model`      | passed to the vendor (`sonnet`, `gpt-5`, `llama3.2`, `system` for Apple)                                                          |
+| `base_url`   | optional; the vendor default otherwise (OpenAI-compatible servers: their `/v1` URL)                                               |
+| `api_key`    | accepted here for hand-written files; saved to `credentials.json` on the next write                                               |
+| `oauth`      | `client_id` / `client_secret` of the OAuth app registered at the vendor (Hugging Face sign-in)                                    |
+| `max_tokens` | response limit                                                                                                                    |
+| `pricing`    | USD per million input / output tokens; prices a draft when the vendor reports no cost                                             |
 
 `provider_ids` exists because swift-configuration cannot enumerate keys; keep it in sync
 when editing by hand (the web and CLI do).
 
-**Keys from the environment**: `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` overrides the file
-and is never written back — the way to keep secrets out of the file entirely.
+**Where secrets live** — resolved in this order:
+
+1. `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` in the environment (never written anywhere);
+2. `credentials.json` next to the config file, mode `0600`: pasted keys and OAuth tokens
+   (with refresh token and expiry), one entry per provider id;
+3. a legacy `api_key` in the config file — moved to `credentials.json` on the next save.
+
+So `config.yaml` can be committed or shared; `credentials.json` never should be.
 
 ## Environment variables
 

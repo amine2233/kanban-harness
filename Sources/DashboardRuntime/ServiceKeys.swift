@@ -51,8 +51,16 @@ public enum BoardCommandsKey: ServiceKey {
     public typealias Value = any BoardCommands
 }
 
+public enum CredentialStoreKey: ServiceKey {
+    public typealias Value = any CredentialStore
+}
+
 public enum AIConfigStoreKey: ServiceKey {
     public typealias Value = any AIConfigStore
+}
+
+public enum SignInCommandsKey: ServiceKey {
+    public typealias Value = any SignInCommands
 }
 
 public enum AIConfigCommandsKey: ServiceKey {

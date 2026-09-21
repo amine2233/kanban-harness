@@ -1,4 +1,5 @@
 import DashboardDomain
+import DashboardOAuth
 import Foundation
 
 /// One structured-output request: a system prompt, a user prompt and the
@@ -102,10 +103,13 @@ extension AIProvider {
     }
 }
 
-/// Maps a kind to an implementation; registered by the composition root.
+/// Maps a kind to an implementation — and, for vendors that support it, to a
+/// browser sign-in; registered by the composition root.
 public struct AIProviderRegistry: Sendable {
     public typealias Factory = @Sendable (AIProviderConfig) -> any AIProvider
+    public typealias SignInFactory = @Sendable (AIProviderConfig) throws -> any ProviderSignIn
     private var factories: [AIProviderKind: Factory] = [:]
+    private var signIns: [AIProviderKind: SignInFactory] = [:]
 
     public init() {}
 
@@ -113,12 +117,22 @@ public struct AIProviderRegistry: Sendable {
         factories[kind] = factory
     }
 
+    public mutating func registerSignIn(_ kind: AIProviderKind, _ factory: @escaping SignInFactory) {
+        signIns[kind] = factory
+    }
+
     public func make(_ config: AIProviderConfig) throws -> any AIProvider {
         guard let factory = factories[config.kind] else { throw AIProviderError.notConfigured("no implementation for kind '\(config.kind.rawValue)'") }
         return factory(config)
     }
 
+    public func signIn(for config: AIProviderConfig) throws -> any ProviderSignIn {
+        guard let factory = signIns[config.kind] else { throw AIProviderError.notConfigured("\(config.kind.rawValue) has no browser sign-in — paste an API key") }
+        return try factory(config)
+    }
+
     public var kinds: [AIProviderKind] { Array(factories.keys) }
+    public var signInKinds: [AIProviderKind] { Array(signIns.keys) }
 }
 
 /// Pulls the first JSON object out of model text: tolerates prose and ``` fences.

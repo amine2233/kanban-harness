@@ -87,13 +87,15 @@ the same column and linked in the same transaction — if one is invalid, nothin
 
 ## AI
 
-| Method   | Path                              | Body / result                                                                                                             |
-| -------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `GET`    | `/settings/ai`                    | `{providers: [{id, kind, name, model, base_url, max_tokens, pricing, has_api_key}], default_provider}`                    |
-| `PUT`    | `/settings/ai/providers/{id}`     | `{kind, name, model, base_url?, api_key?, max_tokens?, pricing?}` — `api_key` absent keeps the stored key, `""` clears it |
-| `DELETE` | `/settings/ai/providers/{id}`     |                                                                                                                           |
-| `PUT`    | `/settings/ai/default`            | `{provider_id}`                                                                                                           |
-| `POST`   | `/projects/{id}/ai/tickets/draft` | `{idea, board_id, provider?}`                                                                                             |
+| Method   | Path                                     | Body / result                                                                                                                     |
+| -------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`    | `/settings/ai`                           | `{providers: [{id, kind, name, model, base_url, max_tokens, pricing, has_api_key, oauth_client_id}], default_provider}`           |
+| `PUT`    | `/settings/ai/providers/{id}`            | `{kind, name, model, base_url?, api_key?, max_tokens?, pricing?, oauth?}` — `api_key` absent keeps the stored key, `""` clears it |
+| `DELETE` | `/settings/ai/providers/{id}`            |                                                                                                                                   |
+| `PUT`    | `/settings/ai/default`                   | `{provider_id}`                                                                                                                   |
+| `POST`   | `/settings/ai/providers/{id}/sign-in`    | `{url}` to open in the browser; the vendor redirects to `GET /api/auth/callback` on this server                                   |
+| `DELETE` | `/settings/ai/providers/{id}/credential` | forgets the stored key/token                                                                                                      |
+| `POST`   | `/projects/{id}/ai/tickets/draft`        | `{idea, board_id, provider?}`                                                                                                     |
 
 The draft endpoint answers JSON (`{draft, provider, model, usage}`) — or, with
 `Accept: text/event-stream`, **server-sent events**:

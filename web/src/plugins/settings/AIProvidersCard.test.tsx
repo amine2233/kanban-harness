@@ -19,6 +19,7 @@ const claude: AIProvider = {
   max_tokens: null,
   pricing: null,
   has_api_key: true,
+  oauth_client_id: null,
 }
 
 function renderCard() {
@@ -158,4 +159,63 @@ describe('AIProvidersCard', () => {
       expect(screen.queryByRole('listitem', { name: 'Claude' })).not.toBeInTheDocument()
     })
   })
+})
+
+const router: AIProvider = {
+  ...claude,
+  id: 'router',
+  kind: 'openrouter',
+  name: 'OpenRouter',
+  model: 'meta-llama/llama-3.3-70b-instruct:free',
+  has_api_key: false,
+}
+
+test('sign in opens the vendor URL in a new tab', async () => {
+  stubApi({
+    'GET /api/settings/ai': () => ({
+      body: { providers: [router], default_provider: 'router' } satisfies AIConfig,
+    }),
+    'POST /api/settings/ai/providers/router/sign-in': () => ({
+      body: { url: 'https://openrouter.ai/auth?callback_url=x' },
+    }),
+  })
+  const open = vi.fn()
+  vi.stubGlobal('open', open)
+  renderCard()
+  const row = await screen.findByRole('listitem', { name: 'OpenRouter' })
+  expect(within(row).getByText('no key')).toBeInTheDocument()
+  await userEvent.click(within(row).getByRole('button', { name: 'Sign in' }))
+  await waitFor(() => {
+    expect(open).toHaveBeenCalledWith(
+      'https://openrouter.ai/auth?callback_url=x',
+      '_blank',
+      'noopener',
+    )
+  })
+})
+
+test('sign out forgets the credential of a signed-in provider', async () => {
+  let config: AIConfig = {
+    providers: [{ ...router, has_api_key: true }],
+    default_provider: 'router',
+  }
+  const api = stubApi({
+    'GET /api/settings/ai': () => ({ body: config }),
+    'DELETE /api/settings/ai/providers/router/credential': () => {
+      config = { ...config, providers: [router] }
+      return { body: config }
+    },
+  })
+  renderCard()
+  const row = await screen.findByRole('listitem', { name: 'OpenRouter' })
+  expect(within(row).getByText('key set')).toBeInTheDocument()
+  expect(within(row).queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument()
+  await userEvent.click(within(row).getByRole('button', { name: 'OpenRouter actions' }))
+  await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }))
+  await waitFor(() => {
+    expect(
+      api.calls.some((c) => c.key === 'DELETE /api/settings/ai/providers/router/credential'),
+    ).toBe(true)
+  })
+  expect(await within(row).findByText('no key')).toBeInTheDocument()
 })

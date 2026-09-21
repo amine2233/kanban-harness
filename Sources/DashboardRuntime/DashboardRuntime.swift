@@ -4,6 +4,8 @@ import DashboardAIProviders
 import DashboardPersistenceConfig
 import DashboardPersistenceFluent
 import DashboardPersistenceJSON
+import DashboardProviderHuggingFace
+import DashboardProviderOpenRouter
 import DashboardService
 import FluentKit
 import Foundation
@@ -58,8 +60,11 @@ public enum DashboardRuntime {
         container.register(SettingsServiceKey.self) { c in
             SettingsService(store: c.make(SettingsStoreKey.self), changes: c.make(ChangeBroadcasterKey.self))
         }
+        container.register(CredentialStoreKey.self) { c in
+            FileCredentialStore(path: c.make(RuntimeConfigKey.self).credentialsPath)
+        }
         container.register(AIConfigStoreKey.self) { c in
-            ConfigFileAIConfigStore(path: c.make(RuntimeConfigKey.self).configPath)
+            ConfigFileAIConfigStore(path: c.make(RuntimeConfigKey.self).configPath, credentials: c.make(CredentialStoreKey.self))
         }
         container.register(AIConfigCommandsKey.self) { c in
             AIConfigService(store: c.make(AIConfigStoreKey.self), changes: c.make(ChangeBroadcasterKey.self))
@@ -70,10 +75,26 @@ public enum DashboardRuntime {
         container.register(SettingsCommandsKey.self) { c in c.make(SettingsServiceKey.self) }
         container.register(BoardCommandsKey.self) { c in LocalBoardCommands(projects: c.make(ProjectServiceKey.self)) }
         container.register(AIProviderRegistryKey.self) { c in
-            AIProviderRegistry.standard(claudeExecutable: c.make(RuntimeConfigKey.self).claudeExecutable)
+            var registry = AIProviderRegistry.standard(claudeExecutable: c.make(RuntimeConfigKey.self).claudeExecutable)
+            HuggingFaceProvider.register(in: &registry)
+            OpenRouterProvider.register(in: &registry)
+            return registry
+        }
+        container.register(SignInCommandsKey.self) { c in
+            ProviderSignInService(
+                aiConfig: c.make(AIConfigCommandsKey.self),
+                credentials: c.make(CredentialStoreKey.self),
+                registry: c.make(AIProviderRegistryKey.self),
+                changes: c.make(ChangeBroadcasterKey.self)
+            )
         }
         container.register(AssistantCommandsKey.self) { c in
-            AssistantService(aiConfig: c.make(AIConfigCommandsKey.self), boards: c.make(BoardCommandsKey.self), registry: c.make(AIProviderRegistryKey.self))
+            AssistantService(
+                aiConfig: c.make(AIConfigCommandsKey.self),
+                boards: c.make(BoardCommandsKey.self),
+                registry: c.make(AIProviderRegistryKey.self),
+                signIn: c.make(SignInCommandsKey.self)
+            )
         }
     }
 

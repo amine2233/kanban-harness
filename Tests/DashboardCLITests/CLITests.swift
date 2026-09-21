@@ -295,7 +295,8 @@ struct CLI {
         let provider = try #require((added["providers"] as? [[String: Any]])?.first)
         #expect(provider["has_api_key"] as? Bool == true)
         #expect(provider["api_key"] == nil, "the key is never printed")
-        #expect(try String(contentsOfFile: cli.home + "/config.json", encoding: .utf8).contains("sk-cli"))
+        #expect(!(try String(contentsOfFile: cli.home + "/config.json", encoding: .utf8)).contains("sk-cli"), "secrets never land in the config file")
+        #expect(try String(contentsOfFile: cli.home + "/credentials.json", encoding: .utf8).contains("sk-cli"))
 
         _ = try cli.json("ai", "providers", "add", "local", "--kind", "ollama", "--model", "llama3.2", "--base-url", "http://127.0.0.1:11434")
         #expect((try cli.json("ai", "providers", "default", "local") as? [String: Any])?["default_provider"] as? String == "local")

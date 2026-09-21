@@ -27,6 +27,7 @@ const providers = {
       base_url: null,
       max_tokens: null,
       has_api_key: false,
+      oauth_client_id: null,
     },
     {
       id: 'local',
@@ -36,6 +37,7 @@ const providers = {
       base_url: null,
       max_tokens: null,
       has_api_key: false,
+      oauth_client_id: null,
     },
   ],
   default_provider: 'cc',

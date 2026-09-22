@@ -4,13 +4,15 @@
 
 **Symptom**: `[AsyncKit] Connection request timed out` errors occur when accessing workspace databases after WebSocket usage.
 
-**Root Cause**: 
+**Root Cause**:
+
 1. `SQLiteDatabasePool` actor serializes all database access requests
 2. Unbounded connection cache keeps all databases open indefinitely
 3. Single thread per connection (`numberOfThreads: 1`) limits throughput
 4. Actor queue buildup causes timeouts under load
 
 **Error Logs**:
+
 ```
 [AsyncKit] Connection request timed out. This might indicate a connection deadlock
 DashboardService.ServiceError.projectFolder(path: "", reason: "connectionRequestTimeout")
@@ -20,7 +22,8 @@ DashboardService.ServiceError.projectFolder(path: "", reason: "connectionRequest
 
 ## Solution Overview
 
-**Approach**: 
+**Approach**:
+
 1. Add YAML configuration for thread pool size
 2. Refactor `SQLiteDatabasePool` to eliminate actor serialization bottleneck
 3. Make database creation non-isolated (parallel)
@@ -28,6 +31,7 @@ DashboardService.ServiceError.projectFolder(path: "", reason: "connectionRequest
 5. Optionally parallelize queries in workspace load
 
 **Expected Result**:
+
 - No more connection timeouts
 - Configurable thread pool via `config.yaml`
 - 60% faster workspace loading (parallel queries)
@@ -50,7 +54,7 @@ public struct DatabaseConfig: Sendable, Equatable {
     /// SQLite supports concurrent reads, so 2+ threads can improve query throughput.
     /// Default: 2
     public var threadPoolSize: Int
-    
+
     public init(threadPoolSize: Int = 2) {
         self.threadPoolSize = max(1, threadPoolSize)  // Minimum 1 thread
     }
@@ -80,10 +84,10 @@ import Yams
 ///       thread_pool_size: 2
 public struct ConfigFileDatabaseConfigStore {
     public static let envPrefix = "mvp_dashboard"
-    
+
     public let path: String
     private let environment: [String: String]
-    
+
     public init(
         path: String,
         environment: [String: String] = ProcessInfo.processInfo.environment
@@ -91,13 +95,13 @@ public struct ConfigFileDatabaseConfigStore {
         self.path = path
         self.environment = environment
     }
-    
+
     public var isYAML: Bool {
         ["yaml", "yml"].contains((path as NSString).pathExtension.lowercased())
     }
-    
+
     // MARK: Read
-    
+
     public func load() async throws -> DatabaseConfig {
         let reader = try await reader()
         let db = reader.scoped(to: "database")
@@ -105,7 +109,7 @@ public struct ConfigFileDatabaseConfigStore {
             threadPoolSize: db.int(forKey: "thread_pool_size") ?? 2
         )
     }
-    
+
     private func reader() async throws -> ConfigReader {
         let env = EnvironmentVariablesProvider(environmentVariables: environment)
             .prefixKeys(with: ConfigKey([Self.envPrefix]))
@@ -121,9 +125,9 @@ public struct ConfigFileDatabaseConfigStore {
         }
         return ConfigReader(providers: [env, file])
     }
-    
+
     // MARK: Write
-    
+
     public func save(_ config: DatabaseConfig) async throws {
         var document = try readDocument()
         var database: [String: Any] = [:]
@@ -131,7 +135,7 @@ public struct ConfigFileDatabaseConfigStore {
         document["database"] = database
         try write(document)
     }
-    
+
     private func readDocument() throws -> [String: Any] {
         guard let data = try AtomicFile.read(path) else { return [:] }
         do {
@@ -143,7 +147,7 @@ public struct ConfigFileDatabaseConfigStore {
             throw PersistenceError.corrupt(path: path, reason: String(describing: error))
         }
     }
-    
+
     private func write(_ document: [String: Any]) throws {
         let data: Data
         do {
@@ -171,6 +175,7 @@ public struct ConfigFileDatabaseConfigStore {
 **Modification 1**: Update `SQLiteDatabase.init` (around line 13-29)
 
 **Before**:
+
 ```swift
 public init(
     configuration: SQLiteConfiguration,
@@ -180,7 +185,7 @@ public init(
     self.configuration = configuration
     self.logger = logger
     self.eventLoopGroup = eventLoopGroup
-    
+
     let threadPool = NIOThreadPool(numberOfThreads: 1)  // ← Hardcoded
     threadPool.start()
     self.threadPool = threadPool
@@ -188,6 +193,7 @@ public init(
 ```
 
 **After**:
+
 ```swift
 public init(
     configuration: SQLiteConfiguration,
@@ -198,7 +204,7 @@ public init(
     self.configuration = configuration
     self.logger = logger
     self.eventLoopGroup = eventLoopGroup
-    
+
     let threadPool = NIOThreadPool(numberOfThreads: numberOfThreads)  // ← Use parameter
     threadPool.start()
     self.threadPool = threadPool
@@ -219,19 +225,19 @@ public init(
 /// Internal cache actor for thread-safe database storage
 private actor DatabaseCache {
     private var databases: [String: SQLiteDatabase] = [:]
-    
+
     func get(_ path: String) -> SQLiteDatabase? {
         databases[path]
     }
-    
+
     func set(_ database: SQLiteDatabase, for path: String) {
         databases[path] = database
     }
-    
+
     func remove(_ path: String) -> SQLiteDatabase? {
         databases.removeValue(forKey: path)
     }
-    
+
     func all() -> [SQLiteDatabase] {
         Array(databases.values)
     }
@@ -240,7 +246,7 @@ private actor DatabaseCache {
 /// Manages per-path creation locks to prevent duplicate database initialization
 private actor CreationLockManager {
     private var locks: [String: Task<SQLiteDatabase, Error>] = [:]
-    
+
     func withLock<T>(
         for key: String,
         operation: @Sendable () async throws -> T
@@ -249,23 +255,23 @@ private actor CreationLockManager {
         if let existingTask = locks[key] {
             return try await existingTask.value as! T
         }
-        
+
         // Create new lock
         let task = Task<T, Error> {
             try await operation()
         }
-        
+
         locks[key] = task as! Task<SQLiteDatabase, Error>
-        
+
         defer {
             Task {
                 await self.removeLock(for: key)
             }
         }
-        
+
         return try await task.value
     }
-    
+
     private func removeLock(for key: String) {
         locks.removeValue(forKey: key)
     }
@@ -275,42 +281,43 @@ private actor CreationLockManager {
 **Replace `SQLiteDatabasePool` actor**:
 
 **Before**:
+
 ```swift
 public actor SQLiteDatabasePool {
     private let logger: Logger
     private let eventLoopGroup: EventLoopGroup
     private let threadPool: NIOThreadPool
     private var open: [String: SQLiteDatabase] = [:]
-    
+
     public init(
         logger: Logger,
         eventLoopGroup: EventLoopGroup = MultiThreadedEventLoopGroup.singleton
     ) {
         self.logger = logger
         self.eventLoopGroup = eventLoopGroup
-        
+
         let threadPool = NIOThreadPool(numberOfThreads: 6)
         threadPool.start()
         self.threadPool = threadPool
     }
-    
+
     public func database(at path: String) async throws -> SQLiteDatabase {
         if let existing = open[path] {
             return existing
         }
-        
+
         let configuration = SQLiteConfiguration(
             storage: .file(path: path),
             enableForeignKeys: true
         )
-        
+
         let database = SQLiteDatabase(
             configuration: configuration,
             logger: logger,
             eventLoopGroup: eventLoopGroup,
             threadPool: threadPool
         )
-        
+
         // Run migrations
         let migrations = Migrations()
         migrations.add(BoardModel.CreateMigration())
@@ -320,21 +327,21 @@ public actor SQLiteDatabasePool {
         migrations.add(CardModel.CreateFullTextSearchMigration())
         migrations.add(SectionModel.CreateMigration())
         migrations.add(PrefixModel.CreateMigration())
-        
+
         let migrator = Migrator(
             databases: .init(logging: false),
             migrations: migrations,
             logger: logger,
             on: database.eventLoopGroup.any()
         )
-        
+
         try await migrator.setupIfNeeded().get()
         try await migrator.prepareBatch().get()
-        
+
         open[path] = database
         return database
     }
-    
+
     public func shutdownAll() async throws {
         for database in open.values {
             try await database.shutdown()
@@ -345,6 +352,7 @@ public actor SQLiteDatabasePool {
 ```
 
 **After**:
+
 ```swift
 public actor SQLiteDatabasePool {
     private let cache = DatabaseCache()
@@ -353,7 +361,7 @@ public actor SQLiteDatabasePool {
     private let eventLoopGroup: EventLoopGroup
     private let threadPool: NIOThreadPool
     private let numberOfThreads: Int
-    
+
     public init(
         logger: Logger,
         eventLoopGroup: EventLoopGroup = MultiThreadedEventLoopGroup.singleton,
@@ -362,48 +370,48 @@ public actor SQLiteDatabasePool {
         self.logger = logger
         self.eventLoopGroup = eventLoopGroup
         self.numberOfThreads = numberOfThreads
-        
+
         let threadPool = NIOThreadPool(numberOfThreads: 6)
         threadPool.start()
         self.threadPool = threadPool
     }
-    
+
     /// Non-isolated database access - allows concurrent creation
     public nonisolated func database(at path: String) async throws -> SQLiteDatabase {
         // Fast path: check cache (isolated)
         if let existing = await cache.get(path) {
             return existing
         }
-        
+
         // Acquire creation lock to prevent duplicate work
         return try await creationLocks.withLock(for: path) {
             // Double-check cache (another task might have created it)
             if let existing = await cache.get(path) {
                 return existing
             }
-            
+
             // Create database (non-isolated, runs in parallel)
             let database = try await createDatabase(at: path)
-            
+
             // Store in cache (isolated)
             await cache.set(database, for: path)
-            
+
             return database
         }
     }
-    
+
     /// Creates and migrates a database - runs outside actor isolation for parallelism
     private nonisolated func createDatabase(at path: String) async throws -> SQLiteDatabase {
         let logger = self.logger
         let eventLoopGroup = self.eventLoopGroup
         let threadPool = self.threadPool
         let numberOfThreads = self.numberOfThreads
-        
+
         let configuration = SQLiteConfiguration(
             storage: .file(path: path),
             enableForeignKeys: true
         )
-        
+
         let database = SQLiteDatabase(
             configuration: configuration,
             logger: logger,
@@ -411,7 +419,7 @@ public actor SQLiteDatabasePool {
             threadPool: threadPool,
             numberOfThreads: numberOfThreads  // ← Pass configured thread count
         )
-        
+
         // Run migrations
         let migrations = Migrations()
         migrations.add(BoardModel.CreateMigration())
@@ -421,20 +429,20 @@ public actor SQLiteDatabasePool {
         migrations.add(CardModel.CreateFullTextSearchMigration())
         migrations.add(SectionModel.CreateMigration())
         migrations.add(PrefixModel.CreateMigration())
-        
+
         let migrator = Migrator(
             databases: .init(logging: false),
             migrations: migrations,
             logger: logger,
             on: database.eventLoopGroup.any()
         )
-        
+
         try await migrator.setupIfNeeded().get()
         try await migrator.prepareBatch().get()
-        
+
         return database
     }
-    
+
     public func shutdownAll() async throws {
         let databases = await cache.all()
         for database in databases {
@@ -445,6 +453,7 @@ public actor SQLiteDatabasePool {
 ```
 
 **Key Changes**:
+
 - `database(at:)` is now `nonisolated` - multiple calls can run concurrently
 - `DatabaseCache` actor provides thread-safe cache access
 - `CreationLockManager` prevents duplicate database creation (race condition)
@@ -460,6 +469,7 @@ public actor SQLiteDatabasePool {
 **Modification**: Load database config and pass to pool initialization
 
 **Add import** at top:
+
 ```swift
 import DashboardPersistenceConfig
 ```
@@ -467,6 +477,7 @@ import DashboardPersistenceConfig
 **Find the pool creation** (look for `SQLiteDatabasePool` initialization) and update:
 
 **Before**:
+
 ```swift
 let pool = SQLiteDatabasePool(
     logger: app.logger
@@ -474,6 +485,7 @@ let pool = SQLiteDatabasePool(
 ```
 
 **After**:
+
 ```swift
 // Load database configuration
 let dbConfigStore = ConfigFileDatabaseConfigStore(path: config.runtime.configPath)
@@ -493,6 +505,7 @@ let pool = SQLiteDatabasePool(
 **Modification**: Load database config for CLI workspace pool (around line 39)
 
 **Add import** at top:
+
 ```swift
 import DashboardPersistenceConfig
 ```
@@ -500,6 +513,7 @@ import DashboardPersistenceConfig
 **Find workspace pool creation** and update:
 
 **Before**:
+
 ```swift
 let workspaces = SQLiteDatabasePool(
     logger: logger["workspaces"]
@@ -507,6 +521,7 @@ let workspaces = SQLiteDatabasePool(
 ```
 
 **After**:
+
 ```swift
 // Load database configuration
 let dbConfigStore = ConfigFileDatabaseConfigStore(path: config.configPath)
@@ -528,6 +543,7 @@ let workspaces = SQLiteDatabasePool(
 **Modification**: Parallelize queries in `load()` method (around lines 59-75)
 
 **Before** (sequential):
+
 ```swift
 public func load() async throws -> Workspace {
     let sections = try await database.query(SectionModel.self).all()
@@ -535,12 +551,13 @@ public func load() async throws -> Workspace {
     let columns = try await database.query(ColumnModel.self).sort(\.$order).all()
     let cards = try await database.query(CardModel.self).sort(\.$order).all()
     let prefixes = try await database.query(PrefixModel.self).all()
-    
+
     // ... convert models to domain objects
 }
 ```
 
 **After** (parallel with `async let`):
+
 ```swift
 public func load() async throws -> Workspace {
     // Launch all queries concurrently
@@ -549,12 +566,12 @@ public func load() async throws -> Workspace {
     async let columns = database.query(ColumnModel.self).sort(\.$order).all()
     async let cards = database.query(CardModel.self).sort(\.$order).all()
     async let prefixes = database.query(PrefixModel.self).all()
-    
+
     // Wait for all to complete
     let (sectionsResult, boardsResult, columnsResult, cardsResult, prefixesResult) = try await (
         sections, boards, columns, cards, prefixes
     )
-    
+
     // ... convert models to domain objects (use *Result variables)
 }
 ```
@@ -571,18 +588,20 @@ Create or update the config file:
 
 ```yaml
 database:
-  thread_pool_size: 2  # 2 threads per SQLite connection (recommended)
+  thread_pool_size: 2 # 2 threads per SQLite connection (recommended)
 
 ai:
   # ... existing AI configuration
 ```
 
 **Recommended values**:
+
 - `thread_pool_size: 1` - Original (slowest, most stable)
 - `thread_pool_size: 2` - **Recommended** (good balance)
 - `thread_pool_size: 4` - High performance (for heavy usage)
 
 **Environment variable override**:
+
 ```bash
 export MVP_DASHBOARD_DATABASE_THREAD_POOL_SIZE=4
 ```
@@ -612,6 +631,7 @@ swift run dashboard-server
 ```
 
 **Environment variable test**:
+
 ```bash
 MVP_DASHBOARD_DATABASE_THREAD_POOL_SIZE=8 swift run dashboard-server
 # Should use 8 threads, not 4 from config file
@@ -649,6 +669,7 @@ wait
 ```
 
 **Load test with ApacheBench**:
+
 ```bash
 # Run server, then:
 ab -n 1000 -c 50 http://localhost:8080/api/projects/PROJECT_ID/kanban/v1/boards
@@ -710,6 +731,7 @@ wait
 ## Implementation Checklist
 
 ### Phase 1: Configuration Infrastructure
+
 - [ ] Create `Sources/DashboardDomain/DatabaseConfig.swift`
 - [ ] Create `Sources/DashboardPersistenceConfig/ConfigFileDatabaseConfigStore.swift`
 - [ ] Update `Sources/DashboardPersistenceFluent/SQLiteDatabase.swift`:
@@ -717,6 +739,7 @@ wait
   - [ ] Update thread pool creation to use parameter
 
 ### Phase 2: Actor Refactoring
+
 - [ ] Add `DatabaseCache` actor to `SQLiteDatabase.swift`
 - [ ] Add `CreationLockManager` actor to `SQLiteDatabase.swift`
 - [ ] Refactor `SQLiteDatabasePool`:
@@ -726,6 +749,7 @@ wait
   - [ ] Use `cache` and `creationLocks` for coordination
 
 ### Phase 3: Wire Configuration
+
 - [ ] Update `Sources/DashboardServer/Configure.swift`:
   - [ ] Import `DashboardPersistenceConfig`
   - [ ] Load database config
@@ -736,10 +760,12 @@ wait
   - [ ] Pass `threadPoolSize` to workspace pool init
 
 ### Phase 4: Optional Optimization
+
 - [ ] Update `Sources/DashboardPersistenceFluent/FluentWorkspaceStore.swift`:
   - [ ] Parallelize queries with `async let` in `load()` method
 
 ### Phase 5: Configuration
+
 - [ ] Create or update `~/.mvp-dashboard/config.yaml`:
   - [ ] Add `database:` section with `thread_pool_size: 2`
 
@@ -748,12 +774,14 @@ wait
 ## Why This Solution Works
 
 ### Problem
+
 - **Actor serialization**: All `database(at:)` calls queue behind the actor
 - **Migration bottleneck**: First access to a workspace blocks the entire queue while running migrations
 - **Single thread**: Only 1 thread per database limits read query throughput
 - **No limits**: Unbounded cache accumulates connections until resource exhaustion
 
 ### Solution
+
 - **Non-isolated creation**: `database(at:)` is `nonisolated`, allows concurrent calls
 - **Parallel migrations**: Multiple workspaces can initialize simultaneously
 - **Creation locks**: Prevent race conditions when multiple tasks access same workspace
@@ -761,6 +789,7 @@ wait
 - **Isolated cache**: `DatabaseCache` actor provides thread-safe storage without serializing all operations
 
 ### Result
+
 - ✅ Eliminates serialization bottleneck
 - ✅ Concurrent database initialization
 - ✅ No more connection timeouts
@@ -792,17 +821,20 @@ Each phase is independent - you can roll back selectively.
 ## Additional Notes
 
 ### SQLite Threading Model
+
 - SQLite supports multiple concurrent readers
 - Writes are serialized by SQLite itself (SERIALIZED mode)
 - 2+ threads allow read queries to run in parallel
 - Write throughput unchanged (SQLite limitation)
 
 ### Actor Isolation Best Practices
+
 - Use actors for state (cache dictionary)
 - Use `nonisolated` for CPU-bound work (database creation, migrations)
 - Combine both for thread-safety without serialization bottleneck
 
 ### Environment Variable Naming
+
 Format: `MVP_DASHBOARD_<SECTION>_<KEY>` (uppercase, underscores)
 Example: `MVP_DASHBOARD_DATABASE_THREAD_POOL_SIZE`
 

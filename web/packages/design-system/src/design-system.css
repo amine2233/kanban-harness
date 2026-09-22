@@ -1398,7 +1398,9 @@ body {
   border-radius: 50%;
   background: var(--ds-purple);
   color: white;
-  box-shadow: 0 4px 12px var(--ds-shadow-strong), 0 2px 4px var(--ds-shadow);
+  box-shadow:
+    0 4px 12px var(--ds-shadow-strong),
+    0 2px 4px var(--ds-shadow);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1406,7 +1408,9 @@ body {
 .ds-fab:hover {
   background: var(--ds-purple-strong);
   transform: scale(1.05);
-  box-shadow: 0 6px 16px var(--ds-shadow-strong), 0 4px 8px var(--ds-shadow);
+  box-shadow:
+    0 6px 16px var(--ds-shadow-strong),
+    0 4px 8px var(--ds-shadow);
 }
 
 .ds-fab:active {

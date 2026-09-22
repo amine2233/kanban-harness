@@ -1,6 +1,6 @@
 export { createStore, type AppDispatch, type AppStore } from './store'
 export { rootReducer, type RootState } from './reducer'
-export { useAppDispatch, useAppSelector } from './hooks'
+export { useAppDispatch, useAppSelector, useAppStore } from './hooks'
 
 export { baseApi, errorMessage, type ApiErrorBody } from './api/baseApi'
 export * from './api/kanbanApi'

@@ -2,8 +2,10 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import {
   resetDraft,
+  selectAssistant,
   streamDraft,
   useAppDispatch,
+  useAppStore,
   useGetAIConfigQuery,
 } from '@mvp/state'
 import { Button, Icon } from '@mvp/design-system'
@@ -22,6 +24,7 @@ interface Props {
 export function RegenerateDescription({ scope, title, currentDescription, onDescription }: Props) {
   const { data: ai } = useGetAIConfigQuery()
   const dispatch = useAppDispatch()
+  const store = useAppStore()
   const [loading, setLoading] = useState(false)
   const abort = useRef<() => void>(() => undefined)
 
@@ -39,12 +42,11 @@ export function RegenerateDescription({ scope, title, currentDescription, onDesc
         promise.abort()
       }
 
-      const result = await promise.unwrap()
-      if (result.draft.description) {
-        onDescription(result.draft.description)
-      }
-    } catch (error) {
-      // Handle cancellation or errors silently
+      await promise.unwrap()
+      const description = selectAssistant(store.getState()).result?.draft.description
+      if (description) onDescription(description)
+    } catch {
+      // cancelled or failed: nothing to deliver
     } finally {
       setLoading(false)
       dispatch(resetDraft())

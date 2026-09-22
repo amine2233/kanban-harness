@@ -38,6 +38,7 @@ The layering is **enforced by ESLint** (`no-restricted-imports` blocks in `eslin
 The dashboard uses **SQLite** databases with two distinct levels:
 
 #### 1. Registry Database (Server-Level)
+
 - **Location**: `~/.mvp-dashboard/projects.sqlite` (configurable via `home` setting)
 - **Purpose**: Stores the **project registry** (list of all projects, metadata, paths, settings)
 - **Lifetime**: Single database for the entire server instance
@@ -45,6 +46,7 @@ The dashboard uses **SQLite** databases with two distinct levels:
 - **Access**: Server-wide, shared across all requests
 
 #### 2. Workspace Databases (Per-Project)
+
 - **Location**: One `.sqlite` file **per project** (inside each project folder: `<project-path>/kanban.sqlite`)
 - **Purpose**: Stores **kanban workspace data** for that specific project:
   - Boards
@@ -61,9 +63,10 @@ The dashboard uses **SQLite** databases with two distinct levels:
 Database configuration (thread pool size, connection settings) is **server-wide** and applies to both registry and all workspace databases.
 
 Configuration file: `~/.mvp-dashboard/config.yaml`
+
 ```yaml
 database:
-  thread_pool_size: 2  # Threads per SQLite connection
+  thread_pool_size: 2 # Threads per SQLite connection
 ```
 
 Environment variable override: `MVP_DASHBOARD_DATABASE_THREAD_POOL_SIZE=4`
@@ -112,6 +115,7 @@ When switching projects in the sidebar:
 5. **Fetch if needed**: Loads data from backend if not cached
 
 **Cache key structure**:
+
 - Boards: `["listBoards", projectId]`
 - Columns: `["listColumns", { projectId, boardId }]`
 - Cards: `["listCards", { projectId, boardId }]`
@@ -146,6 +150,7 @@ SQLite File on Disk
 ### Main API Endpoints
 
 #### Projects
+
 ```
 GET    /api/projects              # List all projects
 POST   /api/projects              # Register new project
@@ -155,6 +160,7 @@ DELETE /api/projects/:id          # Unregister project
 ```
 
 #### Kanban (per-project)
+
 ```
 GET    /api/projects/:projectId/kanban/v1/boards
 POST   /api/projects/:projectId/kanban/v1/boards
@@ -174,6 +180,7 @@ DELETE /api/projects/:projectId/kanban/v1/boards/:boardId/cards/:cardId
 ```
 
 #### WebSocket Events
+
 ```
 WS     /api/events                # Real-time change notifications
 ```
@@ -185,8 +192,9 @@ WS     /api/events                # Real-time change notifications
 ### Connection
 
 Client connects to `ws://localhost:5175/api/events` and receives:
+
 ```json
-{"type": "hello"}
+{ "type": "hello" }
 ```
 
 ### Event Types
@@ -194,11 +202,11 @@ Client connects to `ws://localhost:5175/api/events` and receives:
 The server broadcasts change events to all connected clients:
 
 ```typescript
-type ChangeEvent = 
-  | { type: "projectsChanged" }                      // Project list updated
-  | { type: "workspaceChanged", projectId: string }  // Kanban data changed
-  | { type: "settingsChanged" }                      // Settings updated
-  | { type: "aiConfigChanged" }                      // AI config updated
+type ChangeEvent =
+  | { type: 'projectsChanged' } // Project list updated
+  | { type: 'workspaceChanged'; projectId: string } // Kanban data changed
+  | { type: 'settingsChanged' } // Settings updated
+  | { type: 'aiConfigChanged' } // AI config updated
 ```
 
 ### Frontend Handling
@@ -206,6 +214,7 @@ type ChangeEvent =
 The frontend **does not** currently auto-refresh on events. Events are received but not processed.
 
 **Future enhancement**: Subscribe to workspace events and invalidate RTK Query cache:
+
 ```typescript
 socket.addEventListener('message', (event) => {
   const msg = JSON.parse(event.data)
@@ -295,6 +304,7 @@ When switching projects, components use `key` prop to force React remount:
 ```
 
 This ensures:
+
 - State resets completely
 - RTK Query hooks reinitialize
 - No stale data from previous project
@@ -306,7 +316,7 @@ The Swift backend uses actors for thread-safe state management:
 ```swift
 actor SQLiteDatabasePool {
   private var open: [String: SQLiteDatabase] = [:]
-  
+
   func database(at path: String) async -> Database {
     // Actor ensures serial access to cache
   }
@@ -316,6 +326,7 @@ actor SQLiteDatabasePool {
 ### 5. Lazy Loading
 
 Workspace databases are created **on-demand**:
+
 - Not loaded at server startup
 - Created when project is first accessed
 - Cached in pool for subsequent requests
@@ -386,6 +397,7 @@ Each package has its own `tsconfig.json` (extending `tsconfig.base.json`) so it 
 ### Deployment Considerations
 
 For production use:
+
 1. Add authentication middleware
 2. Implement project ownership/permissions
 3. Use HTTPS (reverse proxy)
@@ -424,7 +436,7 @@ For production use:
 
 ## Related Documentation
 
-- Backend: [Server Architecture](../server/architecture.md)
+- Backend: [Server Architecture](../architecture.md)
 - Backend: `DATABASE_FIX_PLAN.md` - Database performance fixes
 - Backend: `DEBUG.md` - Port and process debugging
 - Root: `README.md` - Project setup and tasks

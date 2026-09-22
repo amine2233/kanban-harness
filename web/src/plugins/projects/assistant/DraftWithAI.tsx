@@ -129,9 +129,7 @@ export function DraftWithAI({ scope, onDraft, generateSubtasks, onGenerateSubtas
             />
             <span>
               Generate sub-tasks with AI{' '}
-              <span className="gray">
-                (when unchecked, AI will only draft the main ticket)
-              </span>
+              <span className="gray">(when unchecked, AI will only draft the main ticket)</span>
             </span>
           </label>
           <Row align="end">

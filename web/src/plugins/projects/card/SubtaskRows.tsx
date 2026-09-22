@@ -52,7 +52,10 @@ export function SubtaskRows({ rows, includedCount, dispatch, scope }: Props) {
           </Row>
           <div className="ml4">
             <Row className="items-center mb1">
-              <label className="hk-label flex-auto" htmlFor={`subtask-description-${row.key}`}>
+              <label
+                className="hk-label flex-auto"
+                htmlFor={`subtask-description-${String(row.key)}`}
+              >
                 Description (optional)
               </label>
               {row.title.trim() && (
@@ -67,8 +70,8 @@ export function SubtaskRows({ rows, includedCount, dispatch, scope }: Props) {
               )}
             </Row>
             <Textarea
-              id={`subtask-description-${row.key}`}
-              name={`subtask-description-${row.key}`}
+              id={`subtask-description-${String(row.key)}`}
+              name={`subtask-description-${String(row.key)}`}
               placeholder="Add details about this sub-task..."
               value={row.description ?? ''}
               rows={2}

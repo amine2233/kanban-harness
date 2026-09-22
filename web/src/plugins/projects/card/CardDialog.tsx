@@ -164,7 +164,12 @@ export function CardDialog({
           }
         />
         {!card && form.subtasks.length > 0 && (
-          <SubtaskRows rows={form.subtasks} includedCount={included} dispatch={dispatch} scope={scope} />
+          <SubtaskRows
+            rows={form.subtasks}
+            includedCount={included}
+            dispatch={dispatch}
+            scope={scope}
+          />
         )}
         {error && <p className="f6 red mt0 mb2">{errorMessage(error)}</p>}
         <Row className="justify-between">

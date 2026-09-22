@@ -10,6 +10,7 @@ picked up without re-deciding anything.
 | [MCP servers and tools](mcp-servers.md)          | Global scope planned; per project later                                           |
 | [Hugging Face provider](huggingface-provider.md) | Planned; implemented by hand                                                      |
 | [Provider sign-in](provider-sign-in.md)          | OAuth/PKCE flow, credential store (file / Keychain), OpenRouter then Hugging Face |
+| [Live connection](live-connection.md)            | Heartbeat, resume/resync, supervised server — Herdr-style                         |
 
 Conventions used in these notes:
 

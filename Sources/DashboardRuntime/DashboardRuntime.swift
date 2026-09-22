@@ -1,6 +1,7 @@
 import CascadeKit
 import DashboardAI
 import DashboardAIProviders
+import DashboardDomain
 import DashboardPersistenceConfig
 import DashboardPersistenceFluent
 import DashboardPersistenceJSON
@@ -36,7 +37,11 @@ public enum DashboardRuntime {
             container.register(RegistryDatabaseKey.self) { _ in database.database }
         }
 
-        let pool = SQLiteDatabasePool(logger: DependencyValues.current.logger)
+        let databaseConfig = (try? await ConfigFileDatabaseConfigStore(path: config.configPath).load()) ?? DatabaseConfig()
+        let pool = SQLiteDatabasePool(
+            logger: DependencyValues.current.logger,
+            numberOfThreads: databaseConfig.threadPoolSize
+        )
         await hooks.add { await pool.shutdownAll() }
         container.register(WorkspacePoolKey.self) { _ in pool }
 

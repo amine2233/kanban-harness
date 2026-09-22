@@ -31,12 +31,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-26, ubuntu-24.04]
+        include:
+          # Linux runs in the official image, which already carries the pinned
+          # toolchain. setup-swift@v3 is a prerelease and verifies its Swiftly
+          # download against an empty keyring on Linux, which fails
+          # intermittently (swift-actions/setup-swift#798, open since 2025-12).
+          - os: ubuntu-24.04
+            container: swift:6.3.3-noble
+          - os: macos-26
+            container: ''
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v7
       # The same toolchain mise pins locally (mise.toml), on both platforms.
-      - uses: swift-actions/setup-swift@v3
+      - if: matrix.container == ''
+        uses: swift-actions/setup-swift@v3
         with:
           swift-version: '6.3.3'
       - run: swift --version

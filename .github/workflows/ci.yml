@@ -44,11 +44,11 @@ jobs:
     container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v7
-      # The same toolchain mise pins locally (mise.toml), on both platforms.
-      - if: matrix.container == ''
-        uses: swift-actions/setup-swift@v3
-        with:
-          swift-version: '6.4.0'
+      # No setup-swift on either platform. Linux gets the toolchain from the
+      # image above; macOS uses the one shipped with the runner's Xcode, because
+      # FoundationModels comes from the Xcode SDK and a swift.org toolchain
+      # dropped beside it disagrees with it (no type named 'LanguageModel',
+      # Transcript.ImageAttachment missing). `swift --version` records which.
       - run: swift --version
       - uses: actions/cache@v6
         with:

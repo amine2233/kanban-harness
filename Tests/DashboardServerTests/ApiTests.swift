@@ -12,10 +12,10 @@ func tempDir() throws -> String {
 }
 
 /// `claude` points `claude_code` providers at a stub executable; the real CLI is never run by tests.
-func withServer(claude: String? = nil, _ body: (TestingApplicationTester, String) async throws -> Void) async throws {
+func withServer(claude: String? = nil, publicURL: URL? = nil, _ body: (TestingApplicationTester, String) async throws -> Void) async throws {
     let home = try tempDir()
     try await withApp(configure: { app in
-        try await configure(app, config: ServerConfig(home: home, claudeExecutable: claude ?? "/nonexistent/claude"))
+        try await configure(app, config: ServerConfig(home: home, publicURL: publicURL, claudeExecutable: claude ?? "/nonexistent/claude"))
     }) { app in
         try await body(try app.testing(), home)
     }

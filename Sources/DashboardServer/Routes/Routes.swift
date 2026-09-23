@@ -35,7 +35,7 @@ func routes(_ app: Vapor.Application, config: ServerConfig) async throws {
     api.get("health") { _ in Health() }
     try api.register(collection: ProjectsController())
     try api.register(collection: SettingsController())
-    try api.register(collection: AIConfigController())
+    try api.register(collection: AIConfigController(publicURL: config.publicURL))
     try api.register(collection: AssistantController())
     try api.register(collection: EventsController())
     try app.register(collection: try await MCPHost.start(app))

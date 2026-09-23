@@ -2,10 +2,14 @@ import DashboardAI
 import DashboardAPI
 import DashboardDomain
 import DashboardRuntime
+import Foundation
 import Vapor
 
 /// `/api/settings/ai`: the AI provider configuration (keys write-only).
 struct AIConfigController: RouteCollection {
+    /// The origin a browser reaches this dashboard at, when one is configured.
+    let publicURL: URL?
+
     func boot(routes: any RoutesBuilder) throws {
         let ai = routes.grouped("settings", "ai")
         ai.get(use: show)
@@ -19,12 +23,33 @@ struct AIConfigController: RouteCollection {
 
     // MARK: Browser sign-in (OAuth / PKCE)
 
-    /// The vendor sends the user back to this server's own `/api/auth/callback`.
+    /// The vendor sends the user back to `/api/auth/callback` on the origin the
+    /// browser has the dashboard at.
     func beginSignIn(req: Request) async throws -> SignInResponse {
         let id = req.parameters.get("provider") ?? ""
+        return SignInResponse(url: try await req.signIn.begin(providerId: id, callback: try callback(req)).absoluteString)
+    }
+
+    /// `Host` is whatever the caller sent, so it is trusted only when it names the
+    /// loopback interface — the one case where the browser is on this machine and
+    /// the origin cannot be anyone else's. Served over a LAN address, a proxy or
+    /// TLS, a forged header would otherwise steer the vendor's callback, and the
+    /// hardcoded `http://` would be wrong; those deployments state their origin
+    /// with `--public-url` instead.
+    private func callback(_ req: Request) throws -> URL {
+        if let publicURL { return publicURL.appending(path: "api/auth/callback") }
         let host = req.headers.first(name: .host) ?? "127.0.0.1"
-        guard let callback = URL(string: "http://\(host)/api/auth/callback") else { throw Abort(.badRequest, reason: "bad Host header") }
-        return SignInResponse(url: try await req.signIn.begin(providerId: id, callback: callback).absoluteString)
+        guard Self.isLoopback(host), let callback = URL(string: "http://\(host)/api/auth/callback") else {
+            throw Abort(.badRequest, reason: "sign-in needs --public-url unless the dashboard is reached over loopback")
+        }
+        return callback
+    }
+
+    private static func isLoopback(_ host: String) -> Bool {
+        let name = host.hasPrefix("[")
+            ? String(host.dropFirst().prefix { $0 != "]" })
+            : String(host.prefix { $0 != ":" })
+        return ["127.0.0.1", "::1", "localhost"].contains(name.lowercased())
     }
 
     /// Top-level navigation from the vendor: lands the user back in Settings either way.
@@ -33,14 +58,21 @@ struct AIConfigController: RouteCollection {
         let code: String? = req.query["code"]
         let error: String? = req.query["error_description"] ?? req.query["error"]
         guard let state, let code, error == nil else {
-            return req.redirect(to: "/settings?sign_in_error=" + Self.encode(error ?? "the vendor sent no code"))
+            return req.redirect(to: settings("sign_in_error=" + Self.encode(error ?? "the vendor sent no code")))
         }
         do {
             let id = try await req.signIn.complete(state: state, code: code)
-            return req.redirect(to: "/settings?signed_in=" + Self.encode(id))
+            return req.redirect(to: settings("signed_in=" + Self.encode(id)))
         } catch {
-            return req.redirect(to: "/settings?sign_in_error=" + Self.encode(error.localizedDescription))
+            return req.redirect(to: settings("sign_in_error=" + Self.encode(error.localizedDescription)))
         }
+    }
+
+    /// Relative without a public URL: the redirect then resolves against the origin
+    /// that served the callback, which is where the app is.
+    private func settings(_ query: String) -> String {
+        guard let publicURL else { return "/settings?" + query }
+        return publicURL.appending(path: "settings").absoluteString + "?" + query
     }
 
     func signOut(req: Request) async throws -> AIConfigDTO {

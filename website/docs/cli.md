@@ -136,7 +136,8 @@ over `--api-key` to keep them out of the file.
 ## Server and MCP
 
 ```bash
-dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...]
+dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...] \
+                [--public-url http://127.0.0.1:5173]
 dashboard mcp                     # MCP server over stdio — see MCP
 dashboard --verbose …             # info-level logs on stderr
                                   # migrations are the daemon's: dashboard --verbose daemon run

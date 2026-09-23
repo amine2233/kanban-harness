@@ -9,6 +9,12 @@ PORT="${MVP_DASHBOARD_PORT:-5175}"
 WEB_PORT="${MVP_DASHBOARD_WEB_PORT:-5173}"
 HOST_FLAG=()
 [[ "${1:-}" == "--lan" ]] && HOST_FLAG=(--host 0.0.0.0)
+# Vite serves the app and proxies /api, so the browser's origin is the web port —
+# that is what the OAuth redirect URI and the post-sign-in landing must use. With
+# --lan the browser reaches Vite at the machine's address, which only the user
+# knows: set MVP_DASHBOARD_PUBLIC_URL and this leaves it alone.
+PUBLIC_URL_FLAG=()
+[[ -z "${MVP_DASHBOARD_PUBLIC_URL:-}" ]] && PUBLIC_URL_FLAG=(--public-url "http://127.0.0.1:$WEB_PORT")
 
 listener() { lsof -nP -iTCP:"$1" -sTCP:LISTEN -Fpc 2>/dev/null; }
 
@@ -33,7 +39,7 @@ free_port "$WEB_PORT" node
 BIN=.build/debug/dashboard
 [[ -x "$BIN" ]] || { echo "backend not built — run: mise run backend:build" >&2; exit 1; }
 
-"$BIN" serve --port "$PORT" &
+"$BIN" serve --port "$PORT" "${PUBLIC_URL_FLAG[@]}" &
 BACKEND=$!
 trap 'kill $BACKEND 2>/dev/null || true' EXIT
 

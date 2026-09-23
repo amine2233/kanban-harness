@@ -7,8 +7,15 @@ title: Overview
 `dashboard serve` is one Swift process (Vapor 4) that owns the data and serves every client.
 
 ```bash
-dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...]
+dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...] \
+                [--public-url http://127.0.0.1:5173]
 ```
+
+`--public-url` (or `MVP_DASHBOARD_PUBLIC_URL`) is the origin a browser reaches the dashboard
+at — the Vite dev server in development, a reverse proxy or the machine's address under
+`--hostname 0.0.0.0`. The OAuth redirect URI and the landing after a provider sign-in are both
+built from it, so it has to be an origin that serves the app. Without it those come from the
+request's `Host` header, which is trusted only when it is loopback.
 
 | It serves          | Where                              |
 | ------------------ | ---------------------------------- |

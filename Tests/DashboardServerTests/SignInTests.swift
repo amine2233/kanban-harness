@@ -36,6 +36,36 @@ import VaporTesting
         }
     }
 
+    /// The redirect URI is the one thing the vendor sends the user back to, so it
+    /// must not come from a header the caller controls.
+    @Test func theCallbackComesFromThePublicURLOrALoopbackHost() async throws {
+        try await withServer { app, _ in
+            try await app.addRouter()
+
+            let loopback = try await app.beginSignIn(host: "localhost:5175")
+            #expect(loopback.status == .ok)
+            #expect(try app.callback(loopback)?.hasPrefix("http://localhost:5175/api/auth/callback?state=") == true)
+
+            let ipv6 = try await app.beginSignIn(host: "[::1]:5175")
+            #expect(ipv6.status == .ok)
+
+            let forged = try await app.beginSignIn(host: "evil.example.com")
+            #expect(forged.status == .badRequest, "a forged Host must not steer the vendor's callback")
+            #expect(try await app.beginSignIn(host: "127.0.0.1.evil.example.com").status == .badRequest)
+        }
+
+        try await withServer(publicURL: URL(string: "http://127.0.0.1:5173")) { app, _ in
+            try await app.addRouter()
+
+            let response = try await app.beginSignIn(host: "evil.example.com")
+            #expect(response.status == .ok, "the configured origin decides, so the Host is never read")
+            #expect(try app.callback(response)?.hasPrefix("http://127.0.0.1:5173/api/auth/callback?state=") == true)
+
+            let landing = try await app.sendRequest(.GET, "/api/auth/callback?state=nope&code=c")
+            #expect(landing.headers.first(name: .location)?.hasPrefix("http://127.0.0.1:5173/settings?") == true)
+        }
+    }
+
     @Test func oauthAppSettingsAreStoredAndOnlyTheClientIdIsExposed() async throws {
         try await withServer { app, home in
             let (status, body) = try await app.json(.PUT, "/api/settings/ai/providers/hf", body: [
@@ -55,5 +85,25 @@ import VaporTesting
             #expect(url.hasPrefix("https://huggingface.co/oauth/authorize?"))
             #expect(url.contains("client_id=app-1") && url.contains("code_challenge_method=S256"))
         }
+    }
+}
+
+extension TestingApplicationTester {
+    fileprivate func addRouter() async throws {
+        let (status, _) = try await json(.PUT, "/api/settings/ai/providers/router", body: ["kind": "openrouter", "name": "Router", "model": "m"])
+        #expect(status == .ok)
+    }
+
+    fileprivate func beginSignIn(host: String) async throws -> TestingHTTPResponse {
+        try await sendRequest(.POST, "/api/settings/ai/providers/router/sign-in", headers: ["Host": host])
+    }
+
+    /// OpenRouter carries the redirect URI as `callback_url` on the authorization
+    /// URL, with the `state` inside it.
+    fileprivate func callback(_ response: TestingHTTPResponse) throws -> String? {
+        let body = try JSONSerialization.jsonObject(with: Data(buffer: response.body)) as? [String: Any]
+        let authorization = try #require((body?["url"] as? String).flatMap { URL(string: $0) })
+        return URLComponents(url: authorization, resolvingAgainstBaseURL: false)?
+            .queryItems?.first { $0.name == "callback_url" }?.value
     }
 }

@@ -13,8 +13,8 @@ public enum JSONCompleter {
         var inString = false
         var escaped = false
         var lastSignificant: Character = "{"
-        var lastKeyStart: String.Index? = nil
-        var stringStart: String.Index? = nil
+        var lastKeyStart: String.Index?
+        var stringStart: String.Index?
         var index = body.startIndex
         while index < body.endIndex {
             let char = body[index]
@@ -101,23 +101,24 @@ public enum JSONCompleter {
             // a trailing bare token: true/false/null cannot grow, a number still can, so it is dropped
             var token = ""
             var cut = body.endIndex
-            var i = body.endIndex
-            while i > body.startIndex {
-                i = body.index(before: i)
-                let c = body[i]
-                if ["\"", "}", "]", "{", "[", ",", ":"].contains(c) || c.isWhitespace { break }
-                token.insert(c, at: token.startIndex)
-                cut = i
+            var index = body.endIndex
+            while index > body.startIndex {
+                index = body.index(before: index)
+                let character = body[index]
+                if ["\"", "}", "]", "{", "[", ",", ":"].contains(character) || character
+                    .isWhitespace { break }
+                token.insert(character, at: token.startIndex)
+                cut = index
             }
             let complete = ["true", "false", "null"].contains(token)
             if !complete {
                 body = String(body[..<cut])
-                while let l = body.last, l.isWhitespace {
+                while let last = body.last, last.isWhitespace {
                     body.removeLast()
                 }
                 if body.last == ":", let lastKeyStart {
                     body = String(body[..<lastKeyStart])
-                    while let l = body.last, l.isWhitespace {
+                    while let last = body.last, last.isWhitespace {
                         body.removeLast()
                     }
                 }

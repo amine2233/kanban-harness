@@ -22,7 +22,9 @@ extension AsyncParsableCommand {
             try await body()
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
-            let envelope = try JSONSerialization.data(withJSONObject: ["error": ["message": message]])
+            let envelope = try JSONSerialization.data(
+                withJSONObject: ["error": ["message": message]]
+            )
             FileHandle.standardError.write(envelope)
             FileHandle.standardError.write(Data("\n".utf8))
             throw ExitCode.failure

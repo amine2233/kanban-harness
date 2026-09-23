@@ -240,8 +240,8 @@ public struct SetParentRequest: Codable, Sendable {
     }
 
     public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.parentId = try c.decodeIfPresent(UUID.self, forKey: .parentId)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.parentId = try container.decodeIfPresent(UUID.self, forKey: .parentId)
     }
 }
 

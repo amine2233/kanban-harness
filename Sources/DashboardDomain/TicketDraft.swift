@@ -24,20 +24,20 @@ public struct SubtaskDraft: Codable, Equatable, Sendable {
     }
 
     public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(title, forKey: .title)
-        try c.encode(description, forKey: .description)
-        try c.encode(points, forKey: .points)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(title, forKey: .title)
+        try container.encode(description, forKey: .description)
+        try container.encode(points, forKey: .points)
     }
 
     enum CodingKeys: String, CodingKey { case title, description, points }
 
     public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(
-            title: c.decode(String.self, forKey: .title),
-            description: c.decodeIfPresent(String.self, forKey: .description),
-            points: c.decodeIfPresent(Int.self, forKey: .points)
+            title: container.decode(String.self, forKey: .title),
+            description: container.decodeIfPresent(String.self, forKey: .description),
+            points: container.decodeIfPresent(Int.self, forKey: .points)
         )
     }
 }
@@ -199,27 +199,27 @@ public struct TicketDraft: Codable, Equatable, Sendable {
     }
 
     public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(title, forKey: .title)
-        try c.encode(description, forKey: .description)
-        try c.encode(acceptanceCriteria, forKey: .acceptanceCriteria)
-        try c.encode(priority.wireValue, forKey: .priority)
-        try c.encode(points, forKey: .points)
-        try c.encode(subtasks, forKey: .subtasks)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(title, forKey: .title)
+        try container.encode(description, forKey: .description)
+        try container.encode(acceptanceCriteria, forKey: .acceptanceCriteria)
+        try container.encode(priority.wireValue, forKey: .priority)
+        try container.encode(points, forKey: .points)
+        try container.encode(subtasks, forKey: .subtasks)
     }
 
     public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        let raw = try c.decode(String.self, forKey: .priority)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let raw = try container.decode(String.self, forKey: .priority)
         guard let priority = CardPriority(wireValue: raw) else { throw DomainError.invalidPriority(raw) }
 
         try self.init(
-            title: c.decode(String.self, forKey: .title),
-            description: c.decodeIfPresent(String.self, forKey: .description),
-            acceptanceCriteria: c.decodeIfPresent([String].self, forKey: .acceptanceCriteria) ?? [],
+            title: container.decode(String.self, forKey: .title),
+            description: container.decodeIfPresent(String.self, forKey: .description),
+            acceptanceCriteria: container.decodeIfPresent([String].self, forKey: .acceptanceCriteria) ?? [],
             priority: priority,
-            points: c.decodeIfPresent(Int.self, forKey: .points),
-            subtasks: c.decodeIfPresent([SubtaskDraft].self, forKey: .subtasks) ?? []
+            points: container.decodeIfPresent(Int.self, forKey: .points),
+            subtasks: container.decodeIfPresent([SubtaskDraft].self, forKey: .subtasks) ?? []
         )
     }
 }
@@ -302,23 +302,24 @@ public struct PartialTicketDraft: Codable, Equatable, Sendable {
     }
 
     public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.title = try c.decodeIfPresent(String.self, forKey: .title)
-        self.description = try c.decodeIfPresent(String.self, forKey: .description)
-        self.acceptanceCriteria = try c.decodeIfPresent([String].self, forKey: .acceptanceCriteria) ?? []
-        self.priority = try c.decodeIfPresent(String.self, forKey: .priority)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.title = try container.decodeIfPresent(String.self, forKey: .title)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.acceptanceCriteria = try container
+            .decodeIfPresent([String].self, forKey: .acceptanceCriteria) ?? []
+        self.priority = try container.decodeIfPresent(String.self, forKey: .priority)
             .flatMap(CardPriority.init(wireValue:))
-        self.points = try c.decodeIfPresent(Int.self, forKey: .points)
-        self.subtasks = try c.decodeIfPresent([PartialSubtask].self, forKey: .subtasks) ?? []
+        self.points = try container.decodeIfPresent(Int.self, forKey: .points)
+        self.subtasks = try container.decodeIfPresent([PartialSubtask].self, forKey: .subtasks) ?? []
     }
 
     public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(title, forKey: .title)
-        try c.encode(description, forKey: .description)
-        try c.encode(acceptanceCriteria, forKey: .acceptanceCriteria)
-        try c.encode(priority?.wireValue, forKey: .priority)
-        try c.encode(points, forKey: .points)
-        try c.encode(subtasks, forKey: .subtasks)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(title, forKey: .title)
+        try container.encode(description, forKey: .description)
+        try container.encode(acceptanceCriteria, forKey: .acceptanceCriteria)
+        try container.encode(priority?.wireValue, forKey: .priority)
+        try container.encode(points, forKey: .points)
+        try container.encode(subtasks, forKey: .subtasks)
     }
 }

@@ -77,13 +77,13 @@ public struct AICost: Codable, Hashable, Sendable {
     }
 
     public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.provider = try c.decode(String.self, forKey: .provider)
-        self.model = try c.decode(String.self, forKey: .model)
-        self.inputTokens = try c.decodeIfPresent(Int.self, forKey: .inputTokens)
-        self.outputTokens = try c.decodeIfPresent(Int.self, forKey: .outputTokens)
-        self.costUSD = try c.decodeIfPresent(Double.self, forKey: .costUSD)
-        self.estimated = try c.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.provider = try container.decode(String.self, forKey: .provider)
+        self.model = try container.decode(String.self, forKey: .model)
+        self.inputTokens = try container.decodeIfPresent(Int.self, forKey: .inputTokens)
+        self.outputTokens = try container.decodeIfPresent(Int.self, forKey: .outputTokens)
+        self.costUSD = try container.decodeIfPresent(Double.self, forKey: .costUSD)
+        self.estimated = try container.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
     }
 }
 

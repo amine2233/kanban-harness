@@ -23,7 +23,10 @@ struct ProjectCommand: AsyncParsableCommand {
         var name: String?
 
         @Option(
-            help: "Workspace format written into the folder (json or sqlite); defaults to the settings' default_storage."
+            help: """
+            Workspace format written into the folder (json or sqlite); \
+            defaults to the settings' default_storage.
+            """
         )
         var storage: StorageKind?
 

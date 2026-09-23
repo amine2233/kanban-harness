@@ -7,13 +7,13 @@ import Vapor
 /// `/api/settings/ai`: the AI provider configuration (keys write-only).
 struct AIConfigController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
-        let ai = routes.grouped("settings", "ai")
-        ai.get(use: show)
-        ai.put("default", use: setDefault)
-        ai.put("providers", ":provider", use: upsert)
-        ai.delete("providers", ":provider", use: remove)
-        ai.post("providers", ":provider", "sign-in", use: beginSignIn)
-        ai.delete("providers", ":provider", "credential", use: signOut)
+        let aiRoutes = routes.grouped("settings", "ai")
+        aiRoutes.get(use: show)
+        aiRoutes.put("default", use: setDefault)
+        aiRoutes.put("providers", ":provider", use: upsert)
+        aiRoutes.delete("providers", ":provider", use: remove)
+        aiRoutes.post("providers", ":provider", "sign-in", use: beginSignIn)
+        aiRoutes.delete("providers", ":provider", "credential", use: signOut)
         routes.get("auth", "callback", use: completeSignIn)
     }
 

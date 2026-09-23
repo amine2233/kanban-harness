@@ -30,26 +30,26 @@ public struct FluentWorkspaceStore: WorkspaceStore {
     }
 
     public func save(_ workspace: Workspace) async throws {
-        try await database.transaction { db in
-            try await CardModel.query(on: db).delete()
-            try await ColumnModel.query(on: db).delete()
-            try await BoardModel.query(on: db).delete()
-            try await PrefixModel.query(on: db).delete()
-            try await SectionModel.query(on: db).delete()
+        try await database.transaction { transaction in
+            try await CardModel.query(on: transaction).delete()
+            try await ColumnModel.query(on: transaction).delete()
+            try await BoardModel.query(on: transaction).delete()
+            try await PrefixModel.query(on: transaction).delete()
+            try await SectionModel.query(on: transaction).delete()
             for board in workspace.boards {
-                try await BoardModel(board).create(on: db)
+                try await BoardModel(board).create(on: transaction)
             }
             for column in workspace.columns {
-                try await ColumnModel(column).create(on: db)
+                try await ColumnModel(column).create(on: transaction)
             }
             for card in workspace.cards {
-                try await CardModel(card).create(on: db)
+                try await CardModel(card).create(on: transaction)
             }
             for prefix in workspace.prefixes {
-                try await PrefixModel(prefix).create(on: db)
+                try await PrefixModel(prefix).create(on: transaction)
             }
             for (key, value) in workspace.extra {
-                try await SectionModel(key: key, value: value).create(on: db)
+                try await SectionModel(key: key, value: value).create(on: transaction)
             }
         }
     }

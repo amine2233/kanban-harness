@@ -26,18 +26,18 @@ struct MCPController: RouteCollection {
             body: body,
             path: req.url.path
         ))
-        return Self.response(from: mcpResponse)
+        return response(from: mcpResponse)
     }
 
     func reject(req: Vapor.Request) -> Vapor.Response {
-        Self.response(from: .error(
+        response(from: .error(
             statusCode: 405,
             .invalidRequest("Method Not Allowed"),
             extraHeaders: ["Allow": "POST"]
         ))
     }
 
-    static func response(from mcp: MCP.HTTPResponse) -> Vapor.Response {
+    private func response(from mcp: MCP.HTTPResponse) -> Vapor.Response {
         let response = Vapor.Response(status: HTTPResponseStatus(statusCode: mcp.statusCode))
         for (name, value) in mcp.headers {
             response.headers.replaceOrAdd(name: name, value: value)
@@ -46,7 +46,7 @@ struct MCPController: RouteCollection {
         case let .data(data, _):
             response.body = .init(data: data)
         case let .stream(stream, _):
-            response.body = .init(asyncStream: { writer in
+            response.body = Response.Body(asyncStream: { writer in
                 for try await chunk in stream {
                     try await writer.write(.buffer(ByteBuffer(data: chunk)))
                 }

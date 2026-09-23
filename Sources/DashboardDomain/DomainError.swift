@@ -50,7 +50,8 @@ extension DomainError: LocalizedError {
         case .emptyColumnName: "column name must not be empty"
         case let .lastColumn(board): "board '\(board)' must keep at least one column"
         case let .invalidOrigin(origin): "invalid origin '\(origin)': expected http(s)://host[:port]"
-        case let .invalidProviderId(id): "invalid provider id '\(id)': use a-z, 0-9 and _, starting with a letter (max 32)"
+        case let .invalidProviderId(id):
+            "invalid provider id '\(id)': use a-z, 0-9 and _, starting with a letter (max 32)"
         case let .emptyModel(id): "provider '\(id)' needs a model"
         case let .invalidMaxTokens(value): "max_tokens must be positive, got \(value)"
         case .invalidPricing: "pricing must be non-negative USD per million tokens"

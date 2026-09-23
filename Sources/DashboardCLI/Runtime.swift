@@ -16,13 +16,22 @@ struct Runtime {
     static func open(_ global: GlobalOptions) async throws -> Runtime {
         let client = try await DaemonProcess.connect(home: global.resolvedHome)
         let runtime = Runtime()
-        runtime.container.register(ProjectCommandsKey.self) { _ in RemoteProjectCommands(client: client) }
-        runtime.container.register(SettingsCommandsKey.self) { _ in RemoteSettingsCommands(client: client) }
-        runtime.container.register(AIConfigCommandsKey.self) { _ in RemoteAIConfigCommands(client: client) }
-        runtime.container.register(BoardCommandsKey.self) { _ in RemoteBoardCommands(client: client) }
-        runtime.container.register(AssistantCommandsKey.self) { _ in RemoteAssistantCommands(client: client) }
-        runtime.container.register(SignInCommandsKey.self) { _ in RemoteSignInCommands(client: client) }
-        DependencyValues.current.logger.debug("dashboard cli daemon: \(client.baseURL.absoluteString)")
+        runtime.container.register(ProjectCommandsKey.self) { _ in RemoteProjectCommands(client: client)
+        }
+        runtime.container.register(SettingsCommandsKey.self) { _ in RemoteSettingsCommands(client: client)
+        }
+        runtime.container.register(AIConfigCommandsKey.self) { _ in RemoteAIConfigCommands(client: client)
+        }
+        runtime.container.register(BoardCommandsKey.self) { _ in
+            RemoteBoardCommands(client: client)
+        }
+        runtime.container.register(AssistantCommandsKey.self) { _ in RemoteAssistantCommands(client: client)
+        }
+        runtime.container.register(SignInCommandsKey.self) { _ in RemoteSignInCommands(client: client)
+        }
+        DependencyValues.current.logger.debug(
+            "dashboard cli daemon: \(client.baseURL.absoluteString)"
+        )
         return runtime
     }
 

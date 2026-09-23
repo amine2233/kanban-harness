@@ -201,9 +201,9 @@ public actor AssistantService: AssistantCommands {
                         lastPartial = partial
                         emit(.partial(partial))
                     }
-                case let .usage(u):
-                    usage = u
-                    emit(.usage(u))
+                case let .usage(reported):
+                    usage = reported
+                    emit(.usage(reported))
                 case let .done(json, model):
                     stage(.validate, nil)
                     let draft: TicketDraft

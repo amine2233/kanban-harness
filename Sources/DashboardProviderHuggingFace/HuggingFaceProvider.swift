@@ -49,7 +49,8 @@ public enum HuggingFaceProvider {
         guard let client = config.oauth else {
             throw AIProviderError
                 .notConfigured(
-                    "\(config.name): set oauth.client_id (an OAuth app from huggingface.co/settings/applications) to sign in"
+                    "\(config.name): set oauth.client_id "
+                        + "(an OAuth app from huggingface.co/settings/applications) to sign in"
                 )
         }
 

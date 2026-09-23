@@ -46,11 +46,11 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
 
     public func load() async throws -> AIConfig {
         let reader = try await reader()
-        let ai = reader.scoped(to: "ai")
-        let ids = ai.stringArray(forKey: "provider_ids", default: [])
+        let aiScope = reader.scoped(to: "ai")
+        let ids = aiScope.stringArray(forKey: "provider_ids", default: [])
         var providers: [AIProviderConfig] = []
         for id in ids {
-            let scope = ai.scoped(to: ConfigKey(["providers", id]))
+            let scope = aiScope.scoped(to: ConfigKey(["providers", id]))
             guard let kindRaw = scope.string(forKey: "kind"),
                   let kind = AIProviderKind(configValue: kindRaw) else {
                 throw PersistenceError.corrupt(
@@ -86,7 +86,7 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         do {
             return try AIConfig(
                 providers: providers,
-                defaultProviderId: ai.string(forKey: "default_provider")
+                defaultProviderId: aiScope.string(forKey: "default_provider")
             )
         } catch {
             throw PersistenceError.corrupt(path: path, reason: error.localizedDescription)
@@ -132,9 +132,9 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
 
     public func save(_ config: AIConfig) async throws {
         var document = try readDocument()
-        var ai: [String: Any] = [:]
-        if let current = config.defaultProviderId { ai["default_provider"] = current }
-        ai["provider_ids"] = config.providers.map(\.id)
+        var aiSection: [String: Any] = [:]
+        if let current = config.defaultProviderId { aiSection["default_provider"] = current }
+        aiSection["provider_ids"] = config.providers.map(\.id)
         let existing = (document["ai"] as? [String: Any])?["providers"] as? [String: Any] ?? [:]
         var providers: [String: Any] = [:]
         for provider in config.providers {
@@ -162,8 +162,8 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         for removed in existing.keys where providers[removed] == nil {
             try await credentials.remove(removed)
         }
-        ai["providers"] = providers
-        document["ai"] = ai
+        aiSection["providers"] = providers
+        document["ai"] = aiSection
         try write(document)
     }
 

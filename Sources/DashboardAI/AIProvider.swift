@@ -79,10 +79,10 @@ public enum AIProviderError: Error, Equatable, Sendable {
 extension AIProviderError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case let .notConfigured(m): "provider not configured: \(m)"
-        case let .unavailable(m): "provider unavailable: \(m)"
-        case let .request(m): "provider request failed: \(m)"
-        case let .badResponse(m): "provider returned an unusable answer: \(m)"
+        case let .notConfigured(reason): "provider not configured: \(reason)"
+        case let .unavailable(reason): "provider unavailable: \(reason)"
+        case let .request(reason): "provider request failed: \(reason)"
+        case let .badResponse(reason): "provider returned an unusable answer: \(reason)"
         }
     }
 }
@@ -100,7 +100,7 @@ extension AIProvider {
         for try await event in stream(request) {
             switch event {
             case .text, .snapshot: continue
-            case let .usage(u): usage = u
+            case let .usage(reported): usage = reported
             case let .done(json, model): return CompletionResult(json: json, usage: usage, model: model)
             }
         }
@@ -180,8 +180,13 @@ public enum JSONExtractor {
         while index < text.endIndex {
             let char = text[index]
             if inString {
-                if escaped { escaped = false } else if char == "\\" { escaped = true }
-                else if char == "\"" { inString = false }
+                if escaped {
+                    escaped = false
+                } else if char == "\\" {
+                    escaped = true
+                } else if char == "\"" {
+                    inString = false
+                }
             } else if char == "\"" {
                 inString = true
             } else if char == "{" {

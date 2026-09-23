@@ -11,7 +11,8 @@ enum CLIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case let .daemonUnavailable(home):
-            "no dashboard daemon for \(home) and starting one timed out; run `dashboard daemon --home \(home)` to see why"
+            "no dashboard daemon for \(home) and starting one timed out; "
+                + "run `dashboard daemon --home \(home)` to see why"
         case .daemonDidNotBind:
             "the daemon could not bind a loopback port"
         case let .handoverTimedOut(pid):

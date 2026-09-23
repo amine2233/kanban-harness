@@ -56,15 +56,15 @@ struct AICommand: AsyncParsableCommand {
                 case hasAPIKey = "has_api_key"
             }
 
-            init(_ p: AIProviderConfig) {
-                self.id = p.id
-                self.kind = p.kind
-                self.name = p.name
-                self.model = p.model
-                self.baseURL = p.baseURL
-                self.maxTokens = p.maxTokens
-                self.pricing = p.pricing
-                self.hasAPIKey = p.hasAPIKey
+            init(_ provider: AIProviderConfig) {
+                self.id = provider.id
+                self.kind = provider.kind
+                self.name = provider.name
+                self.model = provider.model
+                self.baseURL = provider.baseURL
+                self.maxTokens = provider.maxTokens
+                self.pricing = provider.pricing
+                self.hasAPIKey = provider.hasAPIKey
             }
         }
 
@@ -222,11 +222,11 @@ extension AICommand {
                     let ref = ProjectRef.parse(project)
                     let all = try await boards.boards(ref)
                     guard let target = board
-                        .map({ b in
+                        .map({ name in
                             all
                                 .first {
-                                    $0.name.caseInsensitiveCompare(b) == .orderedSame || $0.id.uuidString
-                                        .caseInsensitiveCompare(b) == .orderedSame
+                                    $0.name.caseInsensitiveCompare(name) == .orderedSame || $0.id.uuidString
+                                        .caseInsensitiveCompare(name) == .orderedSame
                                 } }) ?? all.first else {
                         throw ServiceError.domain(.notFound(board ?? "board"))
                     }
@@ -248,11 +248,12 @@ extension AICommand {
                     if create {
                         let columns = try await boards.columns(ref, boardId: target.id)
                         guard let destination = column
-                            .map({ c in
+                            .map({ name in
                                 columns
                                     .first {
-                                        $0.name.caseInsensitiveCompare(c) == .orderedSame || $0.id.uuidString
-                                            .caseInsensitiveCompare(c) == .orderedSame
+                                        $0.name.caseInsensitiveCompare(name) == .orderedSame || $0.id
+                                            .uuidString
+                                            .caseInsensitiveCompare(name) == .orderedSame
                                     } }) ?? columns.first else {
                             throw ServiceError.domain(.notFound(column ?? "column"))
                         }
@@ -315,9 +316,11 @@ extension AICommand {
             let provider: String
             let model: String
             let usage: CompletionUsage
-            init(_ d: DraftedTicket) {
-                self.draft = d.draft; self.provider = d.providerId; self.model = d.model; self.usage = d
-                    .usage
+            init(_ drafted: DraftedTicket) {
+                self.draft = drafted.draft
+                self.provider = drafted.providerId
+                self.model = drafted.model
+                self.usage = drafted.usage
             }
         }
 

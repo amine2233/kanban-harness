@@ -39,7 +39,8 @@ enum KanbanTools {
         ),
         Tool(
             name: "create_board",
-            description: "Create a board in a project. Seeds Backlog / To do / In progress / Done unless with_default_columns is false.",
+            description: "Create a board in a project. Seeds Backlog / To do / In progress / Done "
+                + "unless with_default_columns is false.",
             inputSchema: schema(
                 ["project": project, "name": prop("string", "Board name"), "with_default_columns": prop(
                     "boolean",
@@ -74,7 +75,8 @@ enum KanbanTools {
         ),
         Tool(
             name: "update_card",
-            description: "Change a card's fields. Omitted fields are kept; pass an empty string to clear description, 0 to clear points.",
+            description: "Change a card's fields. Omitted fields are kept; pass an empty string "
+                + "to clear description, 0 to clear points.",
             inputSchema: schema([
                 "project": project, "board": board,
                 "card": prop("string", "Card id, number (e.g. 12) or key (e.g. task-12)"),
@@ -481,8 +483,8 @@ struct Arguments {
 
     func optionalString(_ key: String) -> String? {
         switch values[key] {
-        case let .string(s)?: s
-        case let .int(i)?: String(i)
+        case let .string(value)?: value
+        case let .int(value)?: String(value)
         default: nil
         }
     }
@@ -504,32 +506,50 @@ struct Arguments {
 
 struct ProjectView: Codable {
     let id: String, name: String, path: String, storage: String
-    init(_ p: Project) {
-        self.id = p.id.uuidString.lowercased(); self.name = p.name; self.path = p.path; self.storage = p
-            .storage.rawValue
+
+    init(_ project: Project) {
+        self.id = project.id.uuidString.lowercased()
+        self.name = project.name
+        self.path = project.path
+        self.storage = project.storage.rawValue
     }
 }
 
 struct BoardView: Codable {
     let id: String, name: String, description: String?, cardPrefix: String?, position: Int
-    enum CodingKeys: String,
-        CodingKey { case id, name, description, position; case cardPrefix = "card_prefix" }
-    init(_ b: Board) {
-        self.id = b.id.uuidString.lowercased(); self.name = b.name; self.description = b.description; self
-            .cardPrefix = b.cardPrefix; self.position = b.position
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case description
+        case position
+        case cardPrefix = "card_prefix"
+    }
+
+    init(_ board: Board) {
+        self.id = board.id.uuidString.lowercased()
+        self.name = board.name
+        self.description = board.description
+        self.cardPrefix = board.cardPrefix
+        self.position = board.position
     }
 }
 
 struct ColumnView: Codable {
     let id: String, name: String, position: Int, wipLimit: Int?, defaultStatus: String?
-    enum CodingKeys: String,
-        CodingKey { case id, name,
-                     position; case wipLimit = "wip_limit"; case defaultStatus = "default_status"
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case position
+        case wipLimit = "wip_limit"
+        case defaultStatus = "default_status"
     }
 
-    init(_ c: Column) {
-        self.id = c.id.uuidString.lowercased(); self.name = c.name; self.position = c.position; self
-            .wipLimit = c.wipLimit; self.defaultStatus = c.defaultStatus?.wireValue
+    init(_ column: Column) {
+        self.id = column.id.uuidString.lowercased()
+        self.name = column.name
+        self.position = column.position
+        self.wipLimit = column.wipLimit
+        self.defaultStatus = column.defaultStatus?.wireValue
     }
 }
 
@@ -550,17 +570,17 @@ struct CardView: Codable {
         case dueDate = "due_date"
     }
 
-    init(_ c: Card, columns: [Column]) {
-        self.id = c.id.uuidString.lowercased()
-        self.key = "\(c.prefix)-\(c.cardNumber)"
-        self.title = c.title
-        self.description = c.description
-        self.priority = c.priority.wireValue
-        self.status = c.status.wireValue
-        self.column = columns.first { $0.id == c.columnId }?.name ?? c.columnId.uuidString.lowercased()
-        self.columnId = c.columnId.uuidString.lowercased()
-        self.position = c.position
-        self.points = c.points
-        self.dueDate = c.dueDate.map { Date.ISO8601FormatStyle().format($0) }
+    init(_ card: Card, columns: [Column]) {
+        self.id = card.id.uuidString.lowercased()
+        self.key = "\(card.prefix)-\(card.cardNumber)"
+        self.title = card.title
+        self.description = card.description
+        self.priority = card.priority.wireValue
+        self.status = card.status.wireValue
+        self.column = columns.first { $0.id == card.columnId }?.name ?? card.columnId.uuidString.lowercased()
+        self.columnId = card.columnId.uuidString.lowercased()
+        self.position = card.position
+        self.points = card.points
+        self.dueDate = card.dueDate.map { Date.ISO8601FormatStyle().format($0) }
     }
 }

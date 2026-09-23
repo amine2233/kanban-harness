@@ -39,16 +39,16 @@ public struct AIProviderDTO: Codable, Equatable, Sendable {
     }
 
     public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(id, forKey: .id)
-        try c.encode(kind, forKey: .kind)
-        try c.encode(name, forKey: .name)
-        try c.encode(model, forKey: .model)
-        try c.encode(baseURL, forKey: .baseURL)
-        try c.encode(maxTokens, forKey: .maxTokens)
-        try c.encode(pricing, forKey: .pricing)
-        try c.encode(hasAPIKey, forKey: .hasAPIKey)
-        try c.encode(oauthClientId, forKey: .oauthClientId)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(name, forKey: .name)
+        try container.encode(model, forKey: .model)
+        try container.encode(baseURL, forKey: .baseURL)
+        try container.encode(maxTokens, forKey: .maxTokens)
+        try container.encode(pricing, forKey: .pricing)
+        try container.encode(hasAPIKey, forKey: .hasAPIKey)
+        try container.encode(oauthClientId, forKey: .oauthClientId)
     }
 }
 
@@ -67,9 +67,9 @@ public struct AIConfigDTO: Codable, Equatable, Sendable {
     }
 
     public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(providers, forKey: .providers)
-        try c.encode(defaultProvider, forKey: .defaultProvider)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(providers, forKey: .providers)
+        try container.encode(defaultProvider, forKey: .defaultProvider)
     }
 }
 

@@ -49,51 +49,57 @@ public enum DashboardRuntime {
         await hooks.add { await pool.shutdownAll() }
         container.register(WorkspacePoolKey.self) { _ in pool }
 
-        container.register(ProjectStoreKey.self) { c in
-            FluentProjectStore(database: c.make(RegistryDatabaseKey.self))
+        container.register(ProjectStoreKey.self) { resolver in
+            FluentProjectStore(database: resolver.make(RegistryDatabaseKey.self))
         }
-        container.register(SettingsStoreKey.self) { c in
-            JSONSettingsStore(path: c.make(RuntimeConfigKey.self).settingsPath)
+        container.register(SettingsStoreKey.self) { resolver in
+            JSONSettingsStore(path: resolver.make(RuntimeConfigKey.self).settingsPath)
         }
-        container.register(WorkspaceStoreFactoryKey.self) { c in
-            WorkspaceStores.factory(pool: c.make(WorkspacePoolKey.self))
+        container.register(WorkspaceStoreFactoryKey.self) { resolver in
+            WorkspaceStores.factory(pool: resolver.make(WorkspacePoolKey.self))
         }
         container.register(ChangeBroadcasterKey.self) { _ in ChangeBroadcaster() }
-        container.register(ProjectServiceKey.self) { c in
+        container.register(ProjectServiceKey.self) { resolver in
             ProjectService(
-                store: c.make(ProjectStoreKey.self),
-                workspaces: c.make(WorkspaceStoreFactoryKey.self),
-                changes: c.make(ChangeBroadcasterKey.self)
+                store: resolver.make(ProjectStoreKey.self),
+                workspaces: resolver.make(WorkspaceStoreFactoryKey.self),
+                changes: resolver.make(ChangeBroadcasterKey.self)
             )
         }
-        container.register(SettingsServiceKey.self) { c in
-            SettingsService(store: c.make(SettingsStoreKey.self), changes: c.make(ChangeBroadcasterKey.self))
+        container.register(SettingsServiceKey.self) { resolver in
+            SettingsService(
+                store: resolver.make(SettingsStoreKey.self),
+                changes: resolver.make(ChangeBroadcasterKey.self)
+            )
         }
-        container.register(CredentialStoreKey.self) { c in
-            FileCredentialStore(path: c.make(RuntimeConfigKey.self).credentialsPath)
+        container.register(CredentialStoreKey.self) { resolver in
+            FileCredentialStore(path: resolver.make(RuntimeConfigKey.self).credentialsPath)
         }
-        container.register(AIConfigStoreKey.self) { c in
+        container.register(AIConfigStoreKey.self) { resolver in
             ConfigFileAIConfigStore(
-                path: c.make(RuntimeConfigKey.self).configPath,
-                credentials: c.make(CredentialStoreKey.self)
+                path: resolver.make(RuntimeConfigKey.self).configPath,
+                credentials: resolver.make(CredentialStoreKey.self)
             )
         }
-        container.register(AIConfigCommandsKey.self) { c in
-            AIConfigService(store: c.make(AIConfigStoreKey.self), changes: c.make(ChangeBroadcasterKey.self))
+        container.register(AIConfigCommandsKey.self) { resolver in
+            AIConfigService(
+                store: resolver.make(AIConfigStoreKey.self),
+                changes: resolver.make(ChangeBroadcasterKey.self)
+            )
         }
-        container.register(ProjectCommandsKey.self) { c in
+        container.register(ProjectCommandsKey.self) { resolver in
             LocalProjectCommands(
-                projects: c.make(ProjectServiceKey.self),
-                settings: c.make(SettingsServiceKey.self)
+                projects: resolver.make(ProjectServiceKey.self),
+                settings: resolver.make(SettingsServiceKey.self)
             )
         }
-        container.register(SettingsCommandsKey.self) { c in c.make(SettingsServiceKey.self) }
+        container.register(SettingsCommandsKey.self) { resolver in resolver.make(SettingsServiceKey.self) }
         container
-            .register(BoardCommandsKey.self) { c in
-                LocalBoardCommands(projects: c.make(ProjectServiceKey.self))
+            .register(BoardCommandsKey.self) { resolver in
+                LocalBoardCommands(projects: resolver.make(ProjectServiceKey.self))
             }
-        container.register(AIProviderRegistryKey.self) { c in
-            let runtime = c.make(RuntimeConfigKey.self)
+        container.register(AIProviderRegistryKey.self) { resolver in
+            let runtime = resolver.make(RuntimeConfigKey.self)
             var registry = AIProviderRegistry.standard(
                 claudeExecutable: runtime.claudeExecutable,
                 disabled: runtime.disabledProviders
@@ -102,20 +108,20 @@ public enum DashboardRuntime {
             OpenRouterProvider.register(in: &registry)
             return registry
         }
-        container.register(SignInCommandsKey.self) { c in
+        container.register(SignInCommandsKey.self) { resolver in
             ProviderSignInService(
-                aiConfig: c.make(AIConfigCommandsKey.self),
-                credentials: c.make(CredentialStoreKey.self),
-                registry: c.make(AIProviderRegistryKey.self),
-                changes: c.make(ChangeBroadcasterKey.self)
+                aiConfig: resolver.make(AIConfigCommandsKey.self),
+                credentials: resolver.make(CredentialStoreKey.self),
+                registry: resolver.make(AIProviderRegistryKey.self),
+                changes: resolver.make(ChangeBroadcasterKey.self)
             )
         }
-        container.register(AssistantCommandsKey.self) { c in
+        container.register(AssistantCommandsKey.self) { resolver in
             AssistantService(
-                aiConfig: c.make(AIConfigCommandsKey.self),
-                boards: c.make(BoardCommandsKey.self),
-                registry: c.make(AIProviderRegistryKey.self),
-                signIn: c.make(SignInCommandsKey.self)
+                aiConfig: resolver.make(AIConfigCommandsKey.self),
+                boards: resolver.make(BoardCommandsKey.self),
+                registry: resolver.make(AIProviderRegistryKey.self),
+                signIn: resolver.make(SignInCommandsKey.self)
             )
         }
     }

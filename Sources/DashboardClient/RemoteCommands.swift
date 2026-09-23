@@ -147,13 +147,14 @@ public struct RemoteAIConfigCommands: AIConfigCommands {
     private static func config(_ dto: AIConfigDTO) throws(ServiceError) -> AIConfig {
         do {
             return try AIConfig(
-                providers: dto.providers.map { p in
+                providers: dto.providers.map { provider in
                     try AIProviderConfig(
-                        id: p.id, kind: p.kind, name: p.name, model: p.model, baseURL: p.baseURL,
-                        apiKey: p.hasAPIKey ? RemoteAIConfigCommands.redactedKey : nil,
-                        maxTokens: p.maxTokens,
-                        pricing: p.pricing,
-                        oauth: p.oauthClientId.map { OAuthClientSettings(clientId: $0) }
+                        id: provider.id, kind: provider.kind, name: provider.name,
+                        model: provider.model, baseURL: provider.baseURL,
+                        apiKey: provider.hasAPIKey ? RemoteAIConfigCommands.redactedKey : nil,
+                        maxTokens: provider.maxTokens,
+                        pricing: provider.pricing,
+                        oauth: provider.oauthClientId.map { OAuthClientSettings(clientId: $0) }
                     )
                 },
                 defaultProviderId: dto.defaultProvider
@@ -378,55 +379,60 @@ public struct RemoteBoardCommands: BoardCommands {
         switch value {
         case .none: .keep
         case .some(.none): .clear
-        case let .some(.some(v)): .set(v)
+        case let .some(.some(value)): .set(value)
         }
     }
 
-    private static func board(_ r: BoardResponse) -> Board {
-        var board = Board(name: r.name, position: r.position, id: r.id, now: r.createdAt)
-        board.description = r.description
-        board.cardPrefix = r.cardPrefix
-        board.sprintPrefix = r.sprintPrefix
-        board.updatedAt = r.updatedAt
+    private static func board(_ response: BoardResponse) -> Board {
+        var board = Board(
+            name: response.name,
+            position: response.position,
+            id: response.id,
+            now: response.createdAt
+        )
+        board.description = response.description
+        board.cardPrefix = response.cardPrefix
+        board.sprintPrefix = response.sprintPrefix
+        board.updatedAt = response.updatedAt
         return board
     }
 
-    private static func column(_ r: ColumnResponse) -> Column {
+    private static func column(_ response: ColumnResponse) -> Column {
         var column = Column(
-            boardId: r.boardId,
-            name: r.name,
-            position: r.position,
-            wipLimit: r.wipLimit,
-            defaultStatus: r.defaultStatus.flatMap(\.domain),
-            id: r.id,
-            now: r.createdAt
+            boardId: response.boardId,
+            name: response.name,
+            position: response.position,
+            wipLimit: response.wipLimit,
+            defaultStatus: response.defaultStatus.flatMap(\.domain),
+            id: response.id,
+            now: response.createdAt
         )
-        column.updatedAt = r.updatedAt
+        column.updatedAt = response.updatedAt
         return column
     }
 
-    private static func card(_ r: CardResponse) -> Card? {
-        guard let priority = r.priority.domain, let status = r.status.domain else { return nil }
+    private static func card(_ response: CardResponse) -> Card? {
+        guard let priority = response.priority.domain, let status = response.status.domain else { return nil }
 
         var card = Card(
-            boardId: r.boardId,
-            columnId: r.columnId,
-            prefix: r.prefix,
-            cardNumber: r.cardNumber,
-            title: r.title,
-            description: r.description,
+            boardId: response.boardId,
+            columnId: response.columnId,
+            prefix: response.prefix,
+            cardNumber: response.cardNumber,
+            title: response.title,
+            description: response.description,
             priority: priority,
             status: status,
-            position: r.position,
-            id: r.id,
-            now: r.createdAt
+            position: response.position,
+            id: response.id,
+            now: response.createdAt
         )
-        card.dueDate = r.dueDate
-        card.points = r.points
-        card.aiCost = r.aiCost
-        card.sprintId = r.sprintId
-        card.updatedAt = r.updatedAt
-        card.completedAt = r.completedAt
+        card.dueDate = response.dueDate
+        card.points = response.points
+        card.aiCost = response.aiCost
+        card.sprintId = response.sprintId
+        card.updatedAt = response.updatedAt
+        card.completedAt = response.completedAt
         return card
     }
 }

@@ -28,10 +28,16 @@ public struct SpawnsEdge: Hashable, Sendable {
 
         self.source = sourceId
         self.target = targetId
-        if case let .string(created)? = object["created_at"] { self.createdAt = created }
-        else { self.createdAt = Self.timestamp(Date()) }
-        if case let .string(archived)? = object["archived_at"] { self.archivedAt = archived }
-        else { self.archivedAt = nil }
+        if case let .string(created)? = object["created_at"] {
+            self.createdAt = created
+        } else {
+            self.createdAt = Self.timestamp(Date())
+        }
+        if case let .string(archived)? = object["archived_at"] {
+            self.archivedAt = archived
+        } else {
+            self.archivedAt = nil
+        }
     }
 
     var json: JSONValue {

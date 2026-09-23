@@ -33,8 +33,13 @@ public enum AIProviderKind: String, Codable, Sendable, CaseIterable {
 
     /// Accepts the pre-0.2 spelling from existing config files.
     public init?(configValue: String) {
-        if let kind = AIProviderKind(rawValue: configValue) { self = kind }
-        else if configValue == "openai_compatible" { self = .openai } else { return nil }
+        if let kind = AIProviderKind(rawValue: configValue) {
+            self = kind
+        } else if configValue == "openai_compatible" {
+            self = .openai
+        } else {
+            return nil
+        }
     }
 }
 

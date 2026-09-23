@@ -46,19 +46,19 @@ public struct DraftTicketResponse: Codable, Sendable, Equatable {
         }
 
         public init(from decoder: any Decoder) throws {
-            let c = try decoder.container(keyedBy: CodingKeys.self)
-            self.inputTokens = try c.decodeIfPresent(Int.self, forKey: .inputTokens)
-            self.outputTokens = try c.decodeIfPresent(Int.self, forKey: .outputTokens)
-            self.costUSD = try c.decodeIfPresent(Double.self, forKey: .costUSD)
-            self.estimated = try c.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.inputTokens = try container.decodeIfPresent(Int.self, forKey: .inputTokens)
+            self.outputTokens = try container.decodeIfPresent(Int.self, forKey: .outputTokens)
+            self.costUSD = try container.decodeIfPresent(Double.self, forKey: .costUSD)
+            self.estimated = try container.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
         }
 
         public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(inputTokens, forKey: .inputTokens)
-            try c.encode(outputTokens, forKey: .outputTokens)
-            try c.encode(costUSD, forKey: .costUSD)
-            try c.encode(estimated, forKey: .estimated)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(inputTokens, forKey: .inputTokens)
+            try container.encode(outputTokens, forKey: .outputTokens)
+            try container.encode(costUSD, forKey: .costUSD)
+            try container.encode(estimated, forKey: .estimated)
         }
     }
 
@@ -100,10 +100,10 @@ public enum AssistantFrame: Sendable, Equatable {
         }
 
         public func encode(to encoder: any Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(step, forKey: .step)
-            try c.encode(detail, forKey: .detail)
-            try c.encode(elapsedMs, forKey: .elapsedMs)
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(step, forKey: .step)
+            try container.encode(detail, forKey: .detail)
+            try container.encode(elapsedMs, forKey: .elapsedMs)
         }
     }
 
@@ -129,12 +129,12 @@ public enum AssistantFrame: Sendable, Equatable {
     /// `event: …\ndata: …\n\n`, ready to write on the wire.
     public func encoded(with encoder: JSONEncoder = JSONEncoder()) throws -> Data {
         let data = switch self {
-        case let .stage(s): try encoder.encode(s)
-        case let .text(t): try encoder.encode(t)
-        case let .partial(p): try encoder.encode(p)
-        case let .usage(u): try encoder.encode(u)
-        case let .result(r): try encoder.encode(r)
-        case let .error(e): try encoder.encode(e)
+        case let .stage(value): try encoder.encode(value)
+        case let .text(value): try encoder.encode(value)
+        case let .partial(value): try encoder.encode(value)
+        case let .usage(value): try encoder.encode(value)
+        case let .result(value): try encoder.encode(value)
+        case let .error(value): try encoder.encode(value)
         }
         return Data("event: \(event)\ndata: ".utf8) + data + Data("\n\n".utf8)
     }

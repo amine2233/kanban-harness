@@ -32,6 +32,22 @@ claude mcp add dashboard -- dashboard mcp                                   # st
 claude mcp add --transport http dashboard http://127.0.0.1:5175/mcp        # HTTP
 ```
 
+Or check a `.mcp.json` into the project, so everyone working on it gets the same server:
+
+```json
+{
+  "mcpServers": {
+    "dashboard": {
+      "command": "dashboard",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+`command` is resolved like any other executable: a name on `PATH`, or a path relative to the
+directory the client runs in — `.build/debug/dashboard` while working on the package itself.
+
 Then, in a Claude Code session: _"list my projects"_, _"create a card 'Fix login crash' in
 App's To do column, priority high"_, _"break task-4 down into sub-tasks"_.
 

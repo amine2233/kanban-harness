@@ -25,7 +25,13 @@ note, or ask. A patch is not the place to decide a design.
 
 Three rules this file owns; everything else is a link.
 
-1. **The agent proposes, the human signs.** No commit of a diff nobody read.
+1. **The agent proposes, the human signs.** No commit of a diff nobody read. A commit whose
+   code an assistant wrote ends with `Assisted-by: LLM <model>` — never `Co-Authored-By:`, and
+   never a `Signed-off-by` from the assistant. An assistant is a tool; the person who merges is
+   the author of the change, however much of it was typed by something else. The distinction is
+   the kernel's, in
+   [`Documentation/process/coding-assistants.rst`](https://docs.kernel.org/process/coding-assistants.html):
+   only a person can certify where a patch came from.
 2. **Green at every commit**, not only the last — the bar is [`docs/MEMORY.md`](docs/MEMORY.md)
    § _What counts as verified_.
 3. **One fact, one home.** A rule, command or trap written in two files disagrees within a

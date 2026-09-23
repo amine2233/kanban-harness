@@ -9,7 +9,75 @@ permissions:
   contents: read
 
 jobs:
+  # Which areas this push touched. Every job below gates on it, so a docs-only
+  # change does not pay for a macOS Swift build.
+  #
+  # Per-job `if:` rather than a workflow-level `paths:` filter: a filtered-out
+  # workflow never creates a check run at all, so a required check would stay
+  # pending forever and block the PR. A job skipped by `if:` still reports, and
+  # GitHub counts skipped as satisfied.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.areas.outputs.backend }}
+      web: ${{ steps.areas.outputs.web }}
+      website: ${{ steps.areas.outputs.website }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The diff needs both ends; a shallow clone has neither.
+          fetch-depth: 0
+      - id: areas
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # An unknown range — a force-push, a branch's first commit, a rewritten
+          # history — means "we cannot tell", which must read as "run everything".
+          from=''
+          to=''
+          if [ "$EVENT" = 'pull_request' ]; then
+            # `|| true`: a range we cannot compute must fall through to
+            # "run everything", never fail the job under `set -e`.
+            from="$(git merge-base "$BASE" "$HEAD" || true)"
+            to="$HEAD"
+          elif git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            from="$BEFORE"
+            to="$AFTER"
+          fi
+
+          if [ -z "$from" ]; then
+            echo 'no usable diff range; running every area'
+            changed=''
+            unknown=1
+          else
+            changed="$(git diff --name-only "$from" "$to")"
+            unknown=0
+            echo "$changed" | sed 's/^/  /'
+          fi
+
+          # ci.yml is in all three: editing CI reruns everything, which is the
+          # cheap insurance against a filter that silently stops matching.
+          area() {
+            if [ "$unknown" = '1' ]; then echo 'true'; return; fi
+            if printf '%s\n' "$changed" | grep -Eq "$1"; then echo 'true'; else echo 'false'; fi
+          }
+
+          shared='|^package\.json$|^pnpm-lock\.yaml$|^pnpm-workspace\.yaml$|^\.github/workflows/ci\.yml$'
+          {
+            echo "backend=$(area "^Sources/|^Tests/|^Package\.(swift|resolved)$|^mise\.toml$|^\.github/workflows/ci\.yml$")"
+            echo "web=$(area "^web/$shared")"
+            echo "website=$(area "^website/|^docs/conceptions/$shared")"
+          } | tee -a "$GITHUB_OUTPUT"
+
   web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,13 +92,31 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:coverage
       - run: pnpm build
+
+  # Its own job rather than a step of `web`: the published site and the app
+  # change for different reasons, and a job is the only thing `if:` can gate.
+  website:
+    needs: changes
+    if: needs.changes.outputs.website == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: pnpm --filter website build
 
   # Job ids cannot contain ':', so the ids use '-' and the display names carry
   # the ':' form. Formatting is checked per area, in parallel with the build
   # jobs, so a formatting failure no longer hides a test failure.
+  # `check:format` runs the Swift formatter, so it follows the backend.
   check-backend-format:
     name: check:backend:format
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -45,6 +131,9 @@ jobs:
           cache_key_prefix: mise-format
       - run: mise run check:format
 
+  # Deliberately ungated, despite the name. This is `prettier --check .` over
+  # the whole repository — `docs/`, `README.md`, `.github/workflows/` — so
+  # gating it on `web/` is how an unformatted Markdown file reaches main.
   check-web-format:
     name: check:web:format
     runs-on: ubuntu-latest
@@ -60,6 +149,8 @@ jobs:
       - run: pnpm format:check
 
   backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     strategy:
       fail-fast: false
       matrix:

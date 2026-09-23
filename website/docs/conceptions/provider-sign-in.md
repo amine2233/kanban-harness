@@ -167,3 +167,5 @@ Independent of sign-in — it is a normal OpenAI-compatible vendor:
   tell users to keep `$MVP_DASHBOARD_HOME` out of dotfile repos or use the env var.
 - The callback route accepts only `state` values it issued, once, within 10 minutes.
 - `--cors-origin` does not apply to the callback (it is a top-level navigation, not XHR).
+- Signing out only deletes the local credential; the grant survives at the vendor. An
+  OpenRouter key never expires, so revoking it on their site is the only way to end it.

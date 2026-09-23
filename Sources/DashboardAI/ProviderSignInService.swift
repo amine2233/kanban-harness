@@ -11,6 +11,8 @@ public protocol SignInCommands: Sendable {
     func begin(providerId: String, callback: URL) async throws(ServiceError) -> URL
     /// Finishes it from the vendor's redirect; returns the provider signed in.
     func complete(state: String, code: String) async throws(ServiceError) -> String
+    /// Forgets the stored credential. Nothing is revoked at the vendor — the key or
+    /// token stays valid there until the user revokes it on the vendor's site.
     func signOut(providerId: String) async throws(ServiceError)
     /// The config with a usable secret: renews an OAuth token about to expire.
     func refreshed(_ config: AIProviderConfig) async throws(ServiceError) -> AIProviderConfig

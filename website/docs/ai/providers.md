@@ -29,7 +29,9 @@ backend. OpenRouter model ids look like `meta-llama/llama-3.3-70b-instruct:free`
 Settings → AI providers → **Sign in** on the provider, or `dashboard ai providers login <id>`.
 The vendor sends the browser back to the dashboard server's own `/api/auth/callback`; the
 credential is stored in `credentials.json` (mode `0600`, next to `config.yaml`), never in the
-config file, and the provider reads `key set`. **Sign out** (or `logout`) forgets it.
+config file, and the provider reads `key set`. **Sign out** (or `logout`) forgets it
+locally; it revokes nothing at the vendor, so the key or token keeps working until you
+revoke it on the vendor's site.
 
 - **OpenRouter** needs nothing else: the exchange returns a plain API key that never expires.
 - **Hugging Face** needs an OAuth app: create one at huggingface.co/settings/applications

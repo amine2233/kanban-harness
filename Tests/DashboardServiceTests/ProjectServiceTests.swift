@@ -9,11 +9,11 @@ import Testing
 
 /// In-memory workspace stores keyed by project path, so a re-added folder keeps its data.
 actor MemoryWorkspaces {
-    private var stores: [String: InMemoryWorkspaceStore] = [:]
+    private var stores: [String: WorkspaceStoreInMemory] = [:]
 
-    func store(for project: Project) -> InMemoryWorkspaceStore {
+    func store(for project: Project) -> WorkspaceStoreInMemory {
         if let existing = stores[project.path] { return existing }
-        let store = InMemoryWorkspaceStore()
+        let store = WorkspaceStoreInMemory()
         stores[project.path] = store
         return store
     }
@@ -47,7 +47,7 @@ func tempDir() throws -> String {
 func memoryService(changes: ChangeBroadcaster = ChangeBroadcaster()) -> ProjectService {
     let workspaces = MemoryWorkspaces()
     return ProjectService(
-        store: InMemoryProjectStore(),
+        store: ProjectStoreInMemory(),
         workspaces: WorkspaceStoreFactory { LazyWorkspaceStore(project: $0, workspaces: workspaces) },
         changes: changes
     )

@@ -11,10 +11,10 @@ import Testing
 @Suite(.serialized)
 struct KanbanToolsTests {
     actor Workspaces {
-        private var stores: [String: InMemoryWorkspaceStore] = [:]
-        func store(_ project: Project) -> InMemoryWorkspaceStore {
+        private var stores: [String: WorkspaceStoreInMemory] = [:]
+        func store(_ project: Project) -> WorkspaceStoreInMemory {
             if let s = stores[project.path] { return s }
-            let s = InMemoryWorkspaceStore()
+            let s = WorkspaceStoreInMemory()
             stores[project.path] = s
             return s
         }
@@ -35,10 +35,10 @@ struct KanbanToolsTests {
     func connectedClient() async throws -> (Client, Server, String) {
         let workspaces = Workspaces()
         let projects = ProjectService(
-            store: InMemoryProjectStore(),
+            store: ProjectStoreInMemory(),
             workspaces: WorkspaceStoreFactory { Lazy(project: $0, workspaces: workspaces) }
         )
-        let settings = SettingsService(store: InMemorySettingsStore())
+        let settings = SettingsService(store: SettingsStoreInMemory())
         let folder = NSTemporaryDirectory() + "mcp-" + UUID().uuidString
         _ = try await projects.add(name: "Demo", path: folder, storage: .json)
         let server = await DashboardMCPServer.make(

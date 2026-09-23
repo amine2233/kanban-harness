@@ -8,10 +8,10 @@ import Testing
 @Suite
 struct AssistantServiceTests {
     actor Workspaces {
-        private var stores: [String: InMemoryWorkspaceStore] = [:]
-        func store(_ p: Project) -> InMemoryWorkspaceStore {
+        private var stores: [String: WorkspaceStoreInMemory] = [:]
+        func store(_ p: Project) -> WorkspaceStoreInMemory {
             if let s = stores[p.path] { return s }
-            let s = InMemoryWorkspaceStore()
+            let s = WorkspaceStoreInMemory()
             stores[p.path] = s
             return s
         }
@@ -43,7 +43,7 @@ struct AssistantServiceTests {
     ) async throws -> Fixture {
         let workspaces = Workspaces()
         let projects = ProjectService(
-            store: InMemoryProjectStore(),
+            store: ProjectStoreInMemory(),
             workspaces: WorkspaceStoreFactory { Lazy(project: $0, workspaces: workspaces) }
         )
         let folder = NSTemporaryDirectory() + "ai-" + UUID().uuidString
@@ -61,7 +61,7 @@ struct AssistantServiceTests {
             subtasks: []
         )
 
-        let aiConfig = AIConfigService(store: InMemoryAIConfigStore())
+        let aiConfig = AIConfigService(store: AIConfigStoreInMemory())
         let fakeConfig = try AIProviderConfig(
             id: "fake",
             kind: .ollama,

@@ -16,26 +16,45 @@ public enum AtomicFile {
         do {
             return try Data(contentsOf: URL(fileURLWithPath: path))
         } catch {
-            throw PersistenceError.io(path: path, underlying: error.localizedDescription)
+            throw PersistenceError.io(
+                path: path,
+                underlying: error.localizedDescription
+            )
         }
     }
 
     /// `mode` is applied to the temp file before the rename, so the final file never exists with wider
     /// permissions.
-    public static func write(_ data: Data, to path: String, mode: Int? = nil) throws {
+    public static func write(
+        _ data: Data,
+        to path: String,
+        mode: Int? = nil
+    ) throws {
         let directory = (path as NSString).deletingLastPathComponent
         let temp = path + ".tmp"
         do {
-            try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(
+                atPath: directory,
+                withIntermediateDirectories: true
+            )
             try data.write(to: URL(fileURLWithPath: temp))
             if let mode {
-                try FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: temp)
+                try FileManager.default.setAttributes(
+                    [.posixPermissions: mode],
+                    ofItemAtPath: temp
+                )
             }
         } catch {
-            throw PersistenceError.io(path: path, underlying: error.localizedDescription)
+            throw PersistenceError.io(
+                path: path,
+                underlying: error.localizedDescription
+            )
         }
         guard rename(temp, path) == 0 else {
-            throw PersistenceError.io(path: path, underlying: String(cString: strerror(errno)))
+            throw PersistenceError.io(
+                path: path,
+                underlying: String(cString: strerror(errno))
+            )
         }
     }
 }

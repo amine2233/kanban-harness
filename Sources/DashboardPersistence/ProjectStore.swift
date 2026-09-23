@@ -8,7 +8,7 @@ public protocol ProjectStore: Sendable {
     func save(_ projects: [Project]) async throws
 }
 
-public actor InMemoryProjectStore: ProjectStore {
+public actor ProjectStoreInMemory: ProjectStore {
     private var projects: [Project] = []
 
     public init() {}

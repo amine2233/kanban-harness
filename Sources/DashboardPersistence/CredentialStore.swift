@@ -8,7 +8,7 @@ public protocol CredentialStore: Sendable {
     func remove(_ providerId: String) async throws
 }
 
-public actor InMemoryCredentialStore: CredentialStore {
+public actor CredentialStoreInMemory: CredentialStore {
     private var credentials: [String: Credential] = [:]
 
     public init() {}
@@ -27,6 +27,7 @@ public actor InMemoryCredentialStore: CredentialStore {
 }
 
 extension StoreContract {
+    /// used only for unit-test
     public static func verify(_ store: any CredentialStore) async throws {
         try await require(store.get("hf") == nil, "fresh store must be empty")
         let token = Credential(

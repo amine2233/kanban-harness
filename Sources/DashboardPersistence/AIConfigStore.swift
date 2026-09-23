@@ -8,7 +8,7 @@ public protocol AIConfigStore: Sendable {
     func save(_ config: AIConfig) async throws
 }
 
-public actor InMemoryAIConfigStore: AIConfigStore {
+public actor AIConfigStoreInMemory: AIConfigStore {
     private var config = AIConfig.empty
 
     public init() {}
@@ -23,6 +23,7 @@ public actor InMemoryAIConfigStore: AIConfigStore {
 }
 
 extension StoreContract {
+    /// used only for unit-test
     public static func verify(_ store: any AIConfigStore) async throws {
         let fresh = try await store.load()
         try require(fresh == .empty, "fresh store must be empty")

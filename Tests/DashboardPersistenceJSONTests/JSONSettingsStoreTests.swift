@@ -13,7 +13,7 @@ struct JSONSettingsStoreTests {
     @Test
     func satisfiesContract() async throws {
         try await StoreContract.verify(store())
-        try await StoreContract.verify(InMemorySettingsStore())
+        try await StoreContract.verify(SettingsStoreInMemory())
     }
 
     @Test

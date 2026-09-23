@@ -38,7 +38,7 @@ struct ChangeEventsTests {
     @Test
     func settingsServicePublishesOnUpdate() async throws {
         let changes = ChangeBroadcaster()
-        let svc = SettingsService(store: InMemorySettingsStore(), changes: changes)
+        let svc = SettingsService(store: SettingsStoreInMemory(), changes: changes)
         let stream = await changes.subscribe()
         var events = stream.makeAsyncIterator()
         _ = try await svc.update(defaultStorage: .sqlite)

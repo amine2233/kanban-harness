@@ -15,7 +15,7 @@ struct ConfigFileAIConfigStoreTests {
     @Test(arguments: ["config.json", "config.yaml"])
     func satisfiesContractInBothFormats(file: String) async throws {
         try await StoreContract.verify(ConfigFileAIConfigStore(path: path(file), environment: [:]))
-        try await StoreContract.verify(InMemoryAIConfigStore())
+        try await StoreContract.verify(AIConfigStoreInMemory())
     }
 
     @Test
@@ -112,7 +112,7 @@ struct ConfigFileAIConfigStoreTests {
         let file = try path("config.json")
         try #"{"ai": {"provider_ids": ["hf"], "providers": {"hf": {"kind": "huggingface", "model": "m", "api_key": "hf_legacy", "oauth": {"client_id": "app1"}}}}}"#
             .write(toFile: file, atomically: true, encoding: .utf8)
-        let credentials = InMemoryCredentialStore()
+        let credentials = CredentialStoreInMemory()
         let store = ConfigFileAIConfigStore(path: file, credentials: credentials, environment: [:])
         #expect(try await store.load().provider("hf")?.apiKey == "hf_legacy")
         #expect(try await store.load().provider("hf")?.oauth == OAuthClientSettings(clientId: "app1"))
@@ -148,7 +148,7 @@ struct ConfigFileAIConfigStoreTests {
         let mode = try #require(FileManager.default
             .attributesOfItem(atPath: store.path)[.posixPermissions] as? Int)
         #expect(mode & 0o777 == 0o600)
-        try await StoreContract.verify(InMemoryCredentialStore())
+        try await StoreContract.verify(CredentialStoreInMemory())
     }
 
     @Test

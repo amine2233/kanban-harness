@@ -82,6 +82,7 @@ final class CLI {
         let process = Process()
         process.executableURL = Self.binary
         process.environment = environment
+        process.currentDirectoryURL = URL(fileURLWithPath: home)
         process.arguments = baseArguments + arguments
         let out = Pipe()
         let err = Pipe()
@@ -107,6 +108,7 @@ final class CLI {
         let process = Process()
         process.executableURL = Self.binary
         process.environment = environment
+        process.currentDirectoryURL = URL(fileURLWithPath: home)
         process.arguments = baseArguments + [first] + rest
         let out = Pipe()
         let err = Pipe()
@@ -142,7 +144,6 @@ struct CLITests {
     @Test
     func projectAddResolvesRelativePathsAgainstCwd() throws {
         let cli = try CLI()
-        let cwd = FileManager.default.currentDirectoryPath
         let created = try #require(try cli.json(
             "project",
             "add",
@@ -151,9 +152,8 @@ struct CLITests {
             "Rel"
         ) as? [String: Any])
         let path = try #require(created["path"] as? String)
-        #expect(path.hasPrefix("/"))
-        #expect(path.hasPrefix(URL(fileURLWithPath: cwd).standardizedFileURL.path))
-        try? FileManager.default.removeItem(atPath: path)
+        let resolvedHome = URL(fileURLWithPath: cli.home).resolvingSymlinksInPath().path
+        #expect(URL(fileURLWithPath: path).resolvingSymlinksInPath().path.hasPrefix(resolvedHome + "/"))
     }
 
     @Test

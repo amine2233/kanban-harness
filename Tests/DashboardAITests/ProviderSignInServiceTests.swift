@@ -46,9 +46,9 @@ struct ProviderSignInServiceTests {
     let callback = URL(string: "http://127.0.0.1:5175/api/auth/callback")!
 
     func fixture(_ vendor: FakeSignIn = FakeSignIn()) async throws
-        -> (ProviderSignInService, AIConfigService, InMemoryCredentialStore, FakeSignIn) {
-        let credentials = InMemoryCredentialStore()
-        let aiConfig = AIConfigService(store: InMemoryAIConfigStore())
+        -> (ProviderSignInService, AIConfigService, CredentialStoreInMemory, FakeSignIn) {
+        let credentials = CredentialStoreInMemory()
+        let aiConfig = AIConfigService(store: AIConfigStoreInMemory())
         _ = try await aiConfig.upsert(AIProviderConfig(
             id: "router",
             kind: .openrouter,

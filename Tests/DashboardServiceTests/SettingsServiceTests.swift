@@ -7,13 +7,13 @@ import Testing
 struct SettingsServiceTests {
     @Test
     func currentStartsWithDefaults() async throws {
-        let svc = SettingsService(store: InMemorySettingsStore())
+        let svc = SettingsService(store: SettingsStoreInMemory())
         #expect(try await svc.current() == .default)
     }
 
     @Test
     func updateMergesValidatesAndPersists() async throws {
-        let svc = SettingsService(store: InMemorySettingsStore())
+        let svc = SettingsService(store: SettingsStoreInMemory())
         let updated = try await svc.update(corsOrigins: ["http://localhost:5173/"])
         #expect(updated == Settings(defaultStorage: .json, corsOrigins: ["http://localhost:5173"]))
         let again = try await svc.update(defaultStorage: .sqlite)
@@ -24,7 +24,7 @@ struct SettingsServiceTests {
 
     @Test
     func updateWithBadOriginIsValidationErrorAndChangesNothing() async throws {
-        let svc = SettingsService(store: InMemorySettingsStore())
+        let svc = SettingsService(store: SettingsStoreInMemory())
         do {
             _ = try await svc.update(corsOrigins: ["ftp://x"])
             Issue.record("expected error")

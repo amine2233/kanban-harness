@@ -30,7 +30,7 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
 
     public init(
         path: String,
-        credentials: any CredentialStore = InMemoryCredentialStore(),
+        credentials: any CredentialStore = CredentialStoreInMemory(),
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) {
         self.path = path

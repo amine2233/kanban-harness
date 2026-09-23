@@ -10,17 +10,26 @@ ids() {
 }
 
 # "<blocker> <task>" pairs. No self-edges: tsort treats them as cycles and
-# silently reorders around them.
+# silently reorders around them. A bullet is joined with its wrapped
+# continuation lines first, or a `· T-nn` that prettier pushed onto the next
+# line is never seen.
 edges() {
-  awk 'match($0, /\*\*T-[0-9]+ \([SML]\)\*\*/) {
-    h = substr($0, RSTART, RLENGTH); sub(/^\*\*/, "", h); sub(/ .*/, "", h)
-    rest = $0
-    while (match(rest, /· T-[0-9]+/)) {
-      d = substr(rest, RSTART, RLENGTH); sub(/^· /, "", d)
-      if (d != h) print d, h
-      rest = substr(rest, RSTART + RLENGTH)
+  awk '
+    function emit(rec,   h, rest, d) {
+      if (!match(rec, /\*\*T-[0-9]+ \([SML]\)\*\*/)) return
+      h = substr(rec, RSTART, RLENGTH); sub(/^\*\*/, "", h); sub(/ .*/, "", h)
+      rest = rec
+      while (match(rest, /· T-[0-9]+/)) {
+        d = substr(rest, RSTART, RLENGTH); sub(/^· /, "", d)
+        if (d != h) print d, h
+        rest = substr(rest, RSTART + RLENGTH)
+      }
     }
-  }' "$tasks"
+    /^- \*\*T-[0-9]+ \([SML]\)\*\*/ { emit(buf); buf = $0; next }
+    /^#/                                { emit(buf); buf = ""; next }
+    { buf = buf " " $0 }
+    END { emit(buf) }
+  ' "$tasks"
 }
 
 ordered=$(edges | tsort)                      # non-zero + message on a cycle

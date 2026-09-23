@@ -1,11 +1,3 @@
----
-title: Provider sign-in
----
-
-:::note Design note
-Browser sign-in (OAuth / PKCE) for AI providers and where credentials are stored on macOS and Linux; OpenRouter first, Hugging Face after. Source: `docs/conceptions/provider-sign-in.md`.
-:::
-
 # Provider sign-in (OAuth / PKCE) and credential storage
 
 How a provider gets a credential without the user pasting a key, where that credential
@@ -167,3 +159,24 @@ Independent of sign-in — it is a normal OpenAI-compatible vendor:
   tell users to keep `$MVP_DASHBOARD_HOME` out of dotfile repos or use the env var.
 - The callback route accepts only `state` values it issued, once, within 10 minutes.
 - `--cors-origin` does not apply to the callback (it is a top-level navigation, not XHR).
+
+## Tasks
+
+Steps 1–3 shipped (`b85234d`): the OAuth flow, the file credential store, OpenRouter and
+Hugging Face.
+
+- **T-26 (M)** `KeychainCredentialStore` on macOS behind `#if canImport(Security)`; the file
+  store stays the Linux backend. — SRV-09 · —
+- **T-37 (S)** Build the OAuth redirect URI from a configured public URL; when unset, accept
+  the `Host` header only if it is loopback. Today a forged `Host` steers OpenRouter's
+  `callback_url`, which needs no pre-registration. — SRV-09 · —
+- **T-38 (S)** One `registerOpenAICompatible` helper for the three copies of the
+  guard-key-then-`OpenAILanguageModel` body (`openai`, `huggingface`, `openrouter`). Keep
+  `ProvidersTests.swift:174` passing. — SRV-09 · —
+- **T-39 (M)** Renew an expiring token at read time, or carry `expiresAt` on
+  `AIProviderConfig`; today only `AssistantService` calls `refreshed()`. — SRV-09 · —
+- **T-40 (S)** Record in `ProviderSignInService.signOut` that it does not revoke at the
+  vendor. — SRV-09 · —
+- **T-41 (M)** `OAuthVendor` descriptor so a vendor is data, not a module. — SRV-09 · T-38 ·
+  deferred: one conforming vendor today, OpenRouter deliberately does not fit; revisit at the
+  third standard-OAuth vendor

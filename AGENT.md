@@ -14,10 +14,10 @@ A decision is made once, written down, then cut into patches implemented by hand
 
 ```
 docs/PRD.md            the requirement          SRV-17
-  └─ docs/conceptions/ the RFC — the decision   provider-sign-in.md
-       └─ docs/series/ the decomposition        [1/N] … [N/N]
-            └─ git     the patches              one commit each
-                 └─ docs/TASKS.md   what is left, and in what order
+  └─ docs/conceptions/ the RFC — the decision   20260921-provider-sign-in.md
+       └─ its § Tasks  what is left             T-26 (M) … — SRV-09 · blocked by
+            └─ docs/series/ the decomposition   [1/N] … [N/N]
+                 └─ git    the patches          one commit each
 ```
 
 Entering in the middle is the usual mistake. No conception note behind the work → write the
@@ -52,7 +52,7 @@ repeated here. Run it with `/agent-os:plan-code <note | id | sentence>`.
 | [`docs/RULES.md`](docs/RULES.md)               | before writing code — it is short              |
 | [`docs/MEMORY.md`](docs/MEMORY.md)             | something behaves in a way that makes no sense |
 | [`docs/conceptions/`](docs/conceptions/)       | the design is not settled yet                  |
-| [`docs/TASKS.md`](docs/TASKS.md)               | picking up work                                |
+| [`docs/conceptions/`](docs/conceptions/)       | picking up work — each note carries its tasks  |
 | [`docs/DEBUG.md`](docs/DEBUG.md)               | a port is held or a server will not start      |
 
 Target-by-target ownership is the table in
@@ -79,8 +79,16 @@ Target-by-target ownership is the table in
 
 ## Picking up work
 
-`docs/TASKS.md` carries `· blocked by`, which is a dependency graph.
-`scripts/next-tasks.sh` sorts it into a build order and fails loudly on a cycle.
+Every conception note ends with a `## Tasks` section listing what is left to implement it:
+
+```
+- **T-nn (S|M|L)** what to do. — PRD id · blocked by
+```
+
+`· blocked by` is a dependency graph across all the notes; `scripts/next-tasks.sh` sorts it into
+a build order and fails loudly on a cycle. A task with no note behind it is not a task yet — it
+is a card on the board, or a question in [`docs/PRD.md`](docs/PRD.md) § _Open questions_. There
+is no separate backlog file: an index every branch edits is where merge conflicts come from.
 
 ## Before you finish
 

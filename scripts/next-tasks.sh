@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
-# Build order for docs/TASKS.md, from the `· blocked by` field each task already carries.
-# Fails loudly on a circular `blocked by`.
+# Build order across every conception note's `## Tasks`, from the `· blocked by`
+# field each task already carries. Fails loudly on a circular `blocked by`.
+#
+# There is no single backlog file on purpose: one index edited by every branch
+# is what produced the merge conflicts. Each note owns its own tasks, and the
+# dependency graph is reassembled here, at read time.
 set -euo pipefail
 
-tasks="${1:-docs/TASKS.md}"
+if [ "$#" -gt 0 ]; then
+  tasks=("$@")
+else
+  tasks=(docs/conceptions/*.md)
+fi
 
 ids() {
-  grep -oE '\*\*T-[0-9]+ \([SML]\)\*\*' "$tasks" | grep -oE 'T-[0-9]+' | sort -u
+  grep -hoE '\*\*T-[0-9]+ \([SML]\)\*\*' "${tasks[@]}" | grep -oE 'T-[0-9]+' | sort -u
 }
 
 # "<blocker> <task>" pairs. No self-edges: tsort treats them as cycles and
@@ -29,7 +37,7 @@ edges() {
     /^#/                                { emit(buf); buf = ""; next }
     { buf = buf " " $0 }
     END { emit(buf) }
-  ' "$tasks"
+  ' "${tasks[@]}"
 }
 
 ordered=$(edges | tsort)                      # non-zero + message on a cycle

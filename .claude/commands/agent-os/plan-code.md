@@ -16,7 +16,7 @@ If the target is empty, ask for it and stop.
 Read, in this order:
 
 1. The target: a conception note (`docs/conceptions/*.md`), the requirement behind an id in
-   `docs/PRD.md` / the entry in `docs/TASKS.md`, or, for a plain sentence, whatever in
+   `docs/PRD.md` / the task's line in its conception note's `## Tasks`, or, for a plain sentence, whatever in
    `docs/` covers it.
 2. `docs/ARCHITECTURE.md` — the layering each patch must respect.
 3. `docs/RULES.md` — the constraints each patch must satisfy.

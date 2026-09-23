@@ -135,3 +135,22 @@ altogether and is the smaller implementation.
 
 - Multi-server or shared event log across processes (one server per machine).
 - Client → server commands over the socket — HTTP stays the command channel.
+
+## Tasks
+
+No heartbeat, no sequence numbers, no replay: a sleep, a proxy reset or a rebuild leaves a
+browser stale. Order from `conceptions/20260921-live-connection.md`.
+
+- **T-01 (S)** Heartbeat frame and WebSocket ping on a fixed cadence, advertised in `hello`. —
+  SRV-17 · —
+- **T-02 (M)** Process epoch, per-event sequence number, bounded `ChangeLog` ring (1024). —
+  SRV-18 · T-01
+- **T-03 (M)** Accept `resume {epoch, seq}`: replay inside the ring, `resync` otherwise. —
+  SRV-18 · T-02
+- **T-04 (S)** Boundary tests: replay, resync, stale epoch, heartbeat cadence. — SRV-17/18 · T-03
+- **T-05 (S)** Restart the backend in `scripts/dev.sh` when it exits non-zero. — SRV-19 · —
+- **T-06 (S)** `dashboard server status`: pid, uptime, epoch, socket clients. — SRV-19 · T-02
+- **T-07 (S)** Document a launchd plist and a systemd unit with restart-on-failure. — SRV-19 · T-05
+- **T-08 (S)** Let the dev client open the socket directly on the backend port (server side:
+  confirm the loopback origin rule). — SRV-17 · T-01 · client half in `web/docs/TASKS.md`
+- **T-09 (M)** Re-evaluate SSE instead of the WebSocket once T-01…T-03 land. — SRV-17 · T-03

@@ -1,9 +1,10 @@
 ---
+slug: /conceptions/live-connection
 title: Live connection
 ---
 
 :::note Design note
-Why the live socket drops and an architecture, modelled on Herdr, that survives sleeps, proxies, restarts and crashes. Source: `docs/conceptions/live-connection.md`.
+Why the live socket drops and an architecture, modelled on Herdr, that survives sleeps, proxies, restarts and crashes. Source: `docs/conceptions/20260921-live-connection.md`.
 :::
 
 # A stable live connection

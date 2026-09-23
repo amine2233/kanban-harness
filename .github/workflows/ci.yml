@@ -27,6 +27,21 @@ jobs:
       - run: pnpm build
       - run: pnpm --filter website build
 
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v3
+        with:
+          # Only the formatter: mise.toml's [tools] also pins Swift and node,
+          # and neither is needed to lint formatting.
+          install_args: github:executor-cli/executor
+          # On by default; stated here, and given its own prefix so this job's
+          # partial tool set never restores into a job that installs them all.
+          cache: true
+          cache_key_prefix: mise-format
+      - run: mise run check:format
+
   backend:
     strategy:
       fail-fast: false

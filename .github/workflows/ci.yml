@@ -20,14 +20,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit --audit-level=high
-      - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test:coverage
       - run: pnpm build
       - run: pnpm --filter website build
 
-  format:
+  # Job ids cannot contain ':', so the ids use '-' and the display names carry
+  # the ':' form. Formatting is checked per area, in parallel with the build
+  # jobs, so a formatting failure no longer hides a test failure.
+  check-backend-format:
+    name: check:backend:format
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -41,6 +44,20 @@ jobs:
           cache: true
           cache_key_prefix: mise-format
       - run: mise run check:format
+
+  check-web-format:
+    name: check:web:format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      # Prettier lives in node_modules, so the install is unavoidable here.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
 
   backend:
     strategy:

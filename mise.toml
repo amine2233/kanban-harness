@@ -149,6 +149,10 @@ run = "executor format ."
 description = "Lint code documentation"
 run = "executor linting documentation ./Sources --reporter console"
 
+[tasks."check:web"]
+description = "ESLint and tsc over the web workspace"
+run = ["pnpm lint", "pnpm typecheck"]
+
 [tasks."check:code"]
 description = "Lint source code"
 run = "executor linting code ./Sources --reporter console"

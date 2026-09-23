@@ -30,11 +30,7 @@ extension AIProviderRegistry {
                 return AnthropicLanguageModel(baseURL: Self.url(config.baseURL, default: "https://api.anthropic.com/v1"), apiKey: key, model: config.model)
             }
         }
-        registry.register(.openai) { config in
-            AnyLanguageModelProvider(config: config) {
-                OpenAILanguageModel(baseURL: Self.url(config.baseURL, default: "https://api.openai.com/v1"), apiKey: config.apiKey ?? "", model: config.model)
-            }
-        }
+        registry.registerOpenAICompatible(.openai, baseURL: "https://api.openai.com/v1")
         registry.register(.gemini) { config in
             AnyLanguageModelProvider(config: config) {
                 guard let key = config.apiKey else { throw AIProviderError.notConfigured("\(config.name) has no API key") }
@@ -48,6 +44,21 @@ extension AIProviderRegistry {
         }
         registry.register(.claudeCode) { ClaudeCodeProvider(config: $0, executable: claudeExecutable) }
         return registry
+    }
+
+    /// One OpenAI-compatible endpoint, one line: the vendors differ only in
+    /// their base URL and in whether they answer an anonymous request.
+    /// `requiresKey` is the complaint for those that do not; nil leaves the key
+    /// optional, which is what a local endpoint (LM Studio, LiteLLM) needs.
+    public mutating func registerOpenAICompatible(_ kind: AIProviderKind, baseURL fallback: String, requiresKey complaint: String? = nil) {
+        register(kind) { config in
+            AnyLanguageModelProvider(config: config) {
+                if let complaint, config.apiKey == nil {
+                    throw AIProviderError.notConfigured("\(config.name) \(complaint)")
+                }
+                return OpenAILanguageModel(baseURL: Self.url(config.baseURL, default: fallback), apiKey: config.apiKey ?? "", model: config.model, apiVariant: .chatCompletions)
+            }
+        }
     }
 
     private static func url(_ configured: String?, default fallback: String) -> URL {

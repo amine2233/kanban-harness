@@ -92,6 +92,15 @@ import Vapor
         }
     }
 
+    @Test func anOpenAICompatibleEndpointAnswersWithoutAKey() async throws {
+        try await withStub("not json") { base, recorder in
+            let config = try AIProviderConfig(id: "o", kind: .openai, name: "O", model: "m", baseURL: base.absoluteString)
+            await #expect(throws: AIProviderError.self) { _ = try await collect(try AIProviderRegistry.standard().make(config)) }
+            let sent = try #require(await recorder.first())
+            #expect(sent.path == "/chat/completions")
+        }
+    }
+
     // An unreachable host is not covered: AsyncHTTPClient keeps retrying the
     // connection until its 60 s deadline before surfacing "connection refused".
     @Test func badAnswersAreTyped() async throws {

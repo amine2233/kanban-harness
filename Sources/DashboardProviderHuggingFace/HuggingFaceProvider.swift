@@ -1,4 +1,3 @@
-import AnyLanguageModel
 import DashboardAI
 import DashboardAIProviders
 import DashboardDomain
@@ -17,12 +16,7 @@ public enum HuggingFaceProvider {
     public static let scopes = ["openid", "profile", "inference-api"]
 
     public static func register(in registry: inout AIProviderRegistry, transport: any HTTPTransport = URLSessionTransport()) {
-        registry.register(.huggingface) { config in
-            AnyLanguageModelProvider(config: config) {
-                guard let key = config.apiKey else { throw AIProviderError.notConfigured("\(config.name) has no token — paste one or sign in") }
-                return OpenAILanguageModel(baseURL: url(config.baseURL), apiKey: key, model: config.model, apiVariant: .chatCompletions)
-            }
-        }
+        registry.registerOpenAICompatible(.huggingface, baseURL: routerURL, requiresKey: "has no token — paste one or sign in")
         registry.registerSignIn(.huggingface) { config in
             try signIn(for: config, transport: transport)
         }
@@ -35,9 +29,5 @@ public enum HuggingFaceProvider {
             throw AIProviderError.notConfigured("\(config.name): set oauth.client_id (an OAuth app from huggingface.co/settings/applications) to sign in")
         }
         return OAuthCodeFlow(authorizeURL: authorizeURL, tokenURL: tokenURL, client: client, scopes: scopes, transport: transport)
-    }
-
-    static func url(_ configured: String?) -> URL {
-        URL(string: configured ?? routerURL) ?? URL(string: routerURL)!
     }
 }

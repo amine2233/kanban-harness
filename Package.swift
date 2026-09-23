@@ -64,11 +64,11 @@ let package = Package(
         ),
         .target(
             name: "DashboardProviderHuggingFace",
-            dependencies: ["DashboardAIProviders", "DashboardOAuth", .product(name: "AnyLanguageModel", package: "AnyLanguageModel")]
+            dependencies: ["DashboardAIProviders", "DashboardOAuth"]
         ),
         .target(
             name: "DashboardProviderOpenRouter",
-            dependencies: ["DashboardAIProviders", "DashboardOAuth", .product(name: "AnyLanguageModel", package: "AnyLanguageModel")]
+            dependencies: ["DashboardAIProviders", "DashboardOAuth"]
         ),
         .target(
             name: "DashboardMCP",

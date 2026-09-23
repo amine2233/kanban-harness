@@ -36,6 +36,19 @@ actor StubTransport: HTTPTransport {
         #expect(try registry.signIn(for: hf) is OAuthCodeFlow)
     }
 
+    @Test func vendorsWithoutAKeyAreNotConfigured() async throws {
+        var registry = AIProviderRegistry()
+        HuggingFaceProvider.register(in: &registry)
+        OpenRouterProvider.register(in: &registry)
+        let request = CompletionRequest(system: "sys", prompt: "draft", schema: TicketDraft.jsonSchema)
+        for (kind, complaint) in [(AIProviderKind.huggingface, "has no token"), (.openrouter, "has no API key")] {
+            let provider = try registry.make(AIProviderConfig(id: "v", kind: kind, name: "V", model: "m"))
+            await #expect(throws: AIProviderError.notConfigured("V \(complaint) — paste one or sign in")) {
+                for try await _ in provider.stream(request) {}
+            }
+        }
+    }
+
     @Test func huggingFaceSignInNeedsARegisteredApp() throws {
         let bare = try AIProviderConfig(id: "h", kind: .huggingface, name: "H", model: "m")
         #expect(throws: AIProviderError.self) { _ = try HuggingFaceProvider.signIn(for: bare) }

@@ -1,4 +1,3 @@
-import AnyLanguageModel
 import DashboardAI
 import DashboardAIProviders
 import DashboardDomain
@@ -14,17 +13,8 @@ public enum OpenRouterProvider {
     public static let keysURL = URL(string: "https://openrouter.ai/api/v1/auth/keys")!
 
     public static func register(in registry: inout AIProviderRegistry, transport: any HTTPTransport = URLSessionTransport()) {
-        registry.register(.openrouter) { config in
-            AnyLanguageModelProvider(config: config) {
-                guard let key = config.apiKey else { throw AIProviderError.notConfigured("\(config.name) has no API key — paste one or sign in") }
-                return OpenAILanguageModel(baseURL: url(config.baseURL), apiKey: key, model: config.model, apiVariant: .chatCompletions)
-            }
-        }
+        registry.registerOpenAICompatible(.openrouter, baseURL: apiURL, requiresKey: "has no API key — paste one or sign in")
         registry.registerSignIn(.openrouter) { _ in OpenRouterSignIn(transport: transport) }
-    }
-
-    static func url(_ configured: String?) -> URL {
-        URL(string: configured ?? apiURL) ?? URL(string: apiURL)!
     }
 }
 

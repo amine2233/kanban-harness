@@ -12,7 +12,7 @@ Title: conventional commit — `feat:`, `fix:`, `docs:`, `ci:`, `refactor:`, `te
 <!-- Where this comes from. Delete the lines that do not apply. -->
 
 - Decision: `docs/conceptions/<note>.md`
-- Task: `T-nn` in `docs/TASKS.md` (or `web/docs/TASKS.md`)
+- Task: `T-nn` in the conception note's `## Tasks` (or `web/docs/TASKS.md`)
 - Series: `docs/series/<slug>.md`
 
 ## Checks
@@ -20,7 +20,7 @@ Title: conventional commit — `feat:`, `fix:`, `docs:`, `ci:`, `refactor:`, `te
 - [ ] `mise run check` is green
 - [ ] Each commit stands alone: it builds and passes its own check
 - [ ] The commit message says _why_, not _what_
-- [ ] `docs/TASKS.md` updated — `· done <sha>` or `· dropped: <why>`
+- [ ] The task's line removed from its note's `## Tasks`, or marked `· dropped: <why>`
 - [ ] Facts live in one place; nothing copied between docs
 
 ## Not in this PR

@@ -1,9 +1,10 @@
 ---
+slug: /conceptions/mcp-servers
 title: MCP servers and tools
 ---
 
 :::note Design note
-Written before the code. Global scope is planned first; the per-project part is specified so it can follow without re-deciding anything. Source: `docs/conceptions/mcp-servers.md`.
+Written before the code. Global scope is planned first; the per-project part is specified so it can follow without re-deciding anything. Source: `docs/conceptions/20260920-mcp-servers.md`.
 :::
 
 # MCP servers and tools

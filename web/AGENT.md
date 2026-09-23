@@ -15,7 +15,7 @@ in `localStorage`.
 | [`docs/DESIGN.md`](docs/DESIGN.md)             | you are about to do something a different way        |
 | [`docs/RULES.md`](docs/RULES.md)               | before writing code — it is short                    |
 | [`docs/MEMORY.md`](docs/MEMORY.md)             | something behaves in a way that makes no sense       |
-| [`docs/TASKS.md`](docs/TASKS.md)               | picking up work                                      |
+| [`docs/conceptions/`](docs/conceptions/)       | picking up work — each note carries its tasks        |
 | [`docs/DEBUG.md`](docs/DEBUG.md)               | a port is held or a server will not start            |
 
 ## Layout

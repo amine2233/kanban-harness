@@ -4,7 +4,7 @@ Today the CLI, the server and MCP are siblings: each builds its own container, o
 files and runs its own `ChangeBroadcaster`. This note makes the CLI the single owner and turns
 the server and MCP into clients of it over a local socket.
 
-[`live-connection.md`](live-connection.md) decides the **browser ↔ server** socket — heartbeat,
+[`20260921-live-connection.md`](20260921-live-connection.md) decides the **browser ↔ server** socket — heartbeat,
 resync, backoff — and stays authoritative for it. This note decides the **daemon ↔ interface**
 socket, which is a different hop.
 
@@ -92,7 +92,7 @@ the browser. Each client connection is independent: closing or crashing one drop
 connection's subscribers and nothing else. The daemon never exits because a client went away.
 
 The browser keeps talking HTTP and WebSocket to the server exactly as today — `/api/events`
-stays where it is, with the behaviour `live-connection.md` specifies. The server stops being a
+stays where it is, with the behaviour `20260921-live-connection.md` specifies. The server stops being a
 data owner and becomes a translator between two sockets.
 
 ### D-6 — a daemon from another build is not an owner to use
@@ -139,7 +139,7 @@ any of that is ours to build and maintain. One toggle with one real case is enou
 
 ## Not in this note
 
-- **The browser socket** — `live-connection.md` owns heartbeat, resync and backoff.
+- **The browser socket** — `20260921-live-connection.md` owns heartbeat, resync and backoff.
 - **The wire protocol on the daemon socket** — framing, versioning and what happens when a
   client is older than the daemon. It needs its own note before step 1 is cut into patches.
 - **The on-disk formats** — unchanged; `PRD.md` §data-contract stays the contract.
@@ -152,3 +152,32 @@ any of that is ours to build and maintain. One toggle with one real case is enou
   idle timeout keeps a laptop clean but makes the next command pay a spawn.
 - **Spawn races.** Two commands starting at once both find no socket and both spawn. An
   exclusive create on a lock file under `home` is the usual fix; confirm it before step 1.
+
+## Tasks
+
+From [`conceptions/20260923-cli-as-source-of-truth.md`](conceptions/20260923-cli-as-source-of-truth.md). The daemon
+becomes the only process that opens a database; the server and MCP become clients over a local
+socket. Fixes the MCP-plus-server deadlock ([`MEMORY.md`](MEMORY.md) §2) and makes a change made
+through MCP visible in the web, which no amount of client work can do today. `T-06` becomes
+daemon status once `T-44` lands.
+
+- **T-43 (S)** Decide the daemon socket protocol: framing, version handshake, what a client
+  older than the daemon does. Needs its own note; blocks the theme. — SRV-19 · —
+- **T-44 (L)** `dashboard daemon`: unix socket under `home`, one accept loop, the single
+  `ChangeBroadcaster`, and `DashboardRuntime.register` called here and nowhere else. —
+  SRV-19 · T-43
+- **T-45 (M)** Socket-backed implementations of the command protocols, beside `DashboardClient`'s
+  HTTP ones. — SRV-19 · T-44
+- **T-46 (M)** `serve` connects to the socket instead of building a container; a dropped or
+  crashed client never reaches the daemon. — SRV-19 · T-45
+- **T-47 (M)** `mcp` and the one-shot commands connect to the socket, spawning the daemon and
+  retrying once when nothing answers; a stale socket file is unlinked. — SRV-19 · T-45
+- **T-48 (S)** Delete `Mode`, `GlobalOptions.forcedMode`, `--local` and `--remote`; there is no
+  second wiring path left to choose. — SRV-19 · T-47
+- **T-49 (S)** Exclusive-create lock under `home` so two commands racing to spawn produce one
+  daemon. — SRV-19 · T-47
+- **T-50 (S)** AI providers register themselves through the container; a disabled provider is one
+  that does not register. — SRV-09 · T-44
+- **T-51 (S)** Daemon lifetime: idle timeout, or run until reboot. — open question · T-44
+- **T-52 (S)** Version skew: an upgraded binary meeting a daemon started by the old one. — open
+  question · T-43

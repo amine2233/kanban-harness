@@ -28,7 +28,7 @@ from whichever surface is open, checks what drafting cost.
 **AI agent.** A coding agent (Claude Code, Cursor, any MCP client) on the same machine, acting
 on the board through MCP tools, routed through the server so browsers stay live.
 
-> TODO(owner): are drafting agents (`docs/conceptions/ai-agents.md`) a third user class or a
+> TODO(owner): are drafting agents (`docs/conceptions/20260920-ai-agents.md`) a third user class or a
 > configuration of the second?
 
 ## Goals
@@ -94,7 +94,7 @@ unregistering leaves the folder intact; an env-supplied key never lands on disk.
 ## Functional requirements
 
 Sourced from `README.md` unless the row says otherwise. `SHOULD` and `MAY` rows are the
-backlog in [`TASKS.md`](TASKS.md).
+backlog in each note's `## Tasks` section.
 
 | ID     | Requirement                                                                                 | Priority |
 | ------ | ------------------------------------------------------------------------------------------- | -------- |
@@ -156,8 +156,8 @@ backlog in [`TASKS.md`](TASKS.md).
 | DOC-03 | Keep `README.md` accurate as the quick reference                                            | MUST     |
 
 Sources for the non-`README.md` rows: SRV-16 to SRV-19 and WEB-17 from
-`docs/conceptions/live-connection.md`; SRV-20, CLI-10, WEB-18, MCP-04 from
-`docs/conceptions/ai-agents.md`; MCP-05 from `docs/conceptions/mcp-servers.md`; WEB-13 and
+`docs/conceptions/20260921-live-connection.md`; SRV-20, CLI-10, WEB-18, MCP-04 from
+`docs/conceptions/20260920-ai-agents.md`; MCP-05 from `docs/conceptions/20260920-mcp-servers.md`; WEB-13 and
 WEB-14 from `website/docs/index.md`; DOC-02 from `docs/conceptions/README.md`.
 
 ## Non-functional requirements
@@ -173,7 +173,7 @@ WEB-14 from `website/docs/index.md`; DOC-02 from `docs/conceptions/README.md`.
 - **Gates.** `mise run check` is what CI runs; the store contract test and the JSON → SQLite →
   JSON test guard the data contract.
 - **Live updates.** A disconnection must be survivable and the board correct after any gap.
-  Not met today — target in `docs/conceptions/live-connection.md`.
+  Not met today — target in `docs/conceptions/20260921-live-connection.md`.
 
 > TODO(owner): no performance budget, no accessibility requirements, no licence or release
 > policy exists in any source.
@@ -197,9 +197,16 @@ WEB-14 from `website/docs/index.md`; DOC-02 from `docs/conceptions/README.md`.
 
 ## Open questions
 
-- Product name: `MVP Dashboard`, `kanban-harness`, `dashboard`, `mvp-dashboard-backend`.
+Each one blocks a task or a theme; none has a design note, because none has been decided.
+
+- Product name: `MVP Dashboard`, `kanban-harness`, `dashboard`, `mvp-dashboard-backend`. The
+  rest become aliases. Blocks the macOS version reconciliation below.
 - Minimum macOS: README 14+, package 15, `apple` provider 26.
-- Drafting agents: distinct user class or configuration?
+- Drafting agents: distinct user class or configuration? Shapes
+  [`conceptions/20260920-ai-agents.md`](conceptions/20260920-ai-agents.md).
+- Performance budgets, or a statement that they are out of scope.
+- Licence, distribution, versioning.
+- Which of the success criteria above become automated checks.
 - Are non-goals 5 and 8 real, or just unstarted?
 - Performance budgets, accessibility, licence and versioning.
 - Cost tracking beyond the first entry (backlog-to-done, project totals).

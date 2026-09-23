@@ -1,3 +1,12 @@
+---
+slug: /conceptions/provider-sign-in
+title: Provider sign-in
+---
+
+:::note Design note
+Browser sign-in (OAuth / PKCE) for AI providers and where credentials are stored on macOS and Linux; OpenRouter first, Hugging Face after. Source: `docs/conceptions/20260921-provider-sign-in.md`.
+:::
+
 # Provider sign-in (OAuth / PKCE) and credential storage
 
 How a provider gets a credential without the user pasting a key, where that credential

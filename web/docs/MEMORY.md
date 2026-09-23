@@ -34,7 +34,7 @@ selection in an effect renders once with the previous project's data first; that
 
 The server process owns it and the dev proxy adds its own resets; there is no heartbeat and no
 replay yet, so a stale board in development is expected. Backoff is 1s → 30s, with no fast path
-on tab focus. (`docs/conceptions/live-connection.md`)
+on tab focus. (`docs/conceptions/20260921-live-connection.md`)
 
 ### TypeScript is stricter than most React codebases
 

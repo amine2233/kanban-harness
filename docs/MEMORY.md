@@ -88,7 +88,7 @@ under `ai.providers` but missing there is invisible, with no error.
 
 The server process owns the socket and the dev proxy adds its own resets; there is no
 heartbeat, no sequence number, no replay yet. A stale board in development is expected today —
-do not debug it as a new bug. (`conceptions/live-connection.md`)
+do not debug it as a new bug. (`conceptions/20260921-live-connection.md`)
 
 ## Four names for one product
 

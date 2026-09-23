@@ -48,7 +48,7 @@ block can be copied verbatim between tools:
 
 ## Agents reference tools
 
-In an agent's front matter (see [ai-agents.md](ai-agents.md)):
+In an agent's front matter (see [20260920-ai-agents.md](20260920-ai-agents.md)):
 
 ```yaml
 tools: [kanban, github/search_issues, jira/*] # server, server/tool, or server/*
@@ -144,3 +144,20 @@ Rules:
 - API: `GET /api/projects/{id}/mcp/servers` (resolved, with sources and trust state),
   `POST /api/projects/{id}/trust`.
 - Resolver tests for precedence and trust are written with the global step and enabled here.
+
+## Tasks
+
+Letting a drafting agent call GitHub, Jira or a filesystem server. From
+`conceptions/20260920-mcp-servers.md`.
+
+- **T-20 (M)** `mcp.json` in the dashboard home, Claude Code format, `${VAR}` resolved at
+  connect time and never written back. — MCP-05 · T-12
+- **T-21 (L)** `DashboardMCPClient` target: swift-sdk client over stdio and HTTP, with a stub
+  server in tests. — MCP-05 · T-20
+- **T-22 (M)** Claude Code path: temporary config, strict-config and allowed-tools flags,
+  reported calls become `tool` events. — MCP-05 · T-21
+- **T-23 (M)** AnyLanguageModel path: each MCP tool wrapped as an ALM tool, same `tool` events. —
+  MCP-05 · T-21
+- **T-24 (S)** Guard rails: per-call timeout, per-draft budget, clipped results, read-only board
+  tools, `ai_cost.tool_calls`. — MCP-05 · T-23
+- **T-25 (M)** Per-project `mcp.json`, trust prompt, `dashboard mcp --project`. — MCP-05 · T-24

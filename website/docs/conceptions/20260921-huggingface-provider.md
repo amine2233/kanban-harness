@@ -1,3 +1,12 @@
+---
+slug: /conceptions/huggingface-provider
+title: Hugging Face provider
+---
+
+:::note Design note
+A step-by-step plan for adding Hugging Face Inference Providers as a free provider kind. Source: `docs/conceptions/20260921-huggingface-provider.md`.
+:::
+
 # Hugging Face as a free AI provider
 
 Add a `huggingface` provider kind so a ticket can be drafted with an open model through
@@ -122,7 +131,7 @@ suffix pins a backend (`:groq`, `:cerebras`), and one `dashboard ai providers ad
 ## Not in scope
 
 - Browser sign-in instead of pasting a token, and where tokens are stored: see
-  [Provider sign-in](provider-sign-in.md). The pasted `hf_…` token goes through the same
+  [Provider sign-in](20260921-provider-sign-in.md). The pasted `hf_…` token goes through the same
   `api_key` / env var path as every other kind.
 
 - Listing available models in the UI (would need a call to the router's `/models`).

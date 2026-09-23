@@ -1,6 +1,7 @@
 # Web App Backlog
 
-_Frontend only. Backend tasks: [`docs/TASKS.md`](../../docs/TASKS.md)._
+_Frontend only. Backend tasks live in each conception note's `## Tasks` —
+[`docs/conceptions/`](../../docs/conceptions/)._
 
 From the `SHOULD` / `MAY` `WEB-*` requirements of [`docs/PRD.md`](../../docs/PRD.md) and the
 client half of the design notes. Size: `S` under a day, `M` a few days, `L` more.
@@ -9,7 +10,8 @@ Format: **T-nn (size)** task — requirement · blocked by.
 
 ## Live connection
 
-The client half of `docs/conceptions/live-connection.md`; the server half is `docs/TASKS.md`
+The client half of `docs/conceptions/20260921-live-connection.md`; the server half is that
+note's `## Tasks`
 T-01…T-09. Order from the note.
 
 - **T-01 (S)** Watchdog in `liveMiddleware`: no frame for twice the heartbeat interval means
@@ -28,7 +30,7 @@ T-01…T-09. Order from the note.
 
 ## AI agents
 
-Step 3 of `docs/conceptions/ai-agents.md`; the backend must land first.
+Step 3 of `docs/conceptions/20260920-ai-agents.md`; the backend must land first.
 
 - **T-08 (S)** Agent select next to Provider in `DraftWithAI`, defaulting to the configured
   default agent. — WEB-18 · backend T-16

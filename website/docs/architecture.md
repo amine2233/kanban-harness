@@ -6,10 +6,11 @@ title: Architecture
 
 Three principles shape everything:
 
-1. **The server is the single source of truth.** Every client — web, CLI, MCP — talks to the
-   running server over the same HTTP API. The server writes the files, emits one change
-   event per mutation, and every open browser refetches. The CLI only touches files directly
-   when no server is running (`--local`).
+1. **One process owns the data.** The `dashboard` daemon opens the databases for a home;
+   every client — web, CLI, MCP — reaches them through it over the same HTTP API. It writes
+   the files, emits one change event per mutation, and every open browser refetches. Nothing
+   else opens those files, so two writers on one SQLite file cannot happen and a change made
+   through MCP is seen in the browser.
 2. **Clean architecture, dependencies pointing inward.** Domain → persistence → services →
    interfaces. The kanban `Workspace` aggregate knows nothing about JSON, SQLite, Vapor or AI.
 3. **Files you own, in formats that outlive this tool.** `kanban.json` is the kanban-rs v18

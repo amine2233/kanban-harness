@@ -60,10 +60,10 @@ terminal appears on the board immediately.
 
 Set in `mise.toml`, override in a git-ignored `.env.local`:
 
-| Variable                                  | Default                 | Meaning                                                                                                      |
-| ----------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `MVP_DASHBOARD_HOME`                      | `.local/dashboard-home` | Registry (`projects.sqlite`), `settings.json`, `config.yaml`. Outside mise: `$XDG_CONFIG_HOME/mvp-dashboard` |
-| `MVP_DASHBOARD_PORT`                      | `5175`                  | API port                                                                                                     |
-| `MVP_DASHBOARD_HOST`                      | `127.0.0.1`             | Interface to bind; `0.0.0.0` exposes the server on the network                                               |
-| `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` | —                       | An AI provider's key from the environment instead of the config file                                         |
-| `MVP_DASHBOARD_CLAUDE_BIN`                | `claude`                | The Claude Code executable used by `claude_code` providers                                                   |
+| Variable                                  | Default                 | Meaning                                                                                                       |
+| ----------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `MVP_DASHBOARD_HOME`                      | `.local/dashboard-home` | Registry (`projects.sqlite`), `settings.json`, `config.yaml`. Outside mise: `$XDG_CONFIG_HOME/kanban-harness` |
+| `MVP_DASHBOARD_PORT`                      | `5175`                  | API port                                                                                                      |
+| `MVP_DASHBOARD_HOST`                      | `127.0.0.1`             | Interface to bind; `0.0.0.0` exposes the server on the network                                                |
+| `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` | —                       | An AI provider's key from the environment instead of the config file                                          |
+| `MVP_DASHBOARD_CLAUDE_BIN`                | `claude`                | The Claude Code executable used by `claude_code` providers                                                    |

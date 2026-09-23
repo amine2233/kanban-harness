@@ -9,3 +9,7 @@ website/build
 website/.docusaurus
 website/static
 target
+
+# Board data written by the app (Foundation's .prettyPrinted, not Prettier's style).
+# Formatting it would fail CI again the next time the CLI or the server touches the board.
+kanban.json

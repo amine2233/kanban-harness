@@ -16,6 +16,7 @@ const sidebars: SidebarsConfig = {
       items: ['server/overview', 'server/api', 'server/configuration', 'server/security'],
     },
     'cli',
+    'daemon',
     'mcp',
     {
       type: 'category',

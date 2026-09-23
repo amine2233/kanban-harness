@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dashboard-mcp": {
+      "command": ".build/debug/dashboard",
+      "args": ["mcp"]
+    }
+  }
+}

@@ -4,7 +4,7 @@
 [tools]
 node = "24.21.0"
 pnpm = "12.4.2"
-swift = "6.3.3"
+swift = "6.4.0"
 
 [env]
 # Keep dev data out of ~/.config: registry, settings.json and project folders
@@ -43,6 +43,10 @@ run = "pnpm test"
 [tasks."web:check"]
 description = "Prettier, ESLint and tsc for the web app"
 run = ["pnpm format:check", "pnpm lint", "pnpm typecheck"]
+
+[tasks."web:check:fix"]
+description = "Like web:check, but Prettier and ESLint rewrite what they can"
+run = ["pnpm format", "pnpm --filter mvp-dashboard lint --fix", "pnpm typecheck"]
 
 [tasks."web:build"]
 description = "Production build into dist/"
@@ -126,5 +130,5 @@ description = "Remove build outputs (keeps .local dev data)"
 run = ["rm -rf web/dist web/coverage .build"]
 
 [tasks."backend:test:linux"]
-description = "Run the Swift tests in the swift:6.3.3 Linux container (needs docker/colima)"
-run = 'docker run --rm -v "$PWD:/src" -v mvp-dashboard-linux-build:/src/.build-linux -w /src swift:6.3.3-noble swift test --scratch-path /src/.build-linux'
+description = "Run the Swift tests in the swift:6.4.0 Linux container (needs docker/colima)"
+run = 'docker run --rm -v "$PWD:/src" -v mvp-dashboard-linux-build:/src/.build-linux -w /src swift:6.4.0-noble swift test --scratch-path /src/.build-linux'

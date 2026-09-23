@@ -20,10 +20,12 @@ dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors
 ## What it owns
 
 ```text
-$MVP_DASHBOARD_HOME/            (~/.config/mvp-dashboard by default)
+$MVP_DASHBOARD_HOME/            (~/.config/kanban-harness by default)
   projects.sqlite               the registry: which folders are projects
   settings.json                 server settings, applied live
-  config.yaml | config.json     AI providers and pricing
+  config.yml | config.json      AI providers and pricing
+  credentials.json              API keys and OAuth tokens
+  daemon.port                   the running daemon's port and pid
 
 <project folder>/
   kanban.json | kanban.sqlite   the workspace: boards, columns, cards, links

@@ -5,7 +5,7 @@ title: Configuration
 # Configuration
 
 Three files under the dashboard home (`MVP_DASHBOARD_HOME`, default
-`~/.config/mvp-dashboard`). All are read live: edit them by hand, through the web, or with
+`~/.config/kanban-harness`). All are read live: edit them by hand, through the web, or with
 the CLI — the next request uses the new values, no restart.
 
 ## `settings.json` — server settings
@@ -83,7 +83,7 @@ So `config.yaml` can be committed or shared; `credentials.json` never should be.
 | `MVP_DASHBOARD_HOME`       | the folder above                                                              |
 | `MVP_DASHBOARD_PORT`       | API port (tasks)                                                              |
 | `MVP_DASHBOARD_HOST`       | bind address                                                                  |
-| `MVP_DASHBOARD_URL`        | server the CLI talks to (default `http://127.0.0.1:$MVP_DASHBOARD_PORT`)      |
+| `MVP_DASHBOARD_HOME`       | the home, overriding `./.kanban-harness` and `~/.config/kanban-harness`       |
 | `MVP_DASHBOARD_CLAUDE_BIN` | Claude Code executable for `claude_code` providers (default `claude` on PATH) |
 
 ## Coming: agent and MCP files

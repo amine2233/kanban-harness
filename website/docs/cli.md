@@ -14,21 +14,72 @@ also goes to stderr, never mixing with the JSON.
 
 ## Where a command goes
 
+Every command talks to the **daemon**: the one process that opens this home's databases.
+Nothing else touches them, which is what keeps two writers off one SQLite file.
+
 ```mermaid
 flowchart LR
-  CLI[dashboard …] -->|/api/health answers| Server[running server<br/>REST]
-  CLI -->|no server| Files[(files directly)]
-  Server --> Files
-  Server -->|events| Browsers
+  CLI[dashboard …] --> Daemon[daemon<br/>owns the databases]
+  MCP[dashboard mcp] --> Daemon
+  Serve[dashboard serve] --> Daemon
+  Daemon --> Files[(registry · kanban.json · kanban.sqlite)]
+  Daemon -->|events| Browsers
 ```
 
-If a dashboard server answers (`--server URL`, else `$MVP_DASHBOARD_URL`, else
-`http://127.0.0.1:$MVP_DASHBOARD_PORT`), the CLI talks to it over the HTTP API — the server
-stays the single writer and every open browser sees the change. With no server it works on
-the files directly. `--remote` fails instead of falling back; `--local` forces the files even
-when a server is up (useful for scripts that must not depend on one).
+The first command that finds no daemon starts one and waits for it. It then stays up, so the
+next command is immediate and a change made through MCP is seen by an open browser. It runs
+until you stop it — see [Daemon](#daemon).
 
-`--home <dir>` picks the registry/settings folder (or `MVP_DASHBOARD_HOME`), local mode only.
+There is no flag to point a command somewhere else. `dashboard serve` owns its home like the
+daemon does, so starting a server and then running a command already routes through it —
+nothing to configure, and no way to work on the files behind a running owner's back, which is
+what used to corrupt them.
+
+## Home
+
+The home holds everything global — the registry, providers, credentials and the daemon handle.
+There is no `--home` flag: the directory you run from already says which one you meant.
+
+| Order | Home                                                               | When                             |
+| ----- | ------------------------------------------------------------------ | -------------------------------- |
+| 1     | `$MVP_DASHBOARD_HOME`                                              | set explicitly                   |
+| 2     | `./.kanban-harness/`                                               | that folder exists where you ran |
+| 3     | `$XDG_CONFIG_HOME/kanban-harness`, else `~/.config/kanban-harness` | otherwise                        |
+
+```text
+~/.config/kanban-harness/
+├── config.yml        # AI providers and settings (config.yaml / config.json also read)
+├── credentials.json  # API keys and OAuth tokens — never in config.yml
+├── projects.sqlite   # the registry of projects
+└── daemon.port       # the running daemon's port and pid
+```
+
+To give a repository its own projects, providers and daemon, create `.kanban-harness/` in it:
+
+```bash
+mkdir .kanban-harness
+dashboard project add .          # registered in this folder's home, not yours
+```
+
+Each home gets its own daemon on its own port, so the two never interfere.
+
+:::note
+The daemon does the work, and it inherits the environment of whichever command started it.
+`MVP_DASHBOARD_CLAUDE_BIN=… dashboard ai ticket …` has no effect if a daemon is already
+running — put the value in `config.yml`, which is read per request, or stop the daemon first.
+:::
+
+## Daemon
+
+```bash
+dashboard daemon status            # is one running for this home, and where
+dashboard daemon start             # start it if it is not already up
+dashboard daemon stop              # stop it; the next command starts a new one
+dashboard daemon run               # run it in the foreground (what start spawns)
+```
+
+You rarely need `start` — any command does it. See [Daemon](daemon) for the lifecycle, the
+handover with `dashboard serve`, and what to do when something is wrong.
 
 ## Projects
 
@@ -87,7 +138,8 @@ over `--api-key` to keep them out of the file.
 ```bash
 dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...]
 dashboard mcp                     # MCP server over stdio — see MCP
-dashboard --verbose …             # info-level logs (migrations, database activity) on stderr
+dashboard --verbose …             # info-level logs on stderr
+                                  # migrations are the daemon's: dashboard --verbose daemon run
 ```
 
 ## Examples

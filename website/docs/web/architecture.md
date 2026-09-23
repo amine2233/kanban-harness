@@ -39,7 +39,7 @@ The dashboard uses **SQLite** databases with two distinct levels:
 
 #### 1. Registry Database (Server-Level)
 
-- **Location**: `~/.mvp-dashboard/projects.sqlite` (configurable via `home` setting)
+- **Location**: `~/.config/kanban-harness/projects.sqlite` (configurable via `home` setting)
 - **Purpose**: Stores the **project registry** (list of all projects, metadata, paths, settings)
 - **Lifetime**: Single database for the entire server instance
 - **Schema**: Project metadata (id, name, path, storage type)
@@ -62,7 +62,7 @@ The dashboard uses **SQLite** databases with two distinct levels:
 
 Database configuration (thread pool size, connection settings) is **server-wide** and applies to both registry and all workspace databases.
 
-Configuration file: `~/.mvp-dashboard/config.yaml`
+Configuration file: `~/.config/kanban-harness/config.yml`
 
 ```yaml
 database:

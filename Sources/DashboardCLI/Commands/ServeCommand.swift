@@ -1,4 +1,5 @@
 import ArgumentParser
+import DashboardRuntime
 import DashboardServer
 import Vapor
 
@@ -27,16 +28,25 @@ struct ServeCommand: AsyncParsableCommand {
         try await failing {
             var environment = Environment.production
             environment.arguments = [CommandLine.arguments.first ?? "dashboard", "serve"]
+            let config = ServerConfig(home: global.resolvedHome, staticDir: staticDir, corsOrigins: corsOrigins)
             let app = try await Vapor.Application.make(environment)
             do {
-                try await configure(app, config: ServerConfig(home: global.resolvedHome, staticDir: staticDir, corsOrigins: corsOrigins))
+                // Serving a home means owning it: a daemon started earlier by some
+                // command must let go, or both would open the same databases.
+                try await DaemonHandover.takeOver(config.runtime)
+                try await configure(app, config: config)
                 app.http.server.configuration.hostname = hostname
                 app.http.server.configuration.port = port
-                try await app.execute()
+                try await app.startup()
+                guard let bound = app.http.server.shared.localAddress?.port else { throw CLIError.daemonDidNotBind }
+                try DaemonHandover.publish(port: bound, config: config.runtime)
+                try await app.running?.onStop.get()
             } catch {
+                DaemonHandover.withdraw(config.runtime)
                 try? await app.asyncShutdown()
                 throw error
             }
+            DaemonHandover.withdraw(config.runtime)
             try await app.asyncShutdown()
         }
     }

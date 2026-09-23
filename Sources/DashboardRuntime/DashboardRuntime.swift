@@ -31,13 +31,17 @@ public enum DashboardRuntime {
         if let registryDatabase {
             container.register(RegistryDatabaseKey.self) { _ in registryDatabase }
         } else {
-            let database = try SQLiteDatabase.registry(path: config.registryPath, logger: DependencyValues.current.logger)
+            let database = try SQLiteDatabase.registry(
+                path: config.registryPath,
+                logger: DependencyValues.current.logger
+            )
             try await database.migrate()
             await hooks.add { try? await database.shutdown() }
             container.register(RegistryDatabaseKey.self) { _ in database.database }
         }
 
-        let databaseConfig = (try? await ConfigFileDatabaseConfigStore(path: config.configPath).load()) ?? DatabaseConfig()
+        let databaseConfig = await (try? ConfigFileDatabaseConfigStore(path: config.configPath).load()) ??
+            DatabaseConfig()
         let pool = SQLiteDatabasePool(
             logger: DependencyValues.current.logger,
             numberOfThreads: databaseConfig.threadPoolSize
@@ -69,16 +73,25 @@ public enum DashboardRuntime {
             FileCredentialStore(path: c.make(RuntimeConfigKey.self).credentialsPath)
         }
         container.register(AIConfigStoreKey.self) { c in
-            ConfigFileAIConfigStore(path: c.make(RuntimeConfigKey.self).configPath, credentials: c.make(CredentialStoreKey.self))
+            ConfigFileAIConfigStore(
+                path: c.make(RuntimeConfigKey.self).configPath,
+                credentials: c.make(CredentialStoreKey.self)
+            )
         }
         container.register(AIConfigCommandsKey.self) { c in
             AIConfigService(store: c.make(AIConfigStoreKey.self), changes: c.make(ChangeBroadcasterKey.self))
         }
         container.register(ProjectCommandsKey.self) { c in
-            LocalProjectCommands(projects: c.make(ProjectServiceKey.self), settings: c.make(SettingsServiceKey.self))
+            LocalProjectCommands(
+                projects: c.make(ProjectServiceKey.self),
+                settings: c.make(SettingsServiceKey.self)
+            )
         }
         container.register(SettingsCommandsKey.self) { c in c.make(SettingsServiceKey.self) }
-        container.register(BoardCommandsKey.self) { c in LocalBoardCommands(projects: c.make(ProjectServiceKey.self)) }
+        container
+            .register(BoardCommandsKey.self) { c in
+                LocalBoardCommands(projects: c.make(ProjectServiceKey.self))
+            }
         container.register(AIProviderRegistryKey.self) { c in
             let runtime = c.make(RuntimeConfigKey.self)
             var registry = AIProviderRegistry.standard(
@@ -130,5 +143,4 @@ public enum DashboardRuntime {
     private struct HooksSlot: StorageKey {
         typealias Value = ShutdownHooks
     }
-
 }

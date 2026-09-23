@@ -4,8 +4,10 @@ import Foundation
 import Testing
 @testable import DashboardService
 
-@Suite struct ChangeEventsTests {
-    @Test func broadcasterFansOutToEverySubscriberAndForgetsClosedOnes() async throws {
+@Suite
+struct ChangeEventsTests {
+    @Test
+    func broadcasterFansOutToEverySubscriberAndForgetsClosedOnes() async {
         let broadcaster = ChangeBroadcaster()
         let a = await broadcaster.subscribe()
         let b = await broadcaster.subscribe()
@@ -17,13 +19,14 @@ import Testing
         #expect(await itB.next() == .settingsChanged)
     }
 
-    @Test func projectServicePublishesOnEveryMutation() async throws {
+    @Test
+    func projectServicePublishesOnEveryMutation() async throws {
         let changes = ChangeBroadcaster()
         let svc = memoryService(changes: changes)
         let stream = await changes.subscribe()
         var events = stream.makeAsyncIterator()
 
-        let project = try await svc.add(name: "Demo", path: try tempDir())
+        let project = try await svc.add(name: "Demo", path: tempDir())
         #expect(await events.next() == .projectsChanged)
         try await svc.mutate(.id(project.id)) { workspace, _ in workspace.createBoard(name: "B") }
         #expect(await events.next() == .workspaceChanged(projectId: project.id))
@@ -32,7 +35,8 @@ import Testing
         #expect(await events.next() == .projectsChanged, "no-op storage switch emits nothing; removal does")
     }
 
-    @Test func settingsServicePublishesOnUpdate() async throws {
+    @Test
+    func settingsServicePublishesOnUpdate() async throws {
         let changes = ChangeBroadcaster()
         let svc = SettingsService(store: InMemorySettingsStore(), changes: changes)
         let stream = await changes.subscribe()

@@ -19,6 +19,7 @@ public enum CardStatus: String, Codable, Hashable, Sendable, CaseIterable {
 
     public init?(wireValue: String) {
         guard let match = Self.allCases.first(where: { $0.wireValue == wireValue }) else { return nil }
+
         self = match
     }
 }
@@ -29,10 +30,13 @@ public enum CardPriority: String, Codable, Hashable, Sendable, CaseIterable {
     case high = "High"
     case critical = "Critical"
 
-    public var wireValue: String { rawValue.lowercased() }
+    public var wireValue: String {
+        rawValue.lowercased()
+    }
 
     public init?(wireValue: String) {
         guard let match = Self.allCases.first(where: { $0.wireValue == wireValue }) else { return nil }
+
         self = match
     }
 }
@@ -48,13 +52,22 @@ public struct AICost: Codable, Hashable, Sendable {
     public var estimated: Bool
 
     enum CodingKeys: String, CodingKey {
-        case provider, model, estimated
+        case provider
+        case model
+        case estimated
         case inputTokens = "input_tokens"
         case outputTokens = "output_tokens"
         case costUSD = "cost_usd"
     }
 
-    public init(provider: String, model: String, inputTokens: Int? = nil, outputTokens: Int? = nil, costUSD: Double? = nil, estimated: Bool = false) {
+    public init(
+        provider: String,
+        model: String,
+        inputTokens: Int? = nil,
+        outputTokens: Int? = nil,
+        costUSD: Double? = nil,
+        estimated: Bool = false
+    ) {
         self.provider = provider
         self.model = model
         self.inputTokens = inputTokens
@@ -65,12 +78,12 @@ public struct AICost: Codable, Hashable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        provider = try c.decode(String.self, forKey: .provider)
-        model = try c.decode(String.self, forKey: .model)
-        inputTokens = try c.decodeIfPresent(Int.self, forKey: .inputTokens)
-        outputTokens = try c.decodeIfPresent(Int.self, forKey: .outputTokens)
-        costUSD = try c.decodeIfPresent(Double.self, forKey: .costUSD)
-        estimated = try c.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
+        self.provider = try c.decode(String.self, forKey: .provider)
+        self.model = try c.decode(String.self, forKey: .model)
+        self.inputTokens = try c.decodeIfPresent(Int.self, forKey: .inputTokens)
+        self.outputTokens = try c.decodeIfPresent(Int.self, forKey: .outputTokens)
+        self.costUSD = try c.decodeIfPresent(Double.self, forKey: .costUSD)
+        self.estimated = try c.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
     }
 }
 
@@ -96,7 +109,14 @@ public struct Card: Codable, Hashable, Sendable, Identifiable {
     public var completedAt: Date?
 
     enum CodingKeys: String, CodingKey {
-        case id, prefix, title, description, priority, status, position, points
+        case id
+        case prefix
+        case title
+        case description
+        case priority
+        case status
+        case position
+        case points
         case boardId = "board_id"
         case columnId = "column_id"
         case cardNumber = "card_number"
@@ -132,14 +152,14 @@ public struct Card: Codable, Hashable, Sendable, Identifiable {
         self.priority = priority
         self.status = status
         self.position = position
-        dueDate = nil
-        points = nil
-        sprintId = nil
-        sprintLogs = []
-        aiCost = nil
-        createdAt = now
-        updatedAt = now
-        completedAt = status == .done ? now : nil
+        self.dueDate = nil
+        self.points = nil
+        self.sprintId = nil
+        self.sprintLogs = []
+        self.aiCost = nil
+        self.createdAt = now
+        self.updatedAt = now
+        self.completedAt = status == .done ? now : nil
     }
 
     /// Mirrors kanban-rs `Card::update_status`: `completed_at` follows transitions into and out of `Done`.

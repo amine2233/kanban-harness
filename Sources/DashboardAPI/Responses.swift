@@ -4,12 +4,20 @@ import Foundation
 /// Wire enums use kanban-api's snake_case tokens; domain enums keep the persisted ones.
 public struct PriorityDTO: Codable, Sendable, Equatable, RawRepresentable {
     public let rawValue: String
-    public init(rawValue: String) { self.rawValue = rawValue }
-    public init(_ priority: CardPriority) { rawValue = priority.wireValue }
-    public var domain: CardPriority? { CardPriority(wireValue: rawValue) }
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public init(_ priority: CardPriority) {
+        self.rawValue = priority.wireValue
+    }
+
+    public var domain: CardPriority? {
+        CardPriority(wireValue: rawValue)
+    }
 
     public init(from decoder: any Decoder) throws {
-        rawValue = try decoder.singleValueContainer().decode(String.self)
+        self.rawValue = try decoder.singleValueContainer().decode(String.self)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -20,12 +28,20 @@ public struct PriorityDTO: Codable, Sendable, Equatable, RawRepresentable {
 
 public struct StatusDTO: Codable, Sendable, Equatable, RawRepresentable {
     public let rawValue: String
-    public init(rawValue: String) { self.rawValue = rawValue }
-    public init(_ status: CardStatus) { rawValue = status.wireValue }
-    public var domain: CardStatus? { CardStatus(wireValue: rawValue) }
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public init(_ status: CardStatus) {
+        self.rawValue = status.wireValue
+    }
+
+    public var domain: CardStatus? {
+        CardStatus(wireValue: rawValue)
+    }
 
     public init(from decoder: any Decoder) throws {
-        rawValue = try decoder.singleValueContainer().decode(String.self)
+        self.rawValue = try decoder.singleValueContainer().decode(String.self)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -50,7 +66,10 @@ public struct BoardResponse: Codable, Sendable, Equatable {
     public let updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, name, description, position
+        case id
+        case name
+        case description
+        case position
         case sprintPrefix = "sprint_prefix"
         case cardPrefix = "card_prefix"
         case taskSortField = "task_sort_field"
@@ -80,19 +99,19 @@ public struct BoardResponse: Codable, Sendable, Equatable {
     }
 
     public init(_ board: Board) {
-        id = board.id
-        name = board.name
-        description = board.description
-        sprintPrefix = board.sprintPrefix
-        cardPrefix = board.cardPrefix
-        taskSortField = board.taskSortField.lowercased()
-        taskSortOrder = board.taskSortOrder.lowercased()
-        sprintDurationDays = board.sprintDurationDays
-        taskListView = board.taskListView.lowercased()
-        activeSprintId = board.activeSprintId
-        position = board.position
-        createdAt = board.createdAt
-        updatedAt = board.updatedAt
+        self.id = board.id
+        self.name = board.name
+        self.description = board.description
+        self.sprintPrefix = board.sprintPrefix
+        self.cardPrefix = board.cardPrefix
+        self.taskSortField = board.taskSortField.lowercased()
+        self.taskSortOrder = board.taskSortOrder.lowercased()
+        self.sprintDurationDays = board.sprintDurationDays
+        self.taskListView = board.taskListView.lowercased()
+        self.activeSprintId = board.activeSprintId
+        self.position = board.position
+        self.createdAt = board.createdAt
+        self.updatedAt = board.updatedAt
     }
 }
 
@@ -107,7 +126,9 @@ public struct ColumnResponse: Codable, Sendable, Equatable {
     public let updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, name, position
+        case id
+        case name
+        case position
         case boardId = "board_id"
         case wipLimit = "wip_limit"
         case defaultStatus = "default_status"
@@ -128,14 +149,14 @@ public struct ColumnResponse: Codable, Sendable, Equatable {
     }
 
     public init(_ column: Column) {
-        id = column.id
-        boardId = column.boardId
-        name = column.name
-        position = column.position
-        wipLimit = column.wipLimit
-        defaultStatus = column.defaultStatus.map(StatusDTO.init)
-        createdAt = column.createdAt
-        updatedAt = column.updatedAt
+        self.id = column.id
+        self.boardId = column.boardId
+        self.name = column.name
+        self.position = column.position
+        self.wipLimit = column.wipLimit
+        self.defaultStatus = column.defaultStatus.map(StatusDTO.init)
+        self.createdAt = column.createdAt
+        self.updatedAt = column.updatedAt
     }
 }
 
@@ -161,7 +182,14 @@ public struct CardResponse: Codable, Sendable, Equatable {
     public let completedAt: Date?
 
     enum CodingKeys: String, CodingKey {
-        case id, prefix, title, description, priority, status, position, points
+        case id
+        case prefix
+        case title
+        case description
+        case priority
+        case status
+        case position
+        case points
         case columnId = "column_id"
         case boardId = "board_id"
         case dueDate = "due_date"
@@ -209,25 +237,25 @@ public struct CardResponse: Codable, Sendable, Equatable {
     }
 
     public init(_ card: Card, in workspace: Workspace) {
-        parentId = workspace.parent(of: card.id)
+        self.parentId = workspace.parent(of: card.id)
         let progress = workspace.progress(of: card.id)
-        children = ChildrenDTO(total: progress.total, done: progress.done)
-        id = card.id
-        columnId = card.columnId
-        boardId = card.boardId
-        prefix = card.prefix
-        title = card.title
-        description = card.description
-        priority = PriorityDTO(card.priority)
-        status = StatusDTO(card.status)
-        position = card.position
-        dueDate = card.dueDate
-        points = card.points
-        cardNumber = card.cardNumber
-        sprintId = card.sprintId
-        aiCost = card.aiCost
-        createdAt = card.createdAt
-        updatedAt = card.updatedAt
-        completedAt = card.completedAt
+        self.children = ChildrenDTO(total: progress.total, done: progress.done)
+        self.id = card.id
+        self.columnId = card.columnId
+        self.boardId = card.boardId
+        self.prefix = card.prefix
+        self.title = card.title
+        self.description = card.description
+        self.priority = PriorityDTO(card.priority)
+        self.status = StatusDTO(card.status)
+        self.position = card.position
+        self.dueDate = card.dueDate
+        self.points = card.points
+        self.cardNumber = card.cardNumber
+        self.sprintId = card.sprintId
+        self.aiCost = card.aiCost
+        self.createdAt = card.createdAt
+        self.updatedAt = card.updatedAt
+        self.completedAt = card.completedAt
     }
 }

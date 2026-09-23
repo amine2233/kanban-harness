@@ -5,13 +5,23 @@ import Foundation
 public actor FakeProvider: AIProvider {
     public nonisolated let config: AIProviderConfig
     private var responses: [String]
-    private(set) public var requests: [CompletionRequest] = []
+    public private(set) var requests: [CompletionRequest] = []
     private let failure: AIProviderError?
     private let chunkSize: Int
 
-    public init(config: AIProviderConfig? = nil, responses: [String] = [], failure: AIProviderError? = nil, chunkSize: Int = 12) {
+    public init(
+        config: AIProviderConfig? = nil,
+        responses: [String] = [],
+        failure: AIProviderError? = nil,
+        chunkSize: Int = 12
+    ) {
         // swiftlint:disable:next force_try
-        self.config = config ?? (try! AIProviderConfig(id: "fake", kind: .ollama, name: "Fake", model: "fake"))
+        self.config = config ?? (try! AIProviderConfig(
+            id: "fake",
+            kind: .ollama,
+            name: "Fake",
+            model: "fake"
+        ))
         self.responses = responses
         self.failure = failure
         self.chunkSize = chunkSize
@@ -20,11 +30,14 @@ public actor FakeProvider: AIProvider {
     private func next(_ request: CompletionRequest) throws -> String {
         requests.append(request)
         if let failure { throw failure }
-        guard !responses.isEmpty else { throw AIProviderError.badResponse("fake provider has no scripted response") }
+        guard !responses.isEmpty
+        else { throw AIProviderError.badResponse("fake provider has no scripted response") }
+
         return responses.removeFirst()
     }
 
-    public nonisolated func stream(_ request: CompletionRequest) -> AsyncThrowingStream<CompletionEvent, any Error> {
+    public nonisolated func stream(_ request: CompletionRequest)
+        -> AsyncThrowingStream<CompletionEvent, any Error> {
         AsyncThrowingStream { continuation in
             Task {
                 do {
@@ -33,9 +46,12 @@ public actor FakeProvider: AIProvider {
                     for chunk in text.chunked(self.chunkSize) {
                         buffer += chunk
                         continuation.yield(.text(chunk))
-                        if let snapshot = JSONCompleter.complete(buffer) { continuation.yield(.snapshot(snapshot)) }
+                        if let snapshot = JSONCompleter
+                            .complete(buffer) { continuation.yield(.snapshot(snapshot)) }
                     }
-                    guard let json = JSONExtractor.firstObject(in: text) else { throw AIProviderError.badResponse("no JSON in scripted response") }
+                    guard let json = JSONExtractor.firstObject(in: text)
+                    else { throw AIProviderError.badResponse("no JSON in scripted response") }
+
                     continuation.yield(.usage(CompletionUsage(inputTokens: 10, outputTokens: 20)))
                     continuation.yield(.done(json: json, model: self.config.model))
                     continuation.finish()

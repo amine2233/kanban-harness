@@ -15,6 +15,7 @@ struct EventsController: RouteCollection {
             let pump = Task {
                 for await event in events {
                     guard !socket.isClosed else { break }
+
                     try? await socket.send(Self.frame(ChangeEventDTO(event)))
                 }
             }

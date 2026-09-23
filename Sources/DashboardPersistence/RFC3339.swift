@@ -8,11 +8,13 @@ public enum RFC3339 {
 
     public static func parse(_ text: String) -> Date? {
         guard let dot = text.firstIndex(of: ".") else { return try? base.parse(text) }
+
         let fraction = text[text.index(after: dot)...].prefix { $0.isNumber }
         let rest = text[text.index(dot, offsetBy: 1 + fraction.count)...]
         guard let whole = try? base.parse(String(text[..<dot]) + rest),
               let digits = Double("0." + fraction)
         else { return nil }
+
         // Whole seconds + fraction, the same arithmetic as `Date.quantizedToMicroseconds`.
         return Date(timeIntervalSince1970: whole.timeIntervalSince1970 + digits)
     }
@@ -33,6 +35,7 @@ public enum RFC3339 {
                     .init(codingPath: decoder.codingPath, debugDescription: "invalid timestamp '\(text)'")
                 )
             }
+
             return date
         }
     }

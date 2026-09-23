@@ -12,6 +12,7 @@ public enum AtomicFile {
     /// error is a CocoaError on Darwin and a POSIX error on Linux).
     public static func read(_ path: String) throws -> Data? {
         guard FileManager.default.fileExists(atPath: path) else { return nil }
+
         do {
             return try Data(contentsOf: URL(fileURLWithPath: path))
         } catch {
@@ -19,14 +20,17 @@ public enum AtomicFile {
         }
     }
 
-    /// `mode` is applied to the temp file before the rename, so the final file never exists with wider permissions.
+    /// `mode` is applied to the temp file before the rename, so the final file never exists with wider
+    /// permissions.
     public static func write(_ data: Data, to path: String, mode: Int? = nil) throws {
         let directory = (path as NSString).deletingLastPathComponent
         let temp = path + ".tmp"
         do {
             try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
             try data.write(to: URL(fileURLWithPath: temp))
-            if let mode { try FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: temp) }
+            if let mode {
+                try FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: temp)
+            }
         } catch {
             throw PersistenceError.io(path: path, underlying: error.localizedDescription)
         }

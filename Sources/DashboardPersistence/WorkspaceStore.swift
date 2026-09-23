@@ -12,7 +12,9 @@ public actor InMemoryWorkspaceStore: WorkspaceStore {
 
     public init() {}
 
-    public func load() async throws -> Workspace { workspace }
+    public func load() async throws -> Workspace {
+        workspace
+    }
 
     public func save(_ workspace: Workspace) async throws {
         self.workspace = workspace

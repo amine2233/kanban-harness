@@ -7,7 +7,7 @@ enum Output {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         RFC3339.configure(encoder)
-        print(String(decoding: try encoder.encode(value), as: UTF8.self))
+        try print(String(decoding: encoder.encode(value), as: UTF8.self))
     }
 
     static func progress(_ line: String) {

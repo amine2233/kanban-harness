@@ -51,6 +51,7 @@ enum DaemonProcess {
     /// A daemon from another build does not count as an owner we can use.
     private static func currentBuildClient(home: String) async -> DashboardClient? {
         guard let url = RuntimeConfig(home: home).daemonURL else { return nil }
+
         let client = DashboardClient(baseURL: url)
         return await client.isSameBuild() ? client : nil
     }
@@ -70,7 +71,7 @@ enum DaemonProcess {
         do {
             try FileManager.default.createDirectory(atPath: lock, withIntermediateDirectories: false)
         } catch {
-            return  // another command is already starting it; the caller polls
+            return // another command is already starting it; the caller polls
         }
         defer { try? FileManager.default.removeItem(atPath: lock) }
 

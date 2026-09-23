@@ -13,7 +13,9 @@ public actor InMemoryProjectStore: ProjectStore {
 
     public init() {}
 
-    public func load() async throws -> [Project] { projects }
+    public func load() async throws -> [Project] {
+        projects
+    }
 
     public func save(_ projects: [Project]) async throws {
         self.projects = projects

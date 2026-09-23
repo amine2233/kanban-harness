@@ -28,7 +28,8 @@ public actor ChangeBroadcaster {
     /// A stream of future events; ends when the consumer stops iterating.
     public func subscribe() -> AsyncStream<ChangeEvent> {
         let id = UUID()
-        let (stream, continuation) = AsyncStream<ChangeEvent>.makeStream(bufferingPolicy: .bufferingNewest(64))
+        let (stream, continuation) = AsyncStream<ChangeEvent>
+            .makeStream(bufferingPolicy: .bufferingNewest(64))
         subscribers[id] = continuation
         continuation.onTermination = { [weak self] _ in
             Task { await self?.remove(id) }
@@ -36,7 +37,9 @@ public actor ChangeBroadcaster {
         return stream
     }
 
-    public var subscriberCount: Int { subscribers.count }
+    public var subscriberCount: Int {
+        subscribers.count
+    }
 
     private func remove(_ id: UUID) {
         subscribers[id] = nil

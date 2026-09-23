@@ -14,6 +14,9 @@ struct SettingsController: RouteCollection {
 
     func update(req: Request) async throws -> Settings {
         let body = try req.content.decode(UpdateSettingsRequest.self)
-        return try await req.settings.update(defaultStorage: body.defaultStorage, corsOrigins: body.corsOrigins)
+        return try await req.settings.update(
+            defaultStorage: body.defaultStorage,
+            corsOrigins: body.corsOrigins
+        )
     }
 }

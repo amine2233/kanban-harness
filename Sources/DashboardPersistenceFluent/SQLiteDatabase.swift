@@ -43,10 +43,10 @@ public final class SQLiteDatabase: Sendable {
         self.logger = logger
         let directory = (path as NSString).deletingLastPathComponent
         try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
-        threadPool = NIOThreadPool(numberOfThreads: max(1, numberOfThreads))
+        self.threadPool = NIOThreadPool(numberOfThreads: max(1, numberOfThreads))
         threadPool.start()
-        eventLoop = eventLoopGroup.next()
-        databases = Databases(threadPool: threadPool, on: eventLoop)
+        self.eventLoop = eventLoopGroup.next()
+        self.databases = Databases(threadPool: threadPool, on: eventLoop)
         databases.use(.sqlite(.file(path)), as: .sqlite)
     }
 
@@ -56,7 +56,12 @@ public final class SQLiteDatabase: Sendable {
         logger: Logger = Logger(label: "dashboard.sqlite"),
         numberOfThreads: Int = SQLiteDatabase.defaultNumberOfThreads
     ) throws -> SQLiteDatabase {
-        try SQLiteDatabase(path: path, migrations: FluentProjectStore.migrations, logger: logger, numberOfThreads: numberOfThreads)
+        try SQLiteDatabase(
+            path: path,
+            migrations: FluentProjectStore.migrations,
+            logger: logger,
+            numberOfThreads: numberOfThreads
+        )
     }
 
     /// A project's kanban workspace database.
@@ -65,7 +70,12 @@ public final class SQLiteDatabase: Sendable {
         logger: Logger = Logger(label: "dashboard.sqlite"),
         numberOfThreads: Int = SQLiteDatabase.defaultNumberOfThreads
     ) throws -> SQLiteDatabase {
-        try SQLiteDatabase(path: path, migrations: FluentWorkspaceStore.migrations, logger: logger, numberOfThreads: numberOfThreads)
+        try SQLiteDatabase(
+            path: path,
+            migrations: FluentWorkspaceStore.migrations,
+            logger: logger,
+            numberOfThreads: numberOfThreads
+        )
     }
 
     public var database: any Database {
@@ -125,7 +135,7 @@ public actor SQLiteDatabasePool {
     /// task instead of each opening and migrating a database only to discard it.
     private func opening(at path: String) -> Task<SQLiteDatabase, any Error> {
         if let existing = open[path] { return existing }
-        let make = self.make
+        let make = make
         let task = Task {
             let database = try make(path)
             do {
@@ -143,6 +153,7 @@ public actor SQLiteDatabasePool {
     public func close(_ path: String) async throws {
         guard let opening = open.removeValue(forKey: path) else { return }
         guard let database = try? await opening.value else { return }
+
         try await database.shutdown()
     }
 
@@ -151,6 +162,7 @@ public actor SQLiteDatabasePool {
         open.removeAll()
         for task in opening {
             guard let database = try? await task.value else { continue }
+
             try? await database.shutdown()
         }
     }

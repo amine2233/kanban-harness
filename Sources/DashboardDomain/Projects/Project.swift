@@ -25,7 +25,10 @@ public struct Project: Codable, Hashable, Sendable {
     public let createdAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, name, path, storage
+        case id
+        case name
+        case path
+        case storage
         case createdAt = "created_at"
     }
 
@@ -42,6 +45,7 @@ public struct Project: Codable, Hashable, Sendable {
             throw DomainError.nameTooLong(maxProjectNameLength)
         }
         guard path.hasPrefix("/") else { throw DomainError.relativePath(path) }
+
         self.id = id
         self.name = trimmed
         self.path = path

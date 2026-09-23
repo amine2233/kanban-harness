@@ -8,7 +8,8 @@ import Testing
 /// the pool used to hand a file's `Databases` the whole event loop group, which
 /// gave the driver one SQLite connection per loop. Two of them writing the same
 /// file deadlocked against sqlite-nio's retry-forever busy handler.
-@Suite(.serialized) struct SQLiteDatabasePoolTests {
+@Suite(.serialized)
+struct SQLiteDatabasePoolTests {
     func path() -> String {
         NSTemporaryDirectory() + "mvp-dashboard-pool-" + UUID().uuidString + "/workspace.sqlite"
     }
@@ -24,13 +25,13 @@ import Testing
     func concurrentWritesToOneFileDoNotDeadlock() async throws {
         let pool = SQLiteDatabasePool()
         let store = SQLiteWorkspaceStore(path: path(), pool: pool)
-        try await store.save(try workspace("seed"))
+        try await store.save(workspace("seed"))
 
         try await withThrowingTaskGroup(of: Void.self) { group in
-            for index in 0..<24 {
+            for index in 0 ..< 24 {
                 group.addTask {
                     _ = try await store.load()
-                    try await store.save(try self.workspace("board-\(index)"))
+                    try await store.save(workspace("board-\(index)"))
                 }
             }
             try await group.waitForAll()
@@ -43,14 +44,14 @@ import Testing
     @Test(.timeLimit(.minutes(1)))
     func concurrentWritesAcrossFilesDoNotDeadlock() async throws {
         let pool = SQLiteDatabasePool()
-        let paths = (0..<6).map { _ in path() }
+        let paths = (0 ..< 6).map { _ in path() }
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             for path in paths {
-                for index in 0..<4 {
+                for index in 0 ..< 4 {
                     group.addTask {
                         let store = SQLiteWorkspaceStore(path: path, pool: pool)
-                        try await store.save(try self.workspace("board-\(index)"))
+                        try await store.save(workspace("board-\(index)"))
                         _ = try await store.load()
                     }
                 }
@@ -61,7 +62,8 @@ import Testing
         await pool.shutdownAll()
     }
 
-    @Test func racingCallersShareOneOpenAndMigration() async throws {
+    @Test
+    func racingCallersShareOneOpenAndMigration() async throws {
         let opened = Counter()
         let path = path()
         let pool = SQLiteDatabasePool { path in
@@ -70,7 +72,7 @@ import Testing
         }
 
         try await withThrowingTaskGroup(of: Void.self) { group in
-            for _ in 0..<16 {
+            for _ in 0 ..< 16 {
                 group.addTask { _ = try await pool.database(at: path) }
             }
             try await group.waitForAll()
@@ -80,7 +82,8 @@ import Testing
         await pool.shutdownAll()
     }
 
-    @Test func aFailedOpenIsNotCachedForever() async throws {
+    @Test
+    func aFailedOpenIsNotCachedForever() async throws {
         let attempts = Counter()
         let pool = SQLiteDatabasePool { path in
             attempts.increment()
@@ -95,7 +98,8 @@ import Testing
         await pool.shutdownAll()
     }
 
-    @Test func closeReopensOnTheNextAccess() async throws {
+    @Test
+    func closeReopensOnTheNextAccess() async throws {
         let opened = Counter()
         let pool = SQLiteDatabasePool { path in
             opened.increment()
@@ -116,7 +120,7 @@ import Testing
 /// a lock rather than an actor they would have to await inside it.
 final class Counter: Sendable {
     private let storage = NSLock()
-    nonisolated(unsafe) private var count = 0
+    private nonisolated(unsafe) var count = 0
 
     func increment() {
         storage.lock()

@@ -28,22 +28,26 @@ actor StubTransport: HTTPTransport {
     }
 }
 
-@Suite struct PKCETests {
-    @Test func verifierIsUnpredictableAndURLSafe() {
+@Suite
+struct PKCETests {
+    @Test
+    func verifierIsUnpredictableAndURLSafe() {
         let a = PKCE.verifier(), b = PKCE.verifier()
         #expect(a != b)
         #expect(a.count == 43, "32 random bytes, base64url without padding")
         #expect(a.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" })
     }
 
-    @Test func challengeIsBase64URLOfSHA256() {
+    @Test
+    func challengeIsBase64URLOfSHA256() {
         // Worked example from RFC 7636 appendix B.
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
         #expect(PKCE.challenge(for: verifier) == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
     }
 }
 
-@Suite struct OAuthCodeFlowTests {
+@Suite
+struct OAuthCodeFlowTests {
     let callback = URL(string: "http://127.0.0.1:5175/api/auth/callback")!
     let client = OAuthClientSettings(clientId: "app-1")
 
@@ -57,8 +61,13 @@ actor StubTransport: HTTPTransport {
         )
     }
 
-    @Test func authorizationURLCarriesPKCEStateAndScopes() throws {
-        let url = flow(StubTransport([])).authorizationURL(callback: callback, state: "st", codeChallenge: "ch")
+    @Test
+    func authorizationURLCarriesPKCEStateAndScopes() throws {
+        let url = flow(StubTransport([])).authorizationURL(
+            callback: callback,
+            state: "st",
+            codeChallenge: "ch"
+        )
         let items = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
         let query = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0.value ?? "") })
         #expect(url.host == "vendor.test" && url.path == "/oauth/authorize")
@@ -71,47 +80,73 @@ actor StubTransport: HTTPTransport {
         #expect(query["code_challenge_method"] == "S256")
     }
 
-    @Test func exchangePostsTheFormAndReadsTheToken() async throws {
-        let transport = StubTransport([(200, #"{"access_token":"at","refresh_token":"rt","expires_in":3600,"token_type":"bearer"}"#)])
-        let credential = try await flow(transport, secret: "s3cret").exchange(code: "c0de", codeVerifier: "ver", callback: callback)
+    @Test
+    func exchangePostsTheFormAndReadsTheToken() async throws {
+        let transport = StubTransport([(
+            200,
+            #"{"access_token":"at","refresh_token":"rt","expires_in":3600,"token_type":"bearer"}"#
+        )])
+        let credential = try await flow(transport, secret: "s3cret").exchange(
+            code: "c0de",
+            codeVerifier: "ver",
+            callback: callback
+        )
         #expect(credential.secret == "at")
         #expect(credential.refreshToken == "rt")
         let expiry = try #require(credential.expiresAt).timeIntervalSinceNow
-        #expect(expiry > 3500 && expiry <= 3600)
+        #expect(expiry > 3_500 && expiry <= 3_600)
         let call = try #require(await transport.calls.first)
         #expect(call.url.absoluteString == "https://vendor.test/oauth/token")
         #expect(call.headers["Content-Type"] == "application/x-www-form-urlencoded")
-        #expect(call.body == "client_id=app-1&client_secret=s3cret&code=c0de&code_verifier=ver&grant_type=authorization_code&redirect_uri=http%3A%2F%2F127.0.0.1%3A5175%2Fapi%2Fauth%2Fcallback")
+        #expect(call
+            .body ==
+            "client_id=app-1&client_secret=s3cret&code=c0de&code_verifier=ver&grant_type=authorization_code&redirect_uri=http%3A%2F%2F127.0.0.1%3A5175%2Fapi%2Fauth%2Fcallback")
     }
 
-    @Test func refreshKeepsTheRefreshTokenWhenTheVendorOmitsIt() async throws {
+    @Test
+    func refreshKeepsTheRefreshTokenWhenTheVendorOmitsIt() async throws {
         let transport = StubTransport([(200, #"{"access_token":"at2","expires_in":60}"#)])
         let renewed = try await flow(transport).refresh(Credential(secret: "old", refreshToken: "rt"))
         #expect(renewed?.secret == "at2")
         #expect(renewed?.refreshToken == "rt")
-        #expect(try #require(await transport.calls.first).body == "client_id=app-1&grant_type=refresh_token&refresh_token=rt")
-        await #expect(throws: OAuthError.notRefreshable) { _ = try await flow(transport).refresh(Credential(secret: "x")) }
+        #expect(try #require(await transport.calls.first)
+            .body == "client_id=app-1&grant_type=refresh_token&refresh_token=rt")
+        await #expect(throws: OAuthError.notRefreshable) {
+            _ = try await flow(transport).refresh(Credential(secret: "x"))
+        }
     }
 
-    @Test func vendorErrorsAreTyped() async throws {
+    @Test
+    func vendorErrorsAreTyped() async throws {
         await #expect(throws: OAuthError.vendorRejected(status: 400, body: #"{"error":"invalid_grant"}"#)) {
-            _ = try await flow(StubTransport([(400, #"{"error":"invalid_grant"}"#)])).exchange(code: "c", codeVerifier: "v", callback: callback)
+            _ = try await flow(StubTransport([(400, #"{"error":"invalid_grant"}"#)])).exchange(
+                code: "c",
+                codeVerifier: "v",
+                callback: callback
+            )
         }
         await #expect(throws: OAuthError.malformedResponse("token response has no access_token")) {
-            _ = try await flow(StubTransport([(200, #"{"ok":true}"#)])).exchange(code: "c", codeVerifier: "v", callback: callback)
+            _ = try await flow(StubTransport([(200, #"{"ok":true}"#)])).exchange(
+                code: "c",
+                codeVerifier: "v",
+                callback: callback
+            )
         }
     }
 }
 
-@Suite struct SignInSessionsTests {
-    @Test func sessionsAreOneShotAndExpire() async {
+@Suite
+struct SignInSessionsTests {
+    @Test
+    func sessionsAreOneShotAndExpire() async throws {
         let clock = Clock()
         let sessions = SignInSessions(ttl: 600) { clock.now }
-        let callback = URL(string: "http://127.0.0.1:1/cb")!
+        let callback = try #require(URL(string: "http://127.0.0.1:1/cb"))
         let (state, verifier) = await sessions.begin(providerId: "hf", callback: callback)
         #expect(await sessions.consume("nope") == nil)
         let pending = await sessions.consume(state)
-        #expect(pending?.providerId == "hf" && pending?.codeVerifier == verifier && pending?.callback == callback)
+        #expect(pending?.providerId == "hf" && pending?.codeVerifier == verifier && pending?
+            .callback == callback)
         #expect(await sessions.consume(state) == nil, "a state is consumed once")
 
         let (stale, _) = await sessions.begin(providerId: "hf", callback: callback)
@@ -121,6 +156,8 @@ actor StubTransport: HTTPTransport {
 
     final class Clock: @unchecked Sendable {
         private(set) var now = Date.timestamp()
-        func advance(_ seconds: TimeInterval) { now = now.addingTimeInterval(seconds) }
+        func advance(_ seconds: TimeInterval) {
+            now = now.addingTimeInterval(seconds)
+        }
     }
 }

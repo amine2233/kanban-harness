@@ -15,7 +15,11 @@ public struct AIProviderDTO: Codable, Equatable, Sendable {
     public let oauthClientId: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, kind, name, model, pricing
+        case id
+        case kind
+        case name
+        case model
+        case pricing
         case baseURL = "base_url"
         case maxTokens = "max_tokens"
         case hasAPIKey = "has_api_key"
@@ -23,15 +27,15 @@ public struct AIProviderDTO: Codable, Equatable, Sendable {
     }
 
     public init(_ provider: AIProviderConfig) {
-        id = provider.id
-        kind = provider.kind
-        name = provider.name
-        model = provider.model
-        baseURL = provider.baseURL
-        maxTokens = provider.maxTokens
-        pricing = provider.pricing
-        hasAPIKey = provider.hasAPIKey
-        oauthClientId = provider.oauth?.clientId
+        self.id = provider.id
+        self.kind = provider.kind
+        self.name = provider.name
+        self.model = provider.model
+        self.baseURL = provider.baseURL
+        self.maxTokens = provider.maxTokens
+        self.pricing = provider.pricing
+        self.hasAPIKey = provider.hasAPIKey
+        self.oauthClientId = provider.oauth?.clientId
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -58,8 +62,8 @@ public struct AIConfigDTO: Codable, Equatable, Sendable {
     }
 
     public init(_ config: AIConfig) {
-        providers = config.providers.map(AIProviderDTO.init)
-        defaultProvider = config.defaultProviderId
+        self.providers = config.providers.map(AIProviderDTO.init)
+        self.defaultProvider = config.defaultProviderId
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -82,13 +86,26 @@ public struct UpsertAIProviderRequest: Codable, Sendable {
     public var oauth: OAuthClientSettings?
 
     enum CodingKeys: String, CodingKey {
-        case kind, name, model, pricing, oauth
+        case kind
+        case name
+        case model
+        case pricing
+        case oauth
         case baseURL = "base_url"
         case apiKey = "api_key"
         case maxTokens = "max_tokens"
     }
 
-    public init(kind: AIProviderKind, name: String, model: String, baseURL: String? = nil, apiKey: String? = nil, maxTokens: Int? = nil, pricing: AIPricing? = nil, oauth: OAuthClientSettings? = nil) {
+    public init(
+        kind: AIProviderKind,
+        name: String,
+        model: String,
+        baseURL: String? = nil,
+        apiKey: String? = nil,
+        maxTokens: Int? = nil,
+        pricing: AIPricing? = nil,
+        oauth: OAuthClientSettings? = nil
+    ) {
         self.kind = kind
         self.name = name
         self.model = model
@@ -106,7 +123,17 @@ public struct UpsertAIProviderRequest: Codable, Sendable {
         case .some(""): nil
         case let .some(value): value
         }
-        return try AIProviderConfig(id: id, kind: kind, name: name, model: model, baseURL: baseURL, apiKey: key, maxTokens: maxTokens, pricing: pricing, oauth: oauth)
+        return try AIProviderConfig(
+            id: id,
+            kind: kind,
+            name: name,
+            model: model,
+            baseURL: baseURL,
+            apiKey: key,
+            maxTokens: maxTokens,
+            pricing: pricing,
+            oauth: oauth
+        )
     }
 }
 

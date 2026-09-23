@@ -11,7 +11,9 @@ public actor InMemorySettingsStore: SettingsStore {
 
     public init() {}
 
-    public func load() async throws -> Settings { settings }
+    public func load() async throws -> Settings {
+        settings
+    }
 
     public func save(_ settings: Settings) async throws {
         self.settings = settings

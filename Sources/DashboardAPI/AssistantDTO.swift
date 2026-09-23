@@ -7,7 +7,8 @@ public struct DraftTicketRequest: Codable, Sendable {
     public var provider: String?
 
     enum CodingKeys: String, CodingKey {
-        case idea, provider
+        case idea
+        case provider
         case boardId = "board_id"
     }
 
@@ -46,10 +47,10 @@ public struct DraftTicketResponse: Codable, Sendable, Equatable {
 
         public init(from decoder: any Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
-            inputTokens = try c.decodeIfPresent(Int.self, forKey: .inputTokens)
-            outputTokens = try c.decodeIfPresent(Int.self, forKey: .outputTokens)
-            costUSD = try c.decodeIfPresent(Double.self, forKey: .costUSD)
-            estimated = try c.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
+            self.inputTokens = try c.decodeIfPresent(Int.self, forKey: .inputTokens)
+            self.outputTokens = try c.decodeIfPresent(Int.self, forKey: .outputTokens)
+            self.costUSD = try c.decodeIfPresent(Double.self, forKey: .costUSD)
+            self.estimated = try c.decodeIfPresent(Bool.self, forKey: .estimated) ?? false
         }
 
         public func encode(to encoder: any Encoder) throws {
@@ -87,7 +88,8 @@ public enum AssistantFrame: Sendable, Equatable {
         public let elapsedMs: Int
 
         enum CodingKeys: String, CodingKey {
-            case step, detail
+            case step
+            case detail
             case elapsedMs = "elapsed_ms"
         }
 
@@ -138,14 +140,18 @@ public enum AssistantFrame: Sendable, Equatable {
     }
 
     /// Nil for event names this version does not know (forward compatible).
-    public static func decode(event: String, data: Data, with decoder: JSONDecoder = JSONDecoder()) throws -> AssistantFrame? {
+    public static func decode(
+        event: String,
+        data: Data,
+        with decoder: JSONDecoder = JSONDecoder()
+    ) throws -> AssistantFrame? {
         switch event {
-        case "stage": .stage(try decoder.decode(StageDTO.self, from: data))
-        case "text": .text(try decoder.decode(TextDTO.self, from: data))
-        case "partial": .partial(try decoder.decode(PartialTicketDraft.self, from: data))
-        case "usage": .usage(try decoder.decode(DraftTicketResponse.UsageDTO.self, from: data))
-        case "result": .result(try decoder.decode(DraftTicketResponse.self, from: data))
-        case "error": .error(try decoder.decode(ApiError.self, from: data))
+        case "stage": try .stage(decoder.decode(StageDTO.self, from: data))
+        case "text": try .text(decoder.decode(TextDTO.self, from: data))
+        case "partial": try .partial(decoder.decode(PartialTicketDraft.self, from: data))
+        case "usage": try .usage(decoder.decode(DraftTicketResponse.UsageDTO.self, from: data))
+        case "result": try .result(decoder.decode(DraftTicketResponse.self, from: data))
+        case "error": try .error(decoder.decode(ApiError.self, from: data))
         default: nil
         }
     }
@@ -165,6 +171,7 @@ public struct SSEParser: Sendable {
             return data.isEmpty ? nil : (event, Data(data.joined(separator: "\n").utf8))
         }
         guard !line.hasPrefix(":") else { return nil }
+
         let field = line.prefix { $0 != ":" }
         var value = line.dropFirst(field.count)
         if value.hasPrefix(":") { value = value.dropFirst() }

@@ -6,7 +6,7 @@ public struct ProjectRegistry: Equatable, Sendable {
     public private(set) var projects: [Project]
 
     public init() {
-        projects = []
+        self.projects = []
     }
 
     public init(projects: [Project]) throws {
@@ -33,6 +33,7 @@ public struct ProjectRegistry: Equatable, Sendable {
         guard let index = projects.firstIndex(where: reference.matches) else {
             throw reference.notFoundError
         }
+
         return projects.remove(at: index)
     }
 
@@ -42,6 +43,7 @@ public struct ProjectRegistry: Equatable, Sendable {
         guard let index = projects.firstIndex(where: { $0.id == project.id }) else {
             throw DomainError.idNotFound(project.id)
         }
+
         let others = projects.enumerated().filter { $0.offset != index }.map(\.element)
         if let clash = others.first(where: { ProjectRef.name(project.name).matches($0) }) {
             throw DomainError.duplicateName(clash.name)
@@ -59,9 +61,15 @@ public struct ProjectRegistry: Equatable, Sendable {
 
     public func get(_ reference: ProjectRef) throws -> Project {
         guard let project = find(reference) else { throw reference.notFoundError }
+
         return project
     }
 
-    public var isEmpty: Bool { projects.isEmpty }
-    public var count: Int { projects.count }
+    public var isEmpty: Bool {
+        projects.isEmpty
+    }
+
+    public var count: Int {
+        projects.count
+    }
 }

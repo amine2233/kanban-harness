@@ -11,7 +11,8 @@ struct ProjectCommand: AsyncParsableCommand {
     )
 
     struct Add: AsyncParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Register a folder as a project (created and seeded if missing).")
+        static let configuration =
+            CommandConfiguration(abstract: "Register a folder as a project (created and seeded if missing).")
 
         @OptionGroup var global: GlobalOptions
 
@@ -21,13 +22,15 @@ struct ProjectCommand: AsyncParsableCommand {
         @Option(help: "Display name; defaults to the folder name.")
         var name: String?
 
-        @Option(help: "Workspace format written into the folder (json or sqlite); defaults to the settings' default_storage.")
+        @Option(
+            help: "Workspace format written into the folder (json or sqlite); defaults to the settings' default_storage."
+        )
         var storage: StorageKind?
 
         func run() async throws {
             try await failing {
                 let absolute = Self.absolute(path)
-                let requested = self.storage
+                let requested = storage
                 let project = try await Runtime.run(global) { services in
                     try await services.make(ProjectCommandsKey.self)
                         .add(name: name ?? Self.folderName(absolute), path: absolute, storage: requested)
@@ -38,7 +41,10 @@ struct ProjectCommand: AsyncParsableCommand {
 
         static func absolute(_ path: String) -> String {
             let expanded = (path as NSString).expandingTildeInPath
-            let url = URL(fileURLWithPath: expanded, relativeTo: URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
+            let url = URL(
+                fileURLWithPath: expanded,
+                relativeTo: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+            )
             return url.standardizedFileURL.path
         }
 
@@ -55,7 +61,7 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                try Output.json(try await Runtime.run(global) {
+                try await Output.json(Runtime.run(global) {
                     try await $0.make(ProjectCommandsKey.self).list()
                 })
             }
@@ -72,7 +78,7 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                try Output.json(try await Runtime.run(global) {
+                try await Output.json(Runtime.run(global) {
                     try await $0.make(ProjectCommandsKey.self).get(.parse(project))
                 })
             }
@@ -80,7 +86,8 @@ struct ProjectCommand: AsyncParsableCommand {
     }
 
     struct Remove: AsyncParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Unregister a project (files on disk are kept).")
+        static let configuration =
+            CommandConfiguration(abstract: "Unregister a project (files on disk are kept).")
 
         @OptionGroup var global: GlobalOptions
 
@@ -89,7 +96,7 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                try Output.json(try await Runtime.run(global) {
+                try await Output.json(Runtime.run(global) {
                     try await $0.make(ProjectCommandsKey.self).remove(.parse(project))
                 })
             }
@@ -97,7 +104,10 @@ struct ProjectCommand: AsyncParsableCommand {
     }
 
     struct Storage: AsyncParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Convert a project's workspace to json or sqlite (the old file is kept).")
+        static let configuration =
+            CommandConfiguration(
+                abstract: "Convert a project's workspace to json or sqlite (the old file is kept)."
+            )
 
         @OptionGroup var global: GlobalOptions
 
@@ -109,7 +119,7 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                try Output.json(try await Runtime.run(global) {
+                try await Output.json(Runtime.run(global) {
                     try await $0.make(ProjectCommandsKey.self).changeStorage(.parse(project), to: storage)
                 })
             }
@@ -126,7 +136,7 @@ struct ProjectCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                try Output.json(try await Runtime.run(global) {
+                try await Output.json(Runtime.run(global) {
                     try await $0.make(ProjectCommandsKey.self).boards(.parse(project))
                 })
             }

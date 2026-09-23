@@ -3,13 +3,16 @@ import DashboardPersistence
 import Testing
 @testable import DashboardService
 
-@Suite struct SettingsServiceTests {
-    @Test func currentStartsWithDefaults() async throws {
+@Suite
+struct SettingsServiceTests {
+    @Test
+    func currentStartsWithDefaults() async throws {
         let svc = SettingsService(store: InMemorySettingsStore())
         #expect(try await svc.current() == .default)
     }
 
-    @Test func updateMergesValidatesAndPersists() async throws {
+    @Test
+    func updateMergesValidatesAndPersists() async throws {
         let svc = SettingsService(store: InMemorySettingsStore())
         let updated = try await svc.update(corsOrigins: ["http://localhost:5173/"])
         #expect(updated == Settings(defaultStorage: .json, corsOrigins: ["http://localhost:5173"]))
@@ -19,7 +22,8 @@ import Testing
         #expect(try await svc.current() == again)
     }
 
-    @Test func updateWithBadOriginIsValidationErrorAndChangesNothing() async throws {
+    @Test
+    func updateWithBadOriginIsValidationErrorAndChangesNothing() async throws {
         let svc = SettingsService(store: InMemorySettingsStore())
         do {
             _ = try await svc.update(corsOrigins: ["ftp://x"])

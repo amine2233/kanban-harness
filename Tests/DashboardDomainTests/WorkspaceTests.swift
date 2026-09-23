@@ -2,7 +2,8 @@ import Foundation
 import Testing
 @testable import DashboardDomain
 
-@Suite struct WorkspaceTests {
+@Suite
+struct WorkspaceTests {
     let now = Date(timeIntervalSince1970: 1_000)
 
     func seeded() -> (Workspace, Board, [Column]) {
@@ -11,7 +12,8 @@ import Testing
         return (workspace, board, workspace.columns(of: board.id))
     }
 
-    @Test func createBoardWithTemplateColumnsSeedsThreeOrderedColumns() {
+    @Test
+    func createBoardWithTemplateColumnsSeedsThreeOrderedColumns() {
         let (workspace, board, columns) = seeded()
         #expect(board.position == 0)
         #expect(columns.map(\.name) == ["Backlog", "To do", "In progress", "Done"])
@@ -20,14 +22,16 @@ import Testing
         #expect(workspace.boards.count == 1)
     }
 
-    @Test func createBoardAppendsPosition() {
+    @Test
+    func createBoardAppendsPosition() {
         var workspace = Workspace()
         workspace.createBoard(name: "A")
         let second = workspace.createBoard(name: "B")
         #expect(second.position == 1)
     }
 
-    @Test func createColumnOnUnknownBoardThrows() {
+    @Test
+    func createColumnOnUnknownBoardThrows() {
         var workspace = Workspace()
         let id = UUID()
         #expect(throws: DomainError.boardNotFound(id)) {
@@ -35,7 +39,8 @@ import Testing
         }
     }
 
-    @Test func createCardAllocatesNumbersFromPrefixCounter() throws {
+    @Test
+    func createCardAllocatesNumbersFromPrefixCounter() throws {
         var (workspace, _, columns) = seeded()
         let first = try workspace.createCard(columnId: columns[0].id, title: "One", now: now)
         let second = try workspace.createCard(columnId: columns[0].id, title: "Two", now: now)
@@ -45,22 +50,38 @@ import Testing
         #expect(workspace.prefixes == [Prefix(name: "task", cardCounter: 2)])
     }
 
-    @Test func aiCostIsAnOptionalExtraKeyOnTheWire() throws {
+    @Test
+    func aiCostIsAnOptionalExtraKeyOnTheWire() throws {
         var workspace = Workspace()
         let board = workspace.createBoardWithTemplateColumns(name: "B")
         let column = workspace.columns(of: board.id)[0]
         let plain = try workspace.createCard(columnId: column.id, title: "Plain")
-        let drafted = try workspace.createCard(columnId: column.id, title: "Drafted", aiCost: AICost(provider: "cc", model: "sonnet", inputTokens: 1, outputTokens: 2, costUSD: 0.5))
+        let drafted = try workspace.createCard(
+            columnId: column.id,
+            title: "Drafted",
+            aiCost: AICost(provider: "cc", model: "sonnet", inputTokens: 1, outputTokens: 2, costUSD: 0.5)
+        )
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
-        #expect(!String(decoding: try encoder.encode(plain), as: UTF8.self).contains("ai_cost"), "kanban-rs files stay byte-compatible for ordinary cards")
-        let json = String(decoding: try encoder.encode(drafted), as: UTF8.self)
-        #expect(json.contains(#""ai_cost":{"cost_usd":0.5,"estimated":false,"input_tokens":1,"model":"sonnet","output_tokens":2,"provider":"cc"}"#))
+        #expect(
+            try !String(decoding: encoder.encode(plain), as: UTF8.self).contains("ai_cost"),
+            "kanban-rs files stay byte-compatible for ordinary cards"
+        )
+        let json = try String(decoding: encoder.encode(drafted), as: UTF8.self)
+        #expect(json
+            .contains(
+                #""ai_cost":{"cost_usd":0.5,"estimated":false,"input_tokens":1,"model":"sonnet","output_tokens":2,"provider":"cc"}"#
+            ))
         #expect(try JSONDecoder().decode(Card.self, from: Data(json.utf8)) == drafted)
-        #expect(try JSONDecoder().decode(AICost.self, from: Data(#"{"provider":"p","model":"m"}"#.utf8)) == AICost(provider: "p", model: "m"))
+        #expect(try JSONDecoder()
+            .decode(AICost.self, from: Data(#"{"provider":"p","model":"m"}"#.utf8)) == AICost(
+                provider: "p",
+                model: "m"
+            ))
     }
 
-    @Test func createCardContinuesExistingPrefixCounterCaseInsensitively() throws {
+    @Test
+    func createCardContinuesExistingPrefixCounterCaseInsensitively() throws {
         var (workspace, board, columns) = seeded()
         workspace.boards[0].cardPrefix = "KAN"
         workspace.prefixes = [Prefix(name: "kan", cardCounter: 41)]
@@ -70,7 +91,8 @@ import Testing
         #expect(card.boardId == board.id)
     }
 
-    @Test func createCardTakesColumnDefaultStatusAndTrimsTitle() throws {
+    @Test
+    func createCardTakesColumnDefaultStatusAndTrimsTitle() throws {
         var (workspace, _, columns) = seeded()
         let doing = try workspace.createCard(columnId: columns[2].id, title: "  Ship  ", now: now)
         #expect(doing.status == .inProgress)
@@ -80,14 +102,16 @@ import Testing
         #expect(done.completedAt == now)
     }
 
-    @Test func createCardWithBlankTitleThrows() {
+    @Test
+    func createCardWithBlankTitleThrows() {
         var (workspace, _, columns) = seeded()
         #expect(throws: DomainError.emptyTitle) {
             try workspace.createCard(columnId: columns[0].id, title: "   ")
         }
     }
 
-    @Test func createCardRespectsWipLimit() throws {
+    @Test
+    func createCardRespectsWipLimit() throws {
         var (workspace, _, columns) = seeded()
         workspace.columns[2].wipLimit = 1
         try workspace.createCard(columnId: columns[2].id, title: "one")
@@ -96,7 +120,8 @@ import Testing
         }
     }
 
-    @Test func moveCardUpdatesColumnStatusAndCompactsOrigin() throws {
+    @Test
+    func moveCardUpdatesColumnStatusAndCompactsOrigin() throws {
         var (workspace, _, columns) = seeded()
         let a = try workspace.createCard(columnId: columns[0].id, title: "a", now: now)
         let b = try workspace.createCard(columnId: columns[0].id, title: "b", now: now)
@@ -114,14 +139,16 @@ import Testing
         #expect(back.completedAt == nil)
     }
 
-    @Test func moveCardToSameColumnIsNoOp() throws {
+    @Test
+    func moveCardToSameColumnIsNoOp() throws {
         var (workspace, _, columns) = seeded()
         let card = try workspace.createCard(columnId: columns[0].id, title: "a", now: now)
         let same = try workspace.moveCard(card.id, toColumn: columns[0].id, now: now.addingTimeInterval(5))
         #expect(same == card)
     }
 
-    @Test func moveCardAcrossBoardsIsRejected() throws {
+    @Test
+    func moveCardAcrossBoardsIsRejected() throws {
         var (workspace, _, columns) = seeded()
         let other = workspace.createBoardWithTemplateColumns(name: "Other")
         let foreign = workspace.columns(of: other.id)[0]
@@ -131,7 +158,8 @@ import Testing
         }
     }
 
-    @Test func moveCardRespectsDestinationWipLimit() throws {
+    @Test
+    func moveCardRespectsDestinationWipLimit() throws {
         var (workspace, _, columns) = seeded()
         workspace.columns[2].wipLimit = 0
         let card = try workspace.createCard(columnId: columns[0].id, title: "a")
@@ -140,7 +168,8 @@ import Testing
         }
     }
 
-    @Test func updateCardChangesFieldsAndStatusCompletion() throws {
+    @Test
+    func updateCardChangesFieldsAndStatusCompletion() throws {
         var (workspace, _, columns) = seeded()
         let card = try workspace.createCard(columnId: columns[0].id, title: "a", now: now)
         let updated = try workspace.updateCard(
@@ -155,15 +184,19 @@ import Testing
         #expect(cleared.title == "b")
     }
 
-    @Test func deleteCardCompactsColumnAndDropsGraphEdges() throws {
+    @Test
+    func deleteCardCompactsColumnAndDropsGraphEdges() throws {
         var (workspace, _, columns) = seeded()
         let a = try workspace.createCard(columnId: columns[0].id, title: "a")
         let b = try workspace.createCard(columnId: columns[0].id, title: "b")
-        let edge: JSONValue = .object(["from": .string(a.id.uuidString.lowercased()), "to": .string(b.id.uuidString.lowercased())])
+        let edge: JSONValue = .object([
+            "from": .string(a.id.uuidString.lowercased()),
+            "to": .string(b.id.uuidString.lowercased())
+        ])
         let other: JSONValue = .object(["from": .string("x"), "to": .string("y")])
         workspace.extra["graph"] = .object([
             "blocks": .object(["edges": .array([edge, other])]),
-            "spawns": .object(["edges": .array([])]),
+            "spawns": .object(["edges": .array([])])
         ])
 
         try workspace.deleteCard(a.id)
@@ -176,7 +209,8 @@ import Testing
         }
     }
 
-    @Test func queriesReturnEntitiesSortedByPosition() throws {
+    @Test
+    func queriesReturnEntitiesSortedByPosition() throws {
         var (workspace, board, columns) = seeded()
         let first = try workspace.createCard(columnId: columns[0].id, title: "1")
         let second = try workspace.createCard(columnId: columns[2].id, title: "2")

@@ -10,21 +10,30 @@ actor StubTransport: HTTPTransport {
     struct Call: Sendable { let url: URL; let headers: [String: String]; let body: String }
     private(set) var calls: [Call] = []
     private let response: (Int, String)
-    init(_ response: (Int, String)) { self.response = response }
+    init(_ response: (Int, String)) {
+        self.response = response
+    }
+
     func post(_ url: URL, headers: [String: String], body: Data) async throws -> (status: Int, body: Data) {
         calls.append(Call(url: url, headers: headers, body: String(decoding: body, as: UTF8.self)))
         return (response.0, Data(response.1.utf8))
     }
 }
 
-@Suite struct VendorModuleTests {
+@Suite
+struct VendorModuleTests {
     let callback = URL(string: "http://127.0.0.1:5175/api/auth/callback")!
 
     func query(_ url: URL) -> [String: String] {
-        Dictionary(uniqueKeysWithValues: (URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+        Dictionary(uniqueKeysWithValues: (URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems ?? []).map { (
+            $0.name,
+            $0.value ?? ""
+        ) })
     }
 
-    @Test func modulesRegisterProviderAndSignIn() throws {
+    @Test
+    func modulesRegisterProviderAndSignIn() throws {
         var registry = AIProviderRegistry()
         HuggingFaceProvider.register(in: &registry)
         OpenRouterProvider.register(in: &registry)
@@ -32,14 +41,27 @@ actor StubTransport: HTTPTransport {
         #expect(Set(registry.signInKinds) == [.huggingface, .openrouter])
         let router = try AIProviderConfig(id: "r", kind: .openrouter, name: "R", model: "m")
         #expect(try registry.signIn(for: router) is OpenRouterSignIn)
-        let hf = try AIProviderConfig(id: "h", kind: .huggingface, name: "H", model: "m", oauth: OAuthClientSettings(clientId: "app"))
+        let hf = try AIProviderConfig(
+            id: "h",
+            kind: .huggingface,
+            name: "H",
+            model: "m",
+            oauth: OAuthClientSettings(clientId: "app")
+        )
         #expect(try registry.signIn(for: hf) is OAuthCodeFlow)
     }
 
-    @Test func huggingFaceSignInNeedsARegisteredApp() throws {
+    @Test
+    func huggingFaceSignInNeedsARegisteredApp() throws {
         let bare = try AIProviderConfig(id: "h", kind: .huggingface, name: "H", model: "m")
         #expect(throws: AIProviderError.self) { _ = try HuggingFaceProvider.signIn(for: bare) }
-        let flow = try HuggingFaceProvider.signIn(for: AIProviderConfig(id: "h", kind: .huggingface, name: "H", model: "m", oauth: OAuthClientSettings(clientId: "app")))
+        let flow = try HuggingFaceProvider.signIn(for: AIProviderConfig(
+            id: "h",
+            kind: .huggingface,
+            name: "H",
+            model: "m",
+            oauth: OAuthClientSettings(clientId: "app")
+        ))
         let url = flow.authorizationURL(callback: callback, state: "s", codeChallenge: "c")
         #expect(url.host == "huggingface.co" && url.path == "/oauth/authorize")
         #expect(query(url)["scope"] == "openid profile inference-api")
@@ -47,7 +69,8 @@ actor StubTransport: HTTPTransport {
         #expect(flow.tokenURL.absoluteString == "https://huggingface.co/oauth/token")
     }
 
-    @Test func openRouterCarriesStateInTheCallbackAndExchangesForAKey() async throws {
+    @Test
+    func openRouterCarriesStateInTheCallbackAndExchangesForAKey() async throws {
         let transport = StubTransport((200, #"{"key":"sk-or-v1-abc"}"#))
         let signIn = OpenRouterSignIn(transport: transport)
         let url = signIn.authorizationURL(callback: callback, state: "st4te", codeChallenge: "ch")
@@ -66,7 +89,8 @@ actor StubTransport: HTTPTransport {
         #expect(try await signIn.refresh(credential) == nil)
     }
 
-    @Test func openRouterRejectionIsTyped() async {
+    @Test
+    func openRouterRejectionIsTyped() async {
         let signIn = OpenRouterSignIn(transport: StubTransport((403, "nope")))
         await #expect(throws: OAuthError.vendorRejected(status: 403, body: "nope")) {
             _ = try await signIn.exchange(code: "c", codeVerifier: "v", callback: callback)

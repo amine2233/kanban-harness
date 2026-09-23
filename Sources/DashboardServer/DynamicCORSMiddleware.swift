@@ -11,10 +11,12 @@ struct DynamicCORSMiddleware: AsyncMiddleware {
         guard request.headers[.origin].first != nil else {
             return try await next.respond(to: request)
         }
-        let origins = staticOrigins + ((try? await request.settings.current().corsOrigins) ?? [])
+
+        let origins = await staticOrigins + ((try? request.settings.current().corsOrigins) ?? [])
         guard !origins.isEmpty else {
             return try await next.respond(to: request)
         }
+
         let cors = CORSMiddleware(configuration: .init(
             allowedOrigin: .any(origins),
             allowedMethods: [.GET, .POST, .PATCH, .DELETE, .OPTIONS],

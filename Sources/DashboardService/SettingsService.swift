@@ -20,7 +20,10 @@ public actor SettingsService {
     }
 
     /// Applies a partial change; `nil` fields keep their value.
-    public func update(defaultStorage: StorageKind? = nil, corsOrigins: [String]? = nil) async throws(ServiceError) -> Settings {
+    public func update(
+        defaultStorage: StorageKind? = nil,
+        corsOrigins: [String]? = nil
+    ) async throws(ServiceError) -> Settings {
         do {
             var settings = try await store.load()
             if let defaultStorage { settings.defaultStorage = defaultStorage }

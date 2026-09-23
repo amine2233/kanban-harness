@@ -4,7 +4,8 @@ import Foundation
 import Testing
 @testable import DashboardPersistenceConfig
 
-@Suite struct ConfigFileAIConfigStoreTests {
+@Suite
+struct ConfigFileAIConfigStoreTests {
     func path(_ name: String) throws -> String {
         let dir = NSTemporaryDirectory() + "mvp-dashboard-config-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
@@ -13,27 +14,48 @@ import Testing
 
     @Test(arguments: ["config.json", "config.yaml"])
     func satisfiesContractInBothFormats(file: String) async throws {
-        try await StoreContract.verify(ConfigFileAIConfigStore(path: try path(file), environment: [:]))
+        try await StoreContract.verify(ConfigFileAIConfigStore(path: path(file), environment: [:]))
         try await StoreContract.verify(InMemoryAIConfigStore())
     }
 
-    @Test func writesReadableJSONWithPrivatePermissions() async throws {
-        let store = ConfigFileAIConfigStore(path: try path("config.json"), environment: [:])
-        try await store.save(try AIConfig(providers: [AIProviderConfig(id: "claude", kind: .anthropic, name: "Claude", model: "claude-sonnet-5", apiKey: "sk-1", pricing: AIPricing(inputPerMillion: 3, outputPerMillion: 15))]))
-        let raw = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: store.path))) as? [String: Any])
+    @Test
+    func writesReadableJSONWithPrivatePermissions() async throws {
+        let store = try ConfigFileAIConfigStore(path: path("config.json"), environment: [:])
+        try await store.save(AIConfig(providers: [AIProviderConfig(
+            id: "claude",
+            kind: .anthropic,
+            name: "Claude",
+            model: "claude-sonnet-5",
+            apiKey: "sk-1",
+            pricing: AIPricing(inputPerMillion: 3, outputPerMillion: 15)
+        )]))
+        let raw = try #require(JSONSerialization
+            .jsonObject(with: Data(contentsOf: URL(fileURLWithPath: store.path))) as? [String: Any])
         let ai = try #require(raw["ai"] as? [String: Any])
         #expect(ai["default_provider"] as? String == "claude")
         #expect(ai["provider_ids"] as? [String] == ["claude"])
-        #expect(((ai["providers"] as? [String: Any])?["claude"] as? [String: Any])?["api_key"] == nil, "secrets go to the credential store")
+        #expect(
+            ((ai["providers"] as? [String: Any])?["claude"] as? [String: Any])?["api_key"] == nil,
+            "secrets go to the credential store"
+        )
         #expect(try await store.load().provider("claude")?.apiKey == "sk-1")
-        #expect((((ai["providers"] as? [String: Any])?["claude"] as? [String: Any])?["pricing"] as? [String: Double])?["output_per_million"] == 15)
+        #expect(
+            (
+                ((ai["providers"] as? [
+                    String: Any
+                ])?["claude"] as? [String: Any])?["pricing"] as? [String: Double]
+            )?["output_per_million"] ==
+                15
+        )
         #expect(try await store.load().provider("claude")?.pricing?.inputPerMillion == 3)
-        let mode = try #require(FileManager.default.attributesOfItem(atPath: store.path)[.posixPermissions] as? Int)
+        let mode = try #require(FileManager.default
+            .attributesOfItem(atPath: store.path)[.posixPermissions] as? Int)
         #expect(mode & 0o777 == 0o600)
     }
 
-    @Test func handWrittenYAMLIsRead() async throws {
-        let store = ConfigFileAIConfigStore(path: try path("config.yaml"), environment: [:])
+    @Test
+    func handWrittenYAMLIsRead() async throws {
+        let store = try ConfigFileAIConfigStore(path: path("config.yaml"), environment: [:])
         try """
         ai:
           default_provider: local
@@ -57,26 +79,36 @@ import Testing
         #expect(config.providers.map(\.id) == ["local", "claude"])
         #expect(config.provider("local")?.baseURL == "http://127.0.0.1:11434")
         #expect(config.provider("claude")?.name == "claude", "name defaults to the id")
-        #expect(config.provider("claude")?.maxTokens == 2048)
-        #expect(config.provider("claude")?.pricing == (try AIPricing(inputPerMillion: 3, outputPerMillion: 15)))
+        #expect(config.provider("claude")?.maxTokens == 2_048)
+        #expect(try config.provider("claude")?.pricing == AIPricing(inputPerMillion: 3, outputPerMillion: 15))
         #expect(config.provider("local")?.pricing == nil)
         #expect(config.provider("claude")?.hasAPIKey == false)
     }
 
-    @Test func environmentOverridesTheFileForSecrets() async throws {
+    @Test
+    func environmentOverridesTheFileForSecrets() async throws {
         let file = try path("config.json")
         let plain = ConfigFileAIConfigStore(path: file, environment: [:])
-        try await plain.save(try AIConfig(providers: [AIProviderConfig(id: "claude", kind: .anthropic, name: "Claude", model: "m")]))
-        let withEnv = ConfigFileAIConfigStore(path: file, environment: ["MVP_DASHBOARD_AI_PROVIDERS_CLAUDE_API_KEY": "sk-from-env"])
+        try await plain.save(AIConfig(providers: [AIProviderConfig(
+            id: "claude",
+            kind: .anthropic,
+            name: "Claude",
+            model: "m"
+        )]))
+        let withEnv = ConfigFileAIConfigStore(
+            path: file,
+            environment: ["MVP_DASHBOARD_AI_PROVIDERS_CLAUDE_API_KEY": "sk-from-env"]
+        )
         #expect(try await withEnv.load().provider("claude")?.apiKey == "sk-from-env")
         #expect(try await plain.load().provider("claude")?.apiKey == nil)
 
-        try await withEnv.save(try await withEnv.load())
+        try await withEnv.save(withEnv.load())
         let raw = try String(contentsOfFile: file, encoding: .utf8)
         #expect(!raw.contains("sk-from-env"), "a key that came from the environment is not written to disk")
     }
 
-    @Test func secretsResolveEnvironmentThenStoreThenLegacyFile() async throws {
+    @Test
+    func secretsResolveEnvironmentThenStoreThenLegacyFile() async throws {
         let file = try path("config.json")
         try #"{"ai": {"provider_ids": ["hf"], "providers": {"hf": {"kind": "huggingface", "model": "m", "api_key": "hf_legacy", "oauth": {"client_id": "app1"}}}}}"#
             .write(toFile: file, atomically: true, encoding: .utf8)
@@ -87,40 +119,68 @@ import Testing
 
         try await credentials.set(Credential(secret: "hf_stored", refreshToken: "r"), for: "hf")
         #expect(try await store.load().provider("hf")?.apiKey == "hf_stored")
-        let env = ConfigFileAIConfigStore(path: file, credentials: credentials, environment: ["MVP_DASHBOARD_AI_PROVIDERS_HF_API_KEY": "hf_env"])
+        let env = ConfigFileAIConfigStore(
+            path: file,
+            credentials: credentials,
+            environment: ["MVP_DASHBOARD_AI_PROVIDERS_HF_API_KEY": "hf_env"]
+        )
         #expect(try await env.load().provider("hf")?.apiKey == "hf_env")
 
-        try await store.save(try await store.load())
-        #expect(!(try String(contentsOfFile: file, encoding: .utf8)).contains("hf_legacy"), "a save moves the legacy key out of the file")
-        #expect(try await credentials.get("hf")?.refreshToken == "r", "an unchanged secret keeps its refresh data")
+        try await store.save(store.load())
+        #expect(
+            try !String(contentsOfFile: file, encoding: .utf8).contains("hf_legacy"),
+            "a save moves the legacy key out of the file"
+        )
+        #expect(
+            try await credentials.get("hf")?.refreshToken == "r",
+            "an unchanged secret keeps its refresh data"
+        )
 
         try await store.save(.empty)
         #expect(try await credentials.get("hf") == nil, "removing a provider forgets its credential")
     }
 
-    @Test func fileCredentialStoreSatisfiesContractWithPrivatePermissions() async throws {
-        let store = FileCredentialStore(path: try path("credentials.json"))
+    @Test
+    func fileCredentialStoreSatisfiesContractWithPrivatePermissions() async throws {
+        let store = try FileCredentialStore(path: path("credentials.json"))
         try await StoreContract.verify(store)
         try await store.set(Credential(secret: "x"), for: "p")
-        let mode = try #require(FileManager.default.attributesOfItem(atPath: store.path)[.posixPermissions] as? Int)
+        let mode = try #require(FileManager.default
+            .attributesOfItem(atPath: store.path)[.posixPermissions] as? Int)
         #expect(mode & 0o777 == 0o600)
         try await StoreContract.verify(InMemoryCredentialStore())
     }
 
-    @Test func saveKeepsOtherTopLevelSections() async throws {
-        let store = ConfigFileAIConfigStore(path: try path("config.json"), environment: [:])
-        try #"{"other": {"keep": true}, "ai": {"provider_ids": []}}"#.write(toFile: store.path, atomically: true, encoding: .utf8)
-        try await store.save(try AIConfig(providers: [AIProviderConfig(id: "x", kind: .ollama, name: "X", model: "m")]))
-        let raw = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: store.path))) as? [String: Any])
+    @Test
+    func saveKeepsOtherTopLevelSections() async throws {
+        let store = try ConfigFileAIConfigStore(path: path("config.json"), environment: [:])
+        try #"{"other": {"keep": true}, "ai": {"provider_ids": []}}"#.write(
+            toFile: store.path,
+            atomically: true,
+            encoding: .utf8
+        )
+        try await store.save(AIConfig(providers: [AIProviderConfig(
+            id: "x",
+            kind: .ollama,
+            name: "X",
+            model: "m"
+        )]))
+        let raw = try #require(JSONSerialization
+            .jsonObject(with: Data(contentsOf: URL(fileURLWithPath: store.path))) as? [String: Any])
         #expect((raw["other"] as? [String: Any])?["keep"] as? Bool == true)
         #expect(((raw["ai"] as? [String: Any])?["provider_ids"] as? [String]) == ["x"])
     }
 
-    @Test func unknownKindAndMissingFileAreHandled() async throws {
-        let missing = ConfigFileAIConfigStore(path: try path("config.json"), environment: [:])
+    @Test
+    func unknownKindAndMissingFileAreHandled() async throws {
+        let missing = try ConfigFileAIConfigStore(path: path("config.json"), environment: [:])
         #expect(try await missing.load() == .empty)
-        let bad = ConfigFileAIConfigStore(path: try path("config.json"), environment: [:])
-        try #"{"ai": {"provider_ids": ["x"], "providers": {"x": {"kind": "magic", "model": "m"}}}}"#.write(toFile: bad.path, atomically: true, encoding: .utf8)
+        let bad = try ConfigFileAIConfigStore(path: path("config.json"), environment: [:])
+        try #"{"ai": {"provider_ids": ["x"], "providers": {"x": {"kind": "magic", "model": "m"}}}}"#.write(
+            toFile: bad.path,
+            atomically: true,
+            encoding: .utf8
+        )
         await #expect(throws: PersistenceError.self) { try await bad.load() }
     }
 }

@@ -12,7 +12,8 @@ public struct RuntimeConfig: Sendable, Equatable {
     public static let configFileNames = ["config.yaml", "config.yml", "config.json"]
 
     public var home: String
-    /// The Claude Code executable used by `claude_code` providers (`MVP_DASHBOARD_CLAUDE_BIN`, else `claude` on PATH).
+    /// The Claude Code executable used by `claude_code` providers (`MVP_DASHBOARD_CLAUDE_BIN`, else `claude`
+    /// on PATH).
     public var claudeExecutable: String
     /// Provider kinds this home switches off, by raw value and comma-separated
     /// (`MVP_DASHBOARD_PROVIDERS_DISABLED=huggingface,claude_code`). They never
@@ -21,9 +22,14 @@ public struct RuntimeConfig: Sendable, Equatable {
     /// `config.yaml` if a home needs it to survive without the variable set.
     public var disabledProviders: Set<AIProviderKind>
 
-    public init(home: String? = nil, claudeExecutable: String? = nil, disabledProviders: Set<AIProviderKind>? = nil) {
+    public init(
+        home: String? = nil,
+        claudeExecutable: String? = nil,
+        disabledProviders: Set<AIProviderKind>? = nil
+    ) {
         self.home = home ?? DependencyValues.current.home
-        self.claudeExecutable = claudeExecutable ?? ProcessInfo.processInfo.environment["MVP_DASHBOARD_CLAUDE_BIN"] ?? "claude"
+        self.claudeExecutable = claudeExecutable ?? ProcessInfo.processInfo
+            .environment["MVP_DASHBOARD_CLAUDE_BIN"] ?? "claude"
         self.disabledProviders = disabledProviders ?? Self.disabledFromEnvironment()
     }
 
@@ -31,7 +37,8 @@ public struct RuntimeConfig: Sendable, Equatable {
         _ environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> Set<AIProviderKind> {
         let raw = environment["MVP_DASHBOARD_PROVIDERS_DISABLED"] ?? ""
-        return Set(raw.split(separator: ",").compactMap { AIProviderKind(rawValue: $0.trimmingCharacters(in: .whitespaces)) })
+        return Set(raw.split(separator: ",")
+            .compactMap { AIProviderKind(rawValue: $0.trimmingCharacters(in: .whitespaces)) })
     }
 
     public var registryPath: String {
@@ -62,6 +69,7 @@ public struct RuntimeConfig: Sendable, Equatable {
             return URL(string: "http://127.0.0.1:\(forced)")
         }
         guard let port = daemonHandle?.port else { return nil }
+
         return URL(string: "http://127.0.0.1:\(port)")
     }
 
@@ -69,14 +77,16 @@ public struct RuntimeConfig: Sendable, Equatable {
     /// to signal to hand the home over.
     public var daemonHandle: (port: Int, pid: Int32)? {
         guard let text = try? String(contentsOfFile: daemonPortPath, encoding: .utf8) else { return nil }
+
         let fields = text.split(whereSeparator: \.isWhitespace)
         guard let port = fields.first.flatMap({ Int($0) }) else { return nil }
+
         return (port, fields.count > 1 ? Int32(fields[1]) ?? 0 : 0)
     }
 
-
     public var configPath: String {
         let candidates = Self.configFileNames.map { (home as NSString).appendingPathComponent($0) }
-        return candidates.first { FileManager.default.fileExists(atPath: $0) } ?? candidates[candidates.count - 1]
+        return candidates
+            .first { FileManager.default.fileExists(atPath: $0) } ?? candidates[candidates.count - 1]
     }
 }

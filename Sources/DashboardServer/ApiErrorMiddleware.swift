@@ -35,11 +35,20 @@ struct ApiErrorMiddleware: AsyncMiddleware {
         case let error as ServiceError where error.isValidation:
             (.badRequest, ApiError(code: "VALIDATION_FAILED", message: error.localizedDescription))
         case let ServiceError.remote(code, message):
-            (code == "AI_PROVIDER" || code == "AI_BAD_OUTPUT" ? .badGateway : .badRequest, ApiError(code: code, message: message))
+            (
+                code == "AI_PROVIDER" || code == "AI_BAD_OUTPUT" ? .badGateway : .badRequest,
+                ApiError(code: code, message: message)
+            )
         case let error as DecodingError:
             (.badRequest, ApiError(code: "VALIDATION_FAILED", message: error.reason))
         case let error as any AbortError:
-            (error.status, ApiError(code: error.status == .notFound ? "NOT_FOUND" : "VALIDATION_FAILED", message: error.reason))
+            (
+                error.status,
+                ApiError(
+                    code: error.status == .notFound ? "NOT_FOUND" : "VALIDATION_FAILED",
+                    message: error.reason
+                )
+            )
         default:
             (.internalServerError, ApiError(code: "INTERNAL", message: String(describing: error)))
         }

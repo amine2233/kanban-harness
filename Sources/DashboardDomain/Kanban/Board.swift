@@ -21,7 +21,10 @@ public struct Board: Codable, Hashable, Sendable, Identifiable {
     public var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, name, description, position
+        case id
+        case name
+        case description
+        case position
         case cardPrefix = "card_prefix"
         case sprintPrefix = "sprint_prefix"
         case taskListView = "task_list_view"
@@ -39,19 +42,19 @@ public struct Board: Codable, Hashable, Sendable, Identifiable {
     public init(name: String, position: Int, id: UUID = UUID(), now: Date = .timestamp()) {
         self.id = id
         self.name = name
-        description = nil
-        cardPrefix = nil
-        sprintPrefix = nil
-        taskListView = "Flat"
-        taskSortField = "Default"
-        taskSortOrder = "Ascending"
-        sprintDurationDays = nil
-        activeSprintId = nil
+        self.description = nil
+        self.cardPrefix = nil
+        self.sprintPrefix = nil
+        self.taskListView = "Flat"
+        self.taskSortField = "Default"
+        self.taskSortOrder = "Ascending"
+        self.sprintDurationDays = nil
+        self.activeSprintId = nil
         self.position = position
-        nextSprintNumber = 1
-        sprintNameUsedCount = 0
-        sprintNames = []
-        createdAt = now
-        updatedAt = now
+        self.nextSprintNumber = 1
+        self.sprintNameUsedCount = 0
+        self.sprintNames = []
+        self.createdAt = now
+        self.updatedAt = now
     }
 }

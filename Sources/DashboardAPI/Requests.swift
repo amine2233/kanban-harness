@@ -43,12 +43,18 @@ public struct CreateBoardRequest: Codable, Sendable {
     public var withDefaultColumns: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case name, description
+        case name
+        case description
         case cardPrefix = "card_prefix"
         case withDefaultColumns = "with_default_columns"
     }
 
-    public init(name: String, description: String? = nil, cardPrefix: String? = nil, withDefaultColumns: Bool? = nil) {
+    public init(
+        name: String,
+        description: String? = nil,
+        cardPrefix: String? = nil,
+        withDefaultColumns: Bool? = nil
+    ) {
         self.name = name
         self.description = description
         self.cardPrefix = cardPrefix
@@ -63,11 +69,18 @@ public struct UpdateBoardRequest: Codable, Sendable {
     public var cardPrefix: Patch<String> = .keep
 
     enum CodingKeys: String, CodingKey {
-        case name, position, description
+        case name
+        case position
+        case description
         case cardPrefix = "card_prefix"
     }
 
-    public init(name: String? = nil, position: Int? = nil, description: Patch<String> = .keep, cardPrefix: Patch<String> = .keep) {
+    public init(
+        name: String? = nil,
+        position: Int? = nil,
+        description: Patch<String> = .keep,
+        cardPrefix: Patch<String> = .keep
+    ) {
         self.name = name
         self.position = position
         self.description = description
@@ -76,10 +89,10 @@ public struct UpdateBoardRequest: Codable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        name = try container.decodeIfPresent(String.self, forKey: .name)
-        position = try container.decodeIfPresent(Int.self, forKey: .position)
-        description = try container.patch(String.self, forKey: .description)
-        cardPrefix = try container.patch(String.self, forKey: .cardPrefix)
+        self.name = try container.decodeIfPresent(String.self, forKey: .name)
+        self.position = try container.decodeIfPresent(Int.self, forKey: .position)
+        self.description = try container.patch(String.self, forKey: .description)
+        self.cardPrefix = try container.patch(String.self, forKey: .cardPrefix)
     }
 }
 
@@ -116,12 +129,18 @@ public struct UpdateColumnRequest: Codable, Sendable {
     public var defaultStatus: Patch<StatusDTO> = .keep
 
     enum CodingKeys: String, CodingKey {
-        case name, position
+        case name
+        case position
         case wipLimit = "wip_limit"
         case defaultStatus = "default_status"
     }
 
-    public init(name: String? = nil, position: Int? = nil, wipLimit: Patch<Int> = .keep, defaultStatus: Patch<StatusDTO> = .keep) {
+    public init(
+        name: String? = nil,
+        position: Int? = nil,
+        wipLimit: Patch<Int> = .keep,
+        defaultStatus: Patch<StatusDTO> = .keep
+    ) {
         self.name = name
         self.position = position
         self.wipLimit = wipLimit
@@ -130,10 +149,10 @@ public struct UpdateColumnRequest: Codable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        name = try container.decodeIfPresent(String.self, forKey: .name)
-        position = try container.decodeIfPresent(Int.self, forKey: .position)
-        wipLimit = try container.patch(Int.self, forKey: .wipLimit)
-        defaultStatus = try container.patch(StatusDTO.self, forKey: .defaultStatus)
+        self.name = try container.decodeIfPresent(String.self, forKey: .name)
+        self.position = try container.decodeIfPresent(Int.self, forKey: .position)
+        self.wipLimit = try container.patch(Int.self, forKey: .wipLimit)
+        self.defaultStatus = try container.patch(StatusDTO.self, forKey: .defaultStatus)
     }
 }
 
@@ -154,11 +173,20 @@ public struct CreateCardRequest: Codable, Sendable {
     public var subtasks: [SubtaskRequest]?
 
     enum CodingKeys: String, CodingKey {
-        case title, description, priority, subtasks
+        case title
+        case description
+        case priority
+        case subtasks
         case aiCost = "ai_cost"
     }
 
-    public init(title: String, description: String? = nil, priority: PriorityDTO? = nil, aiCost: AICost? = nil, subtasks: [SubtaskRequest]? = nil) {
+    public init(
+        title: String,
+        description: String? = nil,
+        priority: PriorityDTO? = nil,
+        aiCost: AICost? = nil,
+        subtasks: [SubtaskRequest]? = nil
+    ) {
         self.title = title
         self.description = description
         self.priority = priority
@@ -181,12 +209,18 @@ public struct SubtaskRequest: Codable, Sendable, Equatable {
     }
 
     public init(_ spec: SubtaskSpec) {
-        self.init(title: spec.title, description: spec.description, priority: spec.priority.map(PriorityDTO.init), points: spec.points)
+        self.init(
+            title: spec.title,
+            description: spec.description,
+            priority: spec.priority.map(PriorityDTO.init),
+            points: spec.points
+        )
     }
 
     public func spec() throws -> SubtaskSpec {
         let priority = try priority.map { dto -> CardPriority in
             guard let value = dto.domain else { throw DomainError.invalidPriority(dto.rawValue) }
+
             return value
         }
         return SubtaskSpec(title: title, description: description, priority: priority, points: points)
@@ -207,12 +241,12 @@ public struct SetParentRequest: Codable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        parentId = try c.decodeIfPresent(UUID.self, forKey: .parentId)
+        self.parentId = try c.decodeIfPresent(UUID.self, forKey: .parentId)
     }
 }
 
 /// Three-state field for PATCH bodies: absent (keep), `null` (clear), value (set).
-public enum Patch<T: Codable & Sendable>: Codable, Sendable, Equatable where T: Equatable {
+public enum Patch<T: Codable & Sendable & Equatable>: Codable, Sendable, Equatable {
     case keep
     case clear
     case set(T)
@@ -251,7 +285,11 @@ public struct UpdateCardRequest: Codable, Sendable {
     public var points: Patch<Int> = .keep
 
     enum CodingKeys: String, CodingKey {
-        case title, priority, status, description, points
+        case title
+        case priority
+        case status
+        case description
+        case points
         case columnId = "column_id"
         case boardId = "board_id"
         case dueDate = "due_date"
@@ -279,13 +317,13 @@ public struct UpdateCardRequest: Codable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        title = try container.decodeIfPresent(String.self, forKey: .title)
-        priority = try container.decodeIfPresent(PriorityDTO.self, forKey: .priority)
-        status = try container.decodeIfPresent(StatusDTO.self, forKey: .status)
-        columnId = try container.decodeIfPresent(UUID.self, forKey: .columnId)
-        boardId = try container.decodeIfPresent(UUID.self, forKey: .boardId)
-        description = try container.patch(String.self, forKey: .description)
-        dueDate = try container.patch(Date.self, forKey: .dueDate)
-        points = try container.patch(Int.self, forKey: .points)
+        self.title = try container.decodeIfPresent(String.self, forKey: .title)
+        self.priority = try container.decodeIfPresent(PriorityDTO.self, forKey: .priority)
+        self.status = try container.decodeIfPresent(StatusDTO.self, forKey: .status)
+        self.columnId = try container.decodeIfPresent(UUID.self, forKey: .columnId)
+        self.boardId = try container.decodeIfPresent(UUID.self, forKey: .boardId)
+        self.description = try container.patch(String.self, forKey: .description)
+        self.dueDate = try container.patch(Date.self, forKey: .dueDate)
+        self.points = try container.patch(Int.self, forKey: .points)
     }
 }

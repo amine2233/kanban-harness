@@ -23,8 +23,13 @@ struct AIConfigController: RouteCollection {
     func beginSignIn(req: Request) async throws -> SignInResponse {
         let id = req.parameters.get("provider") ?? ""
         let host = req.headers.first(name: .host) ?? "127.0.0.1"
-        guard let callback = URL(string: "http://\(host)/api/auth/callback") else { throw Abort(.badRequest, reason: "bad Host header") }
-        return SignInResponse(url: try await req.signIn.begin(providerId: id, callback: callback).absoluteString)
+        guard let callback = URL(string: "http://\(host)/api/auth/callback") else { throw Abort(
+            .badRequest,
+            reason: "bad Host header"
+        ) }
+
+        return try await SignInResponse(url: req.signIn.begin(providerId: id, callback: callback)
+            .absoluteString)
     }
 
     /// Top-level navigation from the vendor: lands the user back in Settings either way.
@@ -33,8 +38,10 @@ struct AIConfigController: RouteCollection {
         let code: String? = req.query["code"]
         let error: String? = req.query["error_description"] ?? req.query["error"]
         guard let state, let code, error == nil else {
-            return req.redirect(to: "/settings?sign_in_error=" + Self.encode(error ?? "the vendor sent no code"))
+            return req
+                .redirect(to: "/settings?sign_in_error=" + Self.encode(error ?? "the vendor sent no code"))
         }
+
         do {
             let id = try await req.signIn.complete(state: state, code: code)
             return req.redirect(to: "/settings?signed_in=" + Self.encode(id))
@@ -45,7 +52,7 @@ struct AIConfigController: RouteCollection {
 
     func signOut(req: Request) async throws -> AIConfigDTO {
         try await req.signIn.signOut(providerId: req.parameters.get("provider") ?? "")
-        return AIConfigDTO(try await req.aiConfig.current())
+        return try await AIConfigDTO(req.aiConfig.current())
     }
 
     private static func encode(_ text: String) -> String {
@@ -53,7 +60,7 @@ struct AIConfigController: RouteCollection {
     }
 
     func show(req: Request) async throws -> AIConfigDTO {
-        AIConfigDTO(try await req.aiConfig.current())
+        try await AIConfigDTO(req.aiConfig.current())
     }
 
     func upsert(req: Request) async throws -> AIConfigDTO {
@@ -61,15 +68,15 @@ struct AIConfigController: RouteCollection {
         let body = try req.content.decode(UpsertAIProviderRequest.self)
         let existing = try await req.aiConfig.current().provider(id)?.apiKey
         let provider = try body.provider(id: id, existingKey: existing)
-        return AIConfigDTO(try await req.aiConfig.upsert(provider))
+        return try await AIConfigDTO(req.aiConfig.upsert(provider))
     }
 
     func remove(req: Request) async throws -> AIConfigDTO {
-        AIConfigDTO(try await req.aiConfig.remove(req.parameters.get("provider") ?? ""))
+        try await AIConfigDTO(req.aiConfig.remove(req.parameters.get("provider") ?? ""))
     }
 
     func setDefault(req: Request) async throws -> AIConfigDTO {
         let body = try req.content.decode(SetDefaultAIProviderRequest.self)
-        return AIConfigDTO(try await req.aiConfig.setDefault(body.providerId))
+        return try await AIConfigDTO(req.aiConfig.setDefault(body.providerId))
     }
 }

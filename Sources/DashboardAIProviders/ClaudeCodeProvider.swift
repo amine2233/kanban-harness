@@ -23,17 +23,24 @@ public struct ClaudeCodeProvider: AIProvider {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let schema = String(decoding: try JSONEncoder().encode(request.schema), as: UTF8.self)
+                    let schema = try String(decoding: JSONEncoder().encode(request.schema), as: UTF8.self)
                     let arguments = [
                         "-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
                         "--no-session-persistence", "--tools", "", "--strict-mcp-config",
-                        "--model", config.model, "--system-prompt", request.system, "--json-schema", schema, request.prompt,
+                        "--model", config.model, "--system-prompt", request.system, "--json-schema", schema,
+                        request.prompt
                     ]
                     var typed = ""
                     var finished = false
-                    for try await line in Subprocess.lines(executable, arguments: arguments, timeout: timeout) {
+                    for try await line in Subprocess.lines(
+                        executable,
+                        arguments: arguments,
+                        timeout: timeout
+                    ) {
                         try Task.checkCancellation()
-                        guard let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else { continue }
+                        guard let object = try? JSONSerialization
+                            .jsonObject(with: Data(line.utf8)) as? [String: Any] else { continue }
+
                         if object["is_error"] != nil {
                             let (json, usage) = try Self.finalOutput(object)
                             continuation.yield(.usage(usage))
@@ -42,10 +49,12 @@ public struct ClaudeCodeProvider: AIProvider {
                         } else if let delta = Self.delta(in: object) {
                             typed += delta
                             continuation.yield(.text(delta))
-                            if let partial = Self.partialSnapshot(typed) { continuation.yield(.snapshot(partial)) }
+                            if let partial = Self
+                                .partialSnapshot(typed) { continuation.yield(.snapshot(partial)) }
                         }
                     }
                     guard finished else { throw AIProviderError.badResponse("claude ended without a result") }
+
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -60,6 +69,7 @@ public struct ClaudeCodeProvider: AIProvider {
         guard object["type"] as? String == "stream_event",
               let delta = (object["event"] as? [String: Any])?["delta"] as? [String: Any]
         else { return nil }
+
         return delta["text"] as? String ?? delta["partial_json"] as? String
     }
 
@@ -68,6 +78,7 @@ public struct ClaudeCodeProvider: AIProvider {
     /// unwrap that so partial drafts still render.
     static func partialSnapshot(_ typed: String) -> Data? {
         guard let completed = JSONCompleter.complete(typed) else { return nil }
+
         if let object = try? JSONSerialization.jsonObject(with: completed) as? [String: Any],
            object.count == 1, let inner = object.values.first as? String, inner.contains("{") {
             return JSONCompleter.complete(inner)
@@ -83,13 +94,21 @@ public struct ClaudeCodeProvider: AIProvider {
         let json: Data
         if let structured, !(structured is NSNull), JSONSerialization.isValidJSONObject(structured) {
             json = try JSONSerialization.data(withJSONObject: structured)
-        } else if let text = object["result"] as? String, let extracted = JSONExtractor.firstObject(in: text) {
+        } else if let text = object["result"] as? String,
+                  let extracted = JSONExtractor.firstObject(in: text) {
             json = extracted
         } else {
             throw AIProviderError.badResponse("claude returned no structured output")
         }
         let usage = object["usage"] as? [String: Any]
-        return (json, CompletionUsage(inputTokens: usage?["input_tokens"] as? Int, outputTokens: usage?["output_tokens"] as? Int, costUSD: object["total_cost_usd"] as? Double))
+        return (
+            json,
+            CompletionUsage(
+                inputTokens: usage?["input_tokens"] as? Int,
+                outputTokens: usage?["output_tokens"] as? Int,
+                costUSD: object["total_cost_usd"] as? Double
+            )
+        )
     }
 }
 
@@ -101,7 +120,11 @@ enum Subprocess {
         let timedOut = Mutex(false)
     }
 
-    static func lines(_ executable: String, arguments: [String], timeout: TimeInterval) -> AsyncThrowingStream<String, any Error> {
+    static func lines(
+        _ executable: String,
+        arguments: [String],
+        timeout: TimeInterval
+    ) -> AsyncThrowingStream<String, any Error> {
         AsyncThrowingStream { continuation in
             let handle = Handle()
             let process = handle.process
@@ -120,7 +143,9 @@ enum Subprocess {
             do {
                 try process.run()
             } catch {
-                continuation.finish(throwing: AIProviderError.unavailable("cannot start '\(executable)': \(error.localizedDescription)"))
+                continuation
+                    .finish(throwing: AIProviderError
+                        .unavailable("cannot start '\(executable)': \(error.localizedDescription)"))
                 return
             }
             let errors = Task.detached { stderr.fileHandleForReading.readDataToEndOfFile() }
@@ -137,7 +162,10 @@ enum Subprocess {
                     if chunk.isEmpty { break }
                     buffer.append(chunk)
                     while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
-                        continuation.yield(String(decoding: buffer[buffer.startIndex ..< newline], as: UTF8.self))
+                        continuation.yield(String(
+                            decoding: buffer[buffer.startIndex ..< newline],
+                            as: UTF8.self
+                        ))
                         buffer.removeSubrange(buffer.startIndex ... newline)
                     }
                 }
@@ -145,10 +173,16 @@ enum Subprocess {
                 handle.process.waitUntilExit()
                 watchdog.cancel()
                 if handle.timedOut.withLock({ $0 }) {
-                    continuation.finish(throwing: AIProviderError.unavailable("'\(executable)' timed out after \(Int(timeout))s"))
+                    continuation
+                        .finish(throwing: AIProviderError
+                            .unavailable("'\(executable)' timed out after \(Int(timeout))s"))
                 } else if handle.process.terminationStatus != 0 {
-                    let message = String(decoding: await errors.value.prefix(500), as: UTF8.self)
-                    continuation.finish(throwing: AIProviderError.request("'\(executable)' exited with \(handle.process.terminationStatus): \(message)"))
+                    let message = await String(decoding: errors.value.prefix(500), as: UTF8.self)
+                    continuation
+                        .finish(throwing: AIProviderError
+                            .request(
+                                "'\(executable)' exited with \(handle.process.terminationStatus): \(message)"
+                            ))
                 } else {
                     continuation.finish()
                 }

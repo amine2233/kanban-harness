@@ -14,10 +14,13 @@ extension Workspace {
         if let name {
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { throw DomainError.emptyBoardName }
+
             board.name = trimmed
         }
         if let description { board.description = description }
-        if let cardPrefix { board.cardPrefix = cardPrefix?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
+        if let cardPrefix {
+            board.cardPrefix = cardPrefix?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        }
         board.updatedAt = now
         boards[index] = board
         return board
@@ -38,6 +41,7 @@ extension Workspace {
             let needle = id.uuidString
             extra["sprints"] = .array(sprints.filter { sprint in
                 guard case let .string(boardId)? = sprint.objectValue?["board_id"] else { return true }
+
                 return boardId.caseInsensitiveCompare(needle) != .orderedSame
             })
         }
@@ -46,7 +50,11 @@ extension Workspace {
 
     /// Reorders boards so `id` ends up at `position` (clamped), others shift.
     @discardableResult
-    public mutating func moveBoard(_ id: UUID, toPosition position: Int, now: Date = .timestamp()) throws -> Board {
+    public mutating func moveBoard(
+        _ id: UUID,
+        toPosition position: Int,
+        now: Date = .timestamp()
+    ) throws -> Board {
         _ = try boardIndex(id)
         var ordered = boards.sorted { $0.position < $1.position }
         let from = ordered.firstIndex { $0.id == id }!
@@ -63,7 +71,11 @@ extension Workspace {
     /// Deep copy: columns keep order, WIP limits and default statuses; cards keep
     /// their column, order, status and priority but get fresh ids and numbers.
     @discardableResult
-    public mutating func cloneBoard(_ id: UUID, name: String? = nil, now: Date = .timestamp()) throws -> Board {
+    public mutating func cloneBoard(
+        _ id: UUID,
+        name: String? = nil,
+        now: Date = .timestamp()
+    ) throws -> Board {
         let source = try board(id)
         var copy = createBoard(name: name ?? "\(source.name) copy", now: now)
         copy.description = source.description
@@ -87,6 +99,7 @@ extension Workspace {
         let prefix = copy.cardPrefix ?? Prefix.defaultCardPrefix
         for card in cards(of: source.id) {
             guard let columnId = columnMap[card.columnId] else { continue }
+
             var cloned = Card(
                 boardId: copy.id, columnId: columnId, prefix: prefix,
                 cardNumber: allocateCardNumber(prefix: prefix), title: card.title,
@@ -102,14 +115,17 @@ extension Workspace {
     }
 
     private func boardIndex(_ id: UUID) throws -> Int {
-        guard let index = boards.firstIndex(where: { $0.id == id }) else { throw DomainError.boardNotFound(id) }
+        guard let index = boards.firstIndex(where: { $0.id == id })
+        else { throw DomainError.boardNotFound(id) }
+
         return index
     }
 
     private mutating func compactBoardPositions() {
         let ordered = boards.sorted { $0.position < $1.position }
         for (position, board) in ordered.enumerated() {
-            if let index = boards.firstIndex(where: { $0.id == board.id }), boards[index].position != position {
+            if let index = boards.firstIndex(where: { $0.id == board.id }),
+               boards[index].position != position {
                 boards[index].position = position
             }
         }
@@ -117,5 +133,7 @@ extension Workspace {
 }
 
 extension String {
-    var nilIfEmpty: String? { isEmpty ? nil : self }
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
 }

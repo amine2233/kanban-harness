@@ -30,30 +30,30 @@ public final class BoardModel: Model, @unchecked Sendable {
 
     convenience init(_ board: Board) throws {
         self.init()
-        id = board.id
-        name = board.name
-        description = board.description
-        cardPrefix = board.cardPrefix
-        sprintPrefix = board.sprintPrefix
-        taskListView = board.taskListView
-        taskSortField = board.taskSortField
-        taskSortOrder = board.taskSortOrder
-        sprintDurationDays = board.sprintDurationDays
-        activeSprintId = board.activeSprintId
-        position = board.position
-        nextSprintNumber = board.nextSprintNumber
-        sprintNameUsedCount = board.sprintNameUsedCount
-        sprintNames = try JSONText.encode(board.sprintNames)
-        createdAt = RFC3339.format(board.createdAt)
-        updatedAt = RFC3339.format(board.updatedAt)
+        self.id = board.id
+        self.name = board.name
+        self.description = board.description
+        self.cardPrefix = board.cardPrefix
+        self.sprintPrefix = board.sprintPrefix
+        self.taskListView = board.taskListView
+        self.taskSortField = board.taskSortField
+        self.taskSortOrder = board.taskSortOrder
+        self.sprintDurationDays = board.sprintDurationDays
+        self.activeSprintId = board.activeSprintId
+        self.position = board.position
+        self.nextSprintNumber = board.nextSprintNumber
+        self.sprintNameUsedCount = board.sprintNameUsedCount
+        self.sprintNames = try JSONText.encode(board.sprintNames)
+        self.createdAt = RFC3339.format(board.createdAt)
+        self.updatedAt = RFC3339.format(board.updatedAt)
     }
 
     func toDomain() throws -> Board {
-        var board = Board(
+        var board = try Board(
             name: name,
             position: position,
-            id: try Row.id(id),
-            now: try Row.date(createdAt, "created_at")
+            id: Row.id(id),
+            now: Row.date(createdAt, "created_at")
         )
         board.description = description
         board.cardPrefix = cardPrefix
@@ -87,25 +87,25 @@ public final class ColumnModel: Model, @unchecked Sendable {
 
     convenience init(_ column: Column) {
         self.init()
-        id = column.id
-        boardId = column.boardId
-        name = column.name
-        position = column.position
-        wipLimit = column.wipLimit
-        defaultStatus = column.defaultStatus?.rawValue
-        createdAt = RFC3339.format(column.createdAt)
-        updatedAt = RFC3339.format(column.updatedAt)
+        self.id = column.id
+        self.boardId = column.boardId
+        self.name = column.name
+        self.position = column.position
+        self.wipLimit = column.wipLimit
+        self.defaultStatus = column.defaultStatus?.rawValue
+        self.createdAt = RFC3339.format(column.createdAt)
+        self.updatedAt = RFC3339.format(column.updatedAt)
     }
 
     func toDomain() throws -> Column {
-        var column = Column(
+        var column = try Column(
             boardId: boardId,
             name: name,
             position: position,
             wipLimit: wipLimit,
-            defaultStatus: try defaultStatus.map { try Row.enumValue($0, "default_status") },
-            id: try Row.id(id),
-            now: try Row.date(createdAt, "created_at")
+            defaultStatus: defaultStatus.map { try Row.enumValue($0, "default_status") },
+            id: Row.id(id),
+            now: Row.date(createdAt, "created_at")
         )
         column.updatedAt = try Row.date(updatedAt, "updated_at")
         return column
@@ -138,39 +138,39 @@ public final class CardModel: Model, @unchecked Sendable {
 
     convenience init(_ card: Card) throws {
         self.init()
-        id = card.id
-        boardId = card.boardId
-        columnId = card.columnId
-        prefix = card.prefix
-        cardNumber = card.cardNumber
-        title = card.title
-        description = card.description
-        priority = card.priority.rawValue
-        status = card.status.rawValue
-        position = card.position
-        dueDate = card.dueDate.map(RFC3339.format)
-        points = card.points
-        sprintId = card.sprintId
-        sprintLogs = try JSONText.encode(card.sprintLogs)
-        aiCost = try card.aiCost.map(JSONText.encode)
-        createdAt = RFC3339.format(card.createdAt)
-        updatedAt = RFC3339.format(card.updatedAt)
-        completedAt = card.completedAt.map(RFC3339.format)
+        self.id = card.id
+        self.boardId = card.boardId
+        self.columnId = card.columnId
+        self.prefix = card.prefix
+        self.cardNumber = card.cardNumber
+        self.title = card.title
+        self.description = card.description
+        self.priority = card.priority.rawValue
+        self.status = card.status.rawValue
+        self.position = card.position
+        self.dueDate = card.dueDate.map(RFC3339.format)
+        self.points = card.points
+        self.sprintId = card.sprintId
+        self.sprintLogs = try JSONText.encode(card.sprintLogs)
+        self.aiCost = try card.aiCost.map(JSONText.encode)
+        self.createdAt = RFC3339.format(card.createdAt)
+        self.updatedAt = RFC3339.format(card.updatedAt)
+        self.completedAt = card.completedAt.map(RFC3339.format)
     }
 
     func toDomain() throws -> Card {
-        var card = Card(
+        var card = try Card(
             boardId: boardId,
             columnId: columnId,
             prefix: prefix,
             cardNumber: cardNumber,
             title: title,
             description: description,
-            priority: try Row.enumValue(priority, "priority"),
-            status: try Row.enumValue(status, "status"),
+            priority: Row.enumValue(priority, "priority"),
+            status: Row.enumValue(status, "status"),
             position: position,
-            id: try Row.id(id),
-            now: try Row.date(createdAt, "created_at")
+            id: Row.id(id),
+            now: Row.date(createdAt, "created_at")
         )
         card.dueDate = try dueDate.map { try Row.date($0, "due_date") }
         card.points = points
@@ -194,13 +194,14 @@ public final class PrefixModel: Model, @unchecked Sendable {
 
     convenience init(_ prefix: Prefix) {
         self.init()
-        id = prefix.name
-        cardCounter = prefix.cardCounter
-        sprintCounter = prefix.sprintCounter
+        self.id = prefix.name
+        self.cardCounter = prefix.cardCounter
+        self.sprintCounter = prefix.sprintCounter
     }
 
     func toDomain() throws -> Prefix {
         guard let id else { throw PersistenceError.corrupt(path: Self.schema, reason: "prefix without name") }
+
         return Prefix(name: id, cardCounter: cardCounter, sprintCounter: sprintCounter)
     }
 }
@@ -217,8 +218,8 @@ public final class SectionModel: Model, @unchecked Sendable {
 
     convenience init(key: String, value: JSONValue) throws {
         self.init()
-        id = key
-        json = try JSONText.encode(value)
+        self.id = key
+        self.json = try JSONText.encode(value)
     }
 }
 
@@ -285,7 +286,13 @@ public struct CreateWorkspaceSchema: AsyncMigration {
     }
 
     public func revert(on database: any Database) async throws {
-        for schema in [SectionModel.schema, PrefixModel.schema, CardModel.schema, ColumnModel.schema, BoardModel.schema] {
+        for schema in [
+            SectionModel.schema,
+            PrefixModel.schema,
+            CardModel.schema,
+            ColumnModel.schema,
+            BoardModel.schema
+        ] {
             try await database.schema(schema).delete()
         }
     }
@@ -303,6 +310,7 @@ public struct AddCardAICost: AsyncMigration {
 
     private func hasColumn(_ database: any Database) async throws -> Bool {
         guard let sql = database as? any SQLDatabase else { return false }
+
         let rows = try await sql.raw("PRAGMA table_info(\(unsafeRaw: CardModel.schema))").all()
         return try rows.contains { try $0.decode(column: "name", as: String.self) == "ai_cost" }
     }
@@ -316,6 +324,7 @@ public struct AddCardAICost: AsyncMigration {
 enum Row {
     static func id(_ id: UUID?) throws -> UUID {
         guard let id else { throw PersistenceError.corrupt(path: "sqlite", reason: "row without id") }
+
         return id
     }
 
@@ -323,13 +332,16 @@ enum Row {
         guard let date = RFC3339.parse(text) else {
             throw PersistenceError.corrupt(path: "sqlite", reason: "\(column): invalid timestamp '\(text)'")
         }
+
         return date
     }
 
-    static func enumValue<T: RawRepresentable>(_ raw: String, _ column: String) throws -> T where T.RawValue == String {
+    static func enumValue<T: RawRepresentable>(_ raw: String, _ column: String) throws -> T
+        where T.RawValue == String {
         guard let value = T(rawValue: raw) else {
             throw PersistenceError.corrupt(path: "sqlite", reason: "\(column): unknown value '\(raw)'")
         }
+
         return value
     }
 }
@@ -339,7 +351,7 @@ enum JSONText {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         RFC3339.configure(encoder)
-        return String(decoding: try encoder.encode(value), as: UTF8.self)
+        return try String(decoding: encoder.encode(value), as: UTF8.self)
     }
 
     static func decode<T: Decodable>(_ text: String) throws -> T {

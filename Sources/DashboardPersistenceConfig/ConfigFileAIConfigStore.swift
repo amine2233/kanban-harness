@@ -51,13 +51,21 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         var providers: [AIProviderConfig] = []
         for id in ids {
             let scope = ai.scoped(to: ConfigKey(["providers", id]))
-            guard let kindRaw = scope.string(forKey: "kind"), let kind = AIProviderKind(configValue: kindRaw) else {
-                throw PersistenceError.corrupt(path: path, reason: "ai.providers.\(id).kind is missing or unknown")
+            guard let kindRaw = scope.string(forKey: "kind"),
+                  let kind = AIProviderKind(configValue: kindRaw) else {
+                throw PersistenceError.corrupt(
+                    path: path,
+                    reason: "ai.providers.\(id).kind is missing or unknown"
+                )
             }
+
             let stored = try await credentials.get(id)?.secret
-            let apiKey = environmentAPIKey(for: id) ?? stored ?? scope.string(forKey: "api_key", isSecret: true)
+            let apiKey = environmentAPIKey(for: id) ?? stored ?? scope.string(
+                forKey: "api_key",
+                isSecret: true
+            )
             do {
-                providers.append(try AIProviderConfig(
+                try providers.append(AIProviderConfig(
                     id: id,
                     kind: kind,
                     name: scope.string(forKey: "name", default: id),
@@ -65,22 +73,30 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
                     baseURL: scope.string(forKey: "base_url"),
                     apiKey: apiKey,
                     maxTokens: scope.int(forKey: "max_tokens"),
-                    pricing: try Self.pricing(scope.scoped(to: "pricing")),
+                    pricing: Self.pricing(scope.scoped(to: "pricing")),
                     oauth: Self.oauth(scope.scoped(to: "oauth"))
                 ))
             } catch {
-                throw PersistenceError.corrupt(path: path, reason: "ai.providers.\(id): \(error.localizedDescription)")
+                throw PersistenceError.corrupt(
+                    path: path,
+                    reason: "ai.providers.\(id): \(error.localizedDescription)"
+                )
             }
         }
         do {
-            return try AIConfig(providers: providers, defaultProviderId: ai.string(forKey: "default_provider"))
+            return try AIConfig(
+                providers: providers,
+                defaultProviderId: ai.string(forKey: "default_provider")
+            )
         } catch {
             throw PersistenceError.corrupt(path: path, reason: error.localizedDescription)
         }
     }
 
     private static func pricing(_ scope: ConfigReader) throws -> AIPricing? {
-        guard let input = scope.double(forKey: "input_per_million") ?? scope.double(forKey: "output_per_million") else { return nil }
+        guard let input = scope.double(forKey: "input_per_million") ?? scope
+            .double(forKey: "output_per_million") else { return nil }
+
         return try AIPricing(
             inputPerMillion: scope.double(forKey: "input_per_million", default: input),
             outputPerMillion: scope.double(forKey: "output_per_million", default: input)
@@ -89,11 +105,16 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
 
     private static func oauth(_ scope: ConfigReader) -> OAuthClientSettings? {
         guard let clientId = scope.string(forKey: "client_id") else { return nil }
-        return OAuthClientSettings(clientId: clientId, clientSecret: scope.string(forKey: "client_secret", isSecret: true))
+
+        return OAuthClientSettings(
+            clientId: clientId,
+            clientSecret: scope.string(forKey: "client_secret", isSecret: true)
+        )
     }
 
     private func reader() async throws -> ConfigReader {
-        let env = EnvironmentVariablesProvider(environmentVariables: environment).prefixKeys(with: ConfigKey([Self.envPrefix]))
+        let env = EnvironmentVariablesProvider(environmentVariables: environment)
+            .prefixKeys(with: ConfigKey([Self.envPrefix]))
         let file: any ConfigProvider
         do {
             if isYAML {
@@ -117,12 +138,19 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         let existing = (document["ai"] as? [String: Any])?["providers"] as? [String: Any] ?? [:]
         var providers: [String: Any] = [:]
         for provider in config.providers {
-            var entry: [String: Any] = ["kind": provider.kind.rawValue, "name": provider.name, "model": provider.model]
+            var entry: [String: Any] = [
+                "kind": provider.kind.rawValue,
+                "name": provider.name,
+                "model": provider.model
+            ]
             if let baseURL = provider.baseURL { entry["base_url"] = baseURL }
             try await storeSecret(provider.apiKey, for: provider.id)
             if let maxTokens = provider.maxTokens { entry["max_tokens"] = maxTokens }
             if let pricing = provider.pricing {
-                entry["pricing"] = ["input_per_million": pricing.inputPerMillion, "output_per_million": pricing.outputPerMillion]
+                entry["pricing"] = [
+                    "input_per_million": pricing.inputPerMillion,
+                    "output_per_million": pricing.outputPerMillion
+                ]
             }
             if let oauth = provider.oauth {
                 var settings: [String: Any] = ["client_id": oauth.clientId]
@@ -144,6 +172,7 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
     /// OAuth token's refresh data survives a settings edit.
     private func storeSecret(_ apiKey: String?, for id: String) async throws {
         guard let apiKey else { return try await credentials.remove(id) }
+
         if apiKey == environmentAPIKey(for: id) { return }
         if try await credentials.get(id)?.secret == apiKey { return }
         try await credentials.set(Credential(secret: apiKey), for: id)
@@ -155,6 +184,7 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
 
     private func readDocument() throws -> [String: Any] {
         guard let data = try AtomicFile.read(path) else { return [:] }
+
         do {
             if isYAML {
                 return try Yams.load(yaml: String(decoding: data, as: UTF8.self)) as? [String: Any] ?? [:]
@@ -169,9 +199,12 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
         let data: Data
         do {
             if isYAML {
-                data = Data(try Yams.dump(object: document, sortKeys: true).utf8)
+                data = try Data(Yams.dump(object: document, sortKeys: true).utf8)
             } else {
-                data = try JSONSerialization.data(withJSONObject: document, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+                data = try JSONSerialization.data(
+                    withJSONObject: document,
+                    options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+                )
             }
         } catch {
             throw PersistenceError.corrupt(path: path, reason: String(describing: error))
@@ -180,4 +213,4 @@ public struct ConfigFileAIConfigStore: AIConfigStore {
     }
 }
 
-/// Atomic file helpers; the config file is created private (0600) because it can hold API keys.
+// Atomic file helpers; the config file is created private (0600) because it can hold API keys.

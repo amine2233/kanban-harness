@@ -19,7 +19,9 @@ enum DaemonHandover {
     }
 
     static func withdraw(_ config: RuntimeConfig) {
-        guard let handle = config.daemonHandle, handle.pid == ProcessInfo.processInfo.processIdentifier else { return }
+        guard let handle = config.daemonHandle,
+              handle.pid == ProcessInfo.processInfo.processIdentifier else { return }
+
         try? FileManager.default.removeItem(atPath: config.daemonPortPath)
     }
 
@@ -28,10 +30,12 @@ enum DaemonHandover {
     /// extra HTTP surface on the daemon.
     static func takeOver(_ config: RuntimeConfig) async throws {
         guard let handle = config.daemonHandle, handle.pid > 0 else { return }
-        guard await DashboardClient(baseURL: URL(string: "http://127.0.0.1:\(handle.port)")!).isReachable() else {
+        guard await DashboardClient(baseURL: URL(string: "http://127.0.0.1:\(handle.port)")!).isReachable()
+        else {
             try? FileManager.default.removeItem(atPath: config.daemonPortPath)
             return
         }
+
         kill(handle.pid, SIGTERM)
 
         let deadline = ContinuousClock.now + handoverTimeout

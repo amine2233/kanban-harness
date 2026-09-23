@@ -40,14 +40,26 @@ public actor ProviderSignInService: SignInCommands {
     public func begin(providerId: String, callback: URL) async throws(ServiceError) -> URL {
         let (config, signIn) = try await resolve(providerId)
         let (state, verifier) = await sessions.begin(providerId: config.id, callback: callback)
-        return signIn.authorizationURL(callback: callback, state: state, codeChallenge: PKCE.challenge(for: verifier))
+        return signIn.authorizationURL(
+            callback: callback,
+            state: state,
+            codeChallenge: PKCE.challenge(for: verifier)
+        )
     }
 
     public func complete(state: String, code: String) async throws(ServiceError) -> String {
-        guard let pending = await sessions.consume(state) else { throw .remote(code: "SIGN_IN_FAILED", message: OAuthError.unknownState.message) }
+        guard let pending = await sessions.consume(state) else { throw .remote(
+            code: "SIGN_IN_FAILED",
+            message: OAuthError.unknownState.message
+        ) }
+
         let (config, signIn) = try await resolve(pending.providerId)
         do {
-            let credential = try await signIn.exchange(code: code, codeVerifier: pending.codeVerifier, callback: pending.callback)
+            let credential = try await signIn.exchange(
+                code: code,
+                codeVerifier: pending.codeVerifier,
+                callback: pending.callback
+            )
             try await credentials.set(credential, for: config.id)
         } catch {
             throw Self.failure(error)
@@ -68,9 +80,12 @@ public actor ProviderSignInService: SignInCommands {
     /// Renews and stores a token that is about to expire; kinds without a sign-in pass through.
     public func refreshed(_ config: AIProviderConfig) async throws(ServiceError) -> AIProviderConfig {
         guard let signIn = try? registry.signIn(for: config) else { return config }
+
         do {
-            guard let stored = try await credentials.get(config.id), stored.isExpiring() else { return config }
+            guard let stored = try await credentials.get(config.id),
+                  stored.isExpiring() else { return config }
             guard let renewed = try await signIn.refresh(stored) else { return config }
+
             try await credentials.set(renewed, for: config.id)
             var fresh = config
             fresh.apiKey = renewed.secret
@@ -80,10 +95,13 @@ public actor ProviderSignInService: SignInCommands {
         }
     }
 
-    private func resolve(_ providerId: String) async throws(ServiceError) -> (AIProviderConfig, any ProviderSignIn) {
-        guard let config = try await aiConfig.current().provider(providerId) else { throw .domain(.providerNotFound(providerId)) }
+    private func resolve(_ providerId: String) async throws(ServiceError)
+        -> (AIProviderConfig, any ProviderSignIn) {
+        guard let config = try await aiConfig.current().provider(providerId)
+        else { throw .domain(.providerNotFound(providerId)) }
+
         do {
-            return (config, try registry.signIn(for: config))
+            return try (config, registry.signIn(for: config))
         } catch {
             throw Self.failure(error)
         }
@@ -93,7 +111,10 @@ public actor ProviderSignInService: SignInCommands {
         switch error {
         case let error as ServiceError: error
         case let error as OAuthError: .remote(code: "SIGN_IN_FAILED", message: error.message)
-        case let error as AIProviderError: .remote(code: "SIGN_IN_FAILED", message: error.localizedDescription)
+        case let error as AIProviderError: .remote(
+                code: "SIGN_IN_FAILED",
+                message: error.localizedDescription
+            )
         default: .remote(code: "SIGN_IN_FAILED", message: String(describing: error))
         }
     }

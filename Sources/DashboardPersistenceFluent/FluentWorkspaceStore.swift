@@ -17,13 +17,14 @@ public struct FluentWorkspaceStore: WorkspaceStore {
         var extra: [String: JSONValue] = [:]
         for section in try await SectionModel.query(on: database).all() {
             guard let key = section.id else { continue }
+
             extra[key] = try JSONText.decode(section.json)
         }
-        return Workspace(
-            boards: try await BoardModel.query(on: database).sort(\.$position).all().map { try $0.toDomain() },
-            columns: try await ColumnModel.query(on: database).sort(\.$position).all().map { try $0.toDomain() },
-            cards: try await CardModel.query(on: database).sort(\.$cardNumber).all().map { try $0.toDomain() },
-            prefixes: try await PrefixModel.query(on: database).all().map { try $0.toDomain() },
+        return try await Workspace(
+            boards: BoardModel.query(on: database).sort(\.$position).all().map { try $0.toDomain() },
+            columns: ColumnModel.query(on: database).sort(\.$position).all().map { try $0.toDomain() },
+            cards: CardModel.query(on: database).sort(\.$cardNumber).all().map { try $0.toDomain() },
+            prefixes: PrefixModel.query(on: database).all().map { try $0.toDomain() },
             extra: extra
         )
     }
@@ -66,10 +67,10 @@ public struct SQLiteWorkspaceStore: WorkspaceStore {
     }
 
     public func load() async throws -> Workspace {
-        try await FluentWorkspaceStore(database: try await pool.database(at: path)).load()
+        try await FluentWorkspaceStore(database: pool.database(at: path)).load()
     }
 
     public func save(_ workspace: Workspace) async throws {
-        try await FluentWorkspaceStore(database: try await pool.database(at: path)).save(workspace)
+        try await FluentWorkspaceStore(database: pool.database(at: path)).save(workspace)
     }
 }

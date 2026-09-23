@@ -19,6 +19,7 @@ public struct JSONProjectStore: ProjectStore {
 
     public func load() async throws -> [Project] {
         guard let data = try AtomicFile.read(path) else { return [] }
+
         let decoder = JSONDecoder()
         RFC3339.configure(decoder)
         let envelope: Envelope
@@ -32,6 +33,7 @@ public struct JSONProjectStore: ProjectStore {
                 path: path, found: envelope.version, supported: registryFormatVersion
             )
         }
+
         return envelope.projects
     }
 

@@ -13,7 +13,13 @@ public enum PromptBuilder {
     """
 
     /// Trims the board context to a rough token budget (≈4 chars per token).
-    public static func ticketPrompt(idea: String, board: Board, columns: [Column], recentCards: [Card], budgetTokens: Int = 1500) -> String {
+    public static func ticketPrompt(
+        idea: String,
+        board: Board,
+        columns: [Column],
+        recentCards: [Card],
+        budgetTokens: Int = 1_500
+    ) -> String {
         var context = "board: \(board.name)\ncolumns: \(columns.map(\.name).joined(separator: ", "))\n"
         if !recentCards.isEmpty {
             context += "existing cards (title — priority):\n"

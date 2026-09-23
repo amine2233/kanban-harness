@@ -16,7 +16,7 @@ struct SettingsCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                try Output.json(try await Runtime.run(global) {
+                try await Output.json(Runtime.run(global) {
                     try await $0.make(SettingsCommandsKey.self).current()
                 })
             }
@@ -24,14 +24,19 @@ struct SettingsCommand: AsyncParsableCommand {
     }
 
     struct Set: AsyncParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Change settings; omitted options keep their value.")
+        static let configuration =
+            CommandConfiguration(abstract: "Change settings; omitted options keep their value.")
 
         @OptionGroup var global: GlobalOptions
 
         @Option(name: .customLong("default-storage"), help: "Format for new projects: json or sqlite.")
         var defaultStorage: StorageKind?
 
-        @Option(name: .customLong("cors-origin"), parsing: .upToNextOption, help: "Allowed browser origins (replaces the list).")
+        @Option(
+            name: .customLong("cors-origin"),
+            parsing: .upToNextOption,
+            help: "Allowed browser origins (replaces the list)."
+        )
         var corsOrigins: [String] = []
 
         @Flag(name: .customLong("clear-cors"), help: "Remove every allowed origin.")
@@ -40,9 +45,12 @@ struct SettingsCommand: AsyncParsableCommand {
         func run() async throws {
             try await failing {
                 let origins: [String]? = clearCors ? [] : (corsOrigins.isEmpty ? nil : corsOrigins)
-                let defaultStorage = self.defaultStorage
-                try Output.json(try await Runtime.run(global) {
-                    try await $0.make(SettingsCommandsKey.self).update(defaultStorage: defaultStorage, corsOrigins: origins)
+                let defaultStorage = defaultStorage
+                try await Output.json(Runtime.run(global) {
+                    try await $0.make(SettingsCommandsKey.self).update(
+                        defaultStorage: defaultStorage,
+                        corsOrigins: origins
+                    )
                 })
             }
         }

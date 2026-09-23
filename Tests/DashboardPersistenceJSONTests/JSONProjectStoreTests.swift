@@ -3,27 +3,32 @@ import Foundation
 import Testing
 @testable import DashboardPersistenceJSON
 
-@Suite struct JSONProjectStoreTests {
+@Suite
+struct JSONProjectStoreTests {
     func store() throws -> JSONProjectStore {
         try JSONProjectStore(path: temporaryDirectory() + "/nested/projects.json")
     }
 
-    @Test func satisfiesStoreContract() async throws {
+    @Test
+    func satisfiesStoreContract() async throws {
         try await StoreContract.verify(store())
     }
 
-    @Test func saveCreatesParentDirectoriesAndLeavesNoTempFile() async throws {
+    @Test
+    func saveCreatesParentDirectoriesAndLeavesNoTempFile() async throws {
         let store = try store()
         try await store.save([StoreContract.sampleProject("A", "a")])
         #expect(FileManager.default.fileExists(atPath: store.path))
         #expect(!FileManager.default.fileExists(atPath: store.path + ".tmp"))
     }
 
-    @Test func saveWritesVersionedEnvelope() async throws {
+    @Test
+    func saveWritesVersionedEnvelope() async throws {
         let store = try store()
         try await store.save([StoreContract.sampleProject("A", "a")])
         let raw = try #require(
-            JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: store.path))) as? [String: Any]
+            JSONSerialization
+                .jsonObject(with: Data(contentsOf: URL(fileURLWithPath: store.path))) as? [String: Any]
         )
         #expect(raw["version"] as? Int == registryFormatVersion)
         let projects = try #require(raw["projects"] as? [[String: Any]])
@@ -31,11 +36,13 @@ import Testing
         #expect(projects[0]["storage"] as? String == "json")
     }
 
-    @Test func loadMissingFileReturnsEmpty() async throws {
+    @Test
+    func loadMissingFileReturnsEmpty() async throws {
         #expect(try await store().load().isEmpty)
     }
 
-    @Test func loadMalformedJSONThrowsCorrupt() async throws {
+    @Test
+    func loadMalformedJSONThrowsCorrupt() async throws {
         let store = try store()
         try AtomicFile.write(Data("{ not json".utf8), to: store.path)
         await #expect(throws: PersistenceError.self) {
@@ -43,7 +50,8 @@ import Testing
         }
     }
 
-    @Test func loadFutureVersionThrowsUnsupportedVersion() async throws {
+    @Test
+    func loadFutureVersionThrowsUnsupportedVersion() async throws {
         let store = try store()
         try AtomicFile.write(Data(#"{"version": 99, "projects": []}"#.utf8), to: store.path)
         do {

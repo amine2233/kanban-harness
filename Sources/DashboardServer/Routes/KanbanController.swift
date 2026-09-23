@@ -34,12 +34,21 @@ struct KanbanController: RouteCollection {
 
     func createBoard(req: Request) async throws -> Response {
         let body = try req.content.decode(CreateBoardRequest.self)
-        guard !body.name.trimmingCharacters(in: .whitespaces).isEmpty else { throw Abort(.badRequest, reason: "board name must not be empty") }
+        guard !body.name.trimmingCharacters(in: .whitespaces).isEmpty else { throw Abort(
+            .badRequest,
+            reason: "board name must not be empty"
+        ) }
+
         let board = try await req.projects.mutate(req.projectRef) { workspace, now in
             let board = body.withDefaultColumns ?? true
                 ? workspace.createBoardWithTemplateColumns(name: body.name, now: now)
                 : workspace.createBoard(name: body.name, now: now)
-            return try workspace.updateBoard(board.id, description: .some(body.description), cardPrefix: .some(body.cardPrefix), now: now)
+            return try workspace.updateBoard(
+                board.id,
+                description: .some(body.description),
+                cardPrefix: .some(body.cardPrefix),
+                now: now
+            )
         }
         return try created(BoardResponse(board))
     }
@@ -52,7 +61,8 @@ struct KanbanController: RouteCollection {
                 try workspace.moveBoard(boardId, toPosition: position, now: now)
             }
             return try workspace.updateBoard(
-                boardId, name: body.name, description: body.description.value, cardPrefix: body.cardPrefix.value, now: now
+                boardId, name: body.name, description: body.description.value,
+                cardPrefix: body.cardPrefix.value, now: now
             )
         }
         return BoardResponse(board)
@@ -80,16 +90,27 @@ struct KanbanController: RouteCollection {
     func listColumns(req: Request) async throws -> Page<ColumnResponse> {
         let workspace = try await req.projects.workspace(req.projectRef)
         let board = try workspace.board(req.uuid("board"))
-        return try req.query.decode(PageParams.self).paginate(workspace.columns(of: board.id).map(ColumnResponse.init))
+        return try req.query.decode(PageParams.self)
+            .paginate(workspace.columns(of: board.id).map(ColumnResponse.init))
     }
 
     func createColumn(req: Request) async throws -> Response {
         let body = try req.content.decode(CreateColumnRequest.self)
         let boardId = try req.uuid("board")
-        guard !body.name.trimmingCharacters(in: .whitespaces).isEmpty else { throw Abort(.badRequest, reason: "column name must not be empty") }
+        guard !body.name.trimmingCharacters(in: .whitespaces).isEmpty else { throw Abort(
+            .badRequest,
+            reason: "column name must not be empty"
+        ) }
+
         let status = try body.defaultStatus.map(Self.status)
         let column = try await req.projects.mutate(req.projectRef) { workspace, now in
-            try workspace.createColumn(boardId: boardId, name: body.name, wipLimit: body.wipLimit, defaultStatus: status, now: now)
+            try workspace.createColumn(
+                boardId: boardId,
+                name: body.name,
+                wipLimit: body.wipLimit,
+                defaultStatus: status,
+                now: now
+            )
         }
         return try created(ColumnResponse(column))
     }
@@ -101,14 +122,20 @@ struct KanbanController: RouteCollection {
         let status: CardStatus?? = switch body.defaultStatus {
         case .keep: nil
         case .clear: .some(nil)
-        case let .set(dto): .some(try Self.status(dto))
+        case let .set(dto): try .some(Self.status(dto))
         }
         let column = try await req.projects.mutate(req.projectRef) { workspace, now in
             try Self.requireColumn(columnId, in: boardId, workspace)
             if let position = body.position {
                 try workspace.moveColumn(columnId, toPosition: position, now: now)
             }
-            return try workspace.updateColumn(columnId, name: body.name, wipLimit: body.wipLimit.value, defaultStatus: status, now: now)
+            return try workspace.updateColumn(
+                columnId,
+                name: body.name,
+                wipLimit: body.wipLimit.value,
+                defaultStatus: status,
+                now: now
+            )
         }
         return ColumnResponse(column)
     }
@@ -128,14 +155,22 @@ struct KanbanController: RouteCollection {
     func listCards(req: Request) async throws -> Page<CardResponse> {
         let workspace = try await req.projects.workspace(req.projectRef)
         let board = try workspace.board(req.uuid("board"))
-        return try req.query.decode(PageParams.self).paginate(workspace.cards(of: board.id).map { CardResponse($0, in: workspace) })
+        return try req.query.decode(PageParams.self)
+            .paginate(workspace.cards(of: board.id).map { CardResponse(
+                $0,
+                in: workspace
+            ) })
     }
 
     func listChildren(req: Request) async throws -> Page<CardResponse> {
         let workspace = try await req.projects.workspace(req.projectRef)
         let cardId = try req.uuid("card")
-        try Self.requireCard(cardId, in: try req.uuid("board"), workspace)
-        return try req.query.decode(PageParams.self).paginate(workspace.children(of: cardId).map { CardResponse($0, in: workspace) })
+        try Self.requireCard(cardId, in: req.uuid("board"), workspace)
+        return try req.query.decode(PageParams.self)
+            .paginate(workspace.children(of: cardId).map { CardResponse(
+                $0,
+                in: workspace
+            ) })
     }
 
     func setParent(req: Request) async throws -> CardResponse {
@@ -150,7 +185,7 @@ struct KanbanController: RouteCollection {
             } else {
                 try workspace.detach(cardId, now: now)
             }
-            return (try workspace.card(cardId), workspace)
+            return try (workspace.card(cardId), workspace)
         }
         return CardResponse(card, in: workspace)
     }
@@ -162,7 +197,8 @@ struct KanbanController: RouteCollection {
         let subtasks = try (body.subtasks ?? []).map { try $0.spec() }
         let (card, workspace) = try await req.projects.mutate(req.projectRef) { workspace, now in
             let card = try workspace.createCard(
-                columnId: columnId, title: body.title, description: body.description, priority: priority ?? .medium, aiCost: body.aiCost, now: now
+                columnId: columnId, title: body.title, description: body.description,
+                priority: priority ?? .medium, aiCost: body.aiCost, now: now
             )
             try workspace.createSubtasks(of: card.id, subtasks, now: now)
             return (card, workspace)
@@ -212,12 +248,20 @@ struct KanbanController: RouteCollection {
     }
 
     private static func priority(_ dto: PriorityDTO) throws -> CardPriority {
-        guard let value = dto.domain else { throw Abort(.badRequest, reason: "unknown priority '\(dto.rawValue)'") }
+        guard let value = dto.domain else { throw Abort(
+            .badRequest,
+            reason: "unknown priority '\(dto.rawValue)'"
+        ) }
+
         return value
     }
 
     private static func status(_ dto: StatusDTO) throws -> CardStatus {
-        guard let value = dto.domain else { throw Abort(.badRequest, reason: "unknown status '\(dto.rawValue)'") }
+        guard let value = dto.domain else { throw Abort(
+            .badRequest,
+            reason: "unknown status '\(dto.rawValue)'"
+        ) }
+
         return value
     }
 
@@ -226,6 +270,7 @@ struct KanbanController: RouteCollection {
     }
 
     private static func requireColumn(_ columnId: UUID, in boardId: UUID, _ workspace: Workspace) throws {
-        guard try workspace.column(columnId).boardId == boardId else { throw DomainError.columnNotFound(columnId) }
+        guard try workspace.column(columnId).boardId == boardId
+        else { throw DomainError.columnNotFound(columnId) }
     }
 }

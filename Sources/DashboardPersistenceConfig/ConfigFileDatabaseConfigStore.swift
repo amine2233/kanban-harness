@@ -41,7 +41,8 @@ public struct ConfigFileDatabaseConfigStore {
     }
 
     private func reader() async throws -> ConfigReader {
-        let env = EnvironmentVariablesProvider(environmentVariables: environment).prefixKeys(with: ConfigKey([Self.envPrefix]))
+        let env = EnvironmentVariablesProvider(environmentVariables: environment)
+            .prefixKeys(with: ConfigKey([Self.envPrefix]))
         let file: any ConfigProvider
         do {
             if isYAML {

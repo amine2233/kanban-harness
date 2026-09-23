@@ -14,7 +14,11 @@ public actor ProjectService {
     @Dependency(\.now) private var now
     @Dependency(\.uuid) private var uuid
 
-    public init(store: any ProjectStore, workspaces: WorkspaceStoreFactory, changes: ChangeBroadcaster = ChangeBroadcaster()) {
+    public init(
+        store: any ProjectStore,
+        workspaces: WorkspaceStoreFactory,
+        changes: ChangeBroadcaster = ChangeBroadcaster()
+    ) {
         self.store = store
         self.workspaces = workspaces
         self.changes = changes
@@ -30,7 +34,11 @@ public actor ProjectService {
         try await wrap { try await registry().get(reference) }
     }
 
-    public func add(name: String, path: String, storage: StorageKind = .json) async throws(ServiceError) -> Project {
+    public func add(
+        name: String,
+        path: String,
+        storage: StorageKind = .json
+    ) async throws(ServiceError) -> Project {
         try await wrap {
             let project = try Project(name: name, path: path, storage: storage, id: uuid(), createdAt: now())
             var registry = try await registry()
@@ -56,11 +64,15 @@ public actor ProjectService {
     /// Converts a project's workspace to another format: read through the
     /// current store, write through the new one, then re-point the registry.
     /// The previous file is left on disk as a fallback.
-    public func changeStorage(_ reference: ProjectRef, to storage: StorageKind) async throws(ServiceError) -> Project {
+    public func changeStorage(
+        _ reference: ProjectRef,
+        to storage: StorageKind
+    ) async throws(ServiceError) -> Project {
         try await wrap {
             var registry = try await registry()
             let project = try registry.get(reference)
             guard project.storage != storage else { return project }
+
             let workspace = try await workspaces.make(project).load()
             let converted = project.with(storage: storage)
             try await workspaces.make(converted).save(workspace)
@@ -99,7 +111,7 @@ public actor ProjectService {
     // MARK: Internals
 
     private func registry() async throws(ServiceError) -> ProjectRegistry {
-        try await wrap { try ProjectRegistry(projects: try await store.load()) }
+        try await wrap { try await ProjectRegistry(projects: store.load()) }
     }
 
     private func wrap<T>(_ body: () async throws -> T) async throws(ServiceError) -> T {
@@ -124,6 +136,7 @@ public actor ProjectService {
         let store = workspaces.make(project)
         var workspace = try await store.load()
         guard workspace.boards.isEmpty else { return }
+
         workspace.createBoardWithTemplateColumns(name: project.name, now: now())
         try await store.save(workspace)
     }

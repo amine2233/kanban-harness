@@ -6,7 +6,8 @@ import Foundation
 import Testing
 @testable import DashboardPersistenceFluent
 
-@Suite(.serialized) struct FluentWorkspaceStoreTests {
+@Suite(.serialized)
+struct FluentWorkspaceStoreTests {
     func tempDir() throws -> String {
         let path = NSTemporaryDirectory() + "mvp-dashboard-fluent-ws-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
@@ -14,20 +15,26 @@ import Testing
     }
 
     func fixtureWorkspace() async throws -> Workspace {
-        let url = try #require(Bundle.module.url(forResource: "kanban-v18", withExtension: "json", subdirectory: "Fixtures"))
+        let url = try #require(Bundle.module.url(
+            forResource: "kanban-v18",
+            withExtension: "json",
+            subdirectory: "Fixtures"
+        ))
         let path = try tempDir() + "/kanban.json"
         try FileManager.default.copyItem(at: url, to: URL(fileURLWithPath: path))
         return try await KanbanJSONStore(path: path).load()
     }
 
-    @Test func sqliteStoreSatisfiesTheSameContractAsJSON() async throws {
-        let database = try SQLiteDatabase.workspace(path: try tempDir() + "/kanban.sqlite")
+    @Test
+    func sqliteStoreSatisfiesTheSameContractAsJSON() async throws {
+        let database = try SQLiteDatabase.workspace(path: tempDir() + "/kanban.sqlite")
         try await database.migrate()
         try await StoreContract.verify(FluentWorkspaceStore(database: database.database))
         try await database.shutdown()
     }
 
-    @Test func existingDatabasesGainTheAICostColumn() async throws {
+    @Test
+    func existingDatabasesGainTheAICostColumn() async throws {
         let path = try tempDir() + "/kanban.sqlite"
         let old = try SQLiteDatabase(path: path, migrations: [CreateWorkspaceSchema()])
         try await old.migrate()
@@ -39,7 +46,11 @@ import Testing
         do {
             var workspace = try await store.load()
             let board = workspace.createBoardWithTemplateColumns(name: "Upgraded")
-            try workspace.createCard(columnId: workspace.columns(of: board.id)[0].id, title: "After", aiCost: AICost(provider: "cc", model: "sonnet", costUSD: 0.01))
+            try workspace.createCard(
+                columnId: workspace.columns(of: board.id)[0].id,
+                title: "After",
+                aiCost: AICost(provider: "cc", model: "sonnet", costUSD: 0.01)
+            )
             try await store.save(workspace)
             #expect(try await store.load().cards.first?.aiCost?.costUSD == 0.01)
         } catch {
@@ -49,7 +60,8 @@ import Testing
         try await current.shutdown()
     }
 
-    @Test func aiCostMigrationSkipsFilesThatAlreadyHaveTheColumn() async throws {
+    @Test
+    func aiCostMigrationSkipsFilesThatAlreadyHaveTheColumn() async throws {
         let path = try tempDir() + "/kanban.sqlite"
         let old = try SQLiteDatabase(path: path, migrations: [CreateWorkspaceSchema()])
         try await old.migrate()
@@ -65,7 +77,8 @@ import Testing
         await pool.shutdownAll()
     }
 
-    @Test func pooledStoreSatisfiesContractAndReusesOneDatabase() async throws {
+    @Test
+    func pooledStoreSatisfiesContractAndReusesOneDatabase() async throws {
         let pool = SQLiteDatabasePool()
         let path = try tempDir() + "/kanban.sqlite"
         try await StoreContract.verify(SQLiteWorkspaceStore(path: path, pool: pool))
@@ -73,15 +86,16 @@ import Testing
         await pool.shutdownAll()
     }
 
-    @Test func jsonToSQLiteToJSONIsLossless() async throws {
+    @Test
+    func jsonToSQLiteToJSONIsLossless() async throws {
         let original = try await fixtureWorkspace()
         let pool = SQLiteDatabasePool()
-        let sqlite = SQLiteWorkspaceStore(path: try tempDir() + "/kanban.sqlite", pool: pool)
+        let sqlite = try SQLiteWorkspaceStore(path: tempDir() + "/kanban.sqlite", pool: pool)
         try await sqlite.save(original)
         let fromSQLite = try await sqlite.load()
         #expect(fromSQLite == original)
 
-        let json = KanbanJSONStore(path: try tempDir() + "/kanban.json")
+        let json = try KanbanJSONStore(path: tempDir() + "/kanban.json")
         try await json.save(fromSQLite)
         let backToJSON = try await json.load()
         #expect(backToJSON == original)
@@ -90,11 +104,12 @@ import Testing
         await pool.shutdownAll()
     }
 
-    @Test func mutationsBehaveIdenticallyOnBothBackends() async throws {
+    @Test
+    func mutationsBehaveIdenticallyOnBothBackends() async throws {
         let pool = SQLiteDatabasePool()
-        let stores: [any WorkspaceStore] = [
-            KanbanJSONStore(path: try tempDir() + "/kanban.json"),
-            SQLiteWorkspaceStore(path: try tempDir() + "/kanban.sqlite", pool: pool),
+        let stores: [any WorkspaceStore] = try [
+            KanbanJSONStore(path: tempDir() + "/kanban.json"),
+            SQLiteWorkspaceStore(path: tempDir() + "/kanban.sqlite", pool: pool)
         ]
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         var results: [Workspace] = []
@@ -102,10 +117,15 @@ import Testing
             var workspace = try await fixtureWorkspace()
             let board = workspace.boards[0]
             let columns = workspace.columns(of: board.id)
-            let card = try workspace.createCard(columnId: columns[0].id, title: "Same everywhere", id: UUID(uuidString: "0e0e0e0e-0e0e-4e0e-8e0e-0e0e0e0e0e0e")!, now: now)
+            let card = try workspace.createCard(
+                columnId: columns[0].id,
+                title: "Same everywhere",
+                id: #require(UUID(uuidString: "0e0e0e0e-0e0e-4e0e-8e0e-0e0e0e0e0e0e")),
+                now: now
+            )
             try workspace.moveCard(card.id, toColumn: columns[2].id, now: now)
             try await store.save(workspace)
-            results.append(try await store.load())
+            try await results.append(store.load())
         }
         #expect(results[0] == results[1])
         #expect(results[0].cards.count == 2)
@@ -113,12 +133,20 @@ import Testing
         await pool.shutdownAll()
     }
 
-    @Test func sqliteRowsAreHumanReadable() async throws {
-        let database = try SQLiteDatabase.workspace(path: try tempDir() + "/kanban.sqlite")
+    @Test
+    func sqliteRowsAreHumanReadable() async throws {
+        let database = try SQLiteDatabase.workspace(path: tempDir() + "/kanban.sqlite")
         try await database.migrate()
         var workspace = Workspace()
-        let board = workspace.createBoardWithTemplateColumns(name: "Readable", now: Date(timeIntervalSince1970: 1.5))
-        try workspace.createCard(columnId: workspace.columns(of: board.id)[2].id, title: "x", now: Date(timeIntervalSince1970: 2))
+        let board = workspace.createBoardWithTemplateColumns(
+            name: "Readable",
+            now: Date(timeIntervalSince1970: 1.5)
+        )
+        try workspace.createCard(
+            columnId: workspace.columns(of: board.id)[2].id,
+            title: "x",
+            now: Date(timeIntervalSince1970: 2)
+        )
         try await FluentWorkspaceStore(database: database.database).save(workspace)
         let card = try #require(try await CardModel.query(on: database.database).first())
         #expect(card.status == "InProgress")
@@ -127,8 +155,9 @@ import Testing
         try await database.shutdown()
     }
 
-    @Test func corruptRowSurfacesAsPersistenceError() async throws {
-        let database = try SQLiteDatabase.workspace(path: try tempDir() + "/kanban.sqlite")
+    @Test
+    func corruptRowSurfacesAsPersistenceError() async throws {
+        let database = try SQLiteDatabase.workspace(path: tempDir() + "/kanban.sqlite")
         try await database.migrate()
         var workspace = Workspace()
         workspace.createBoard(name: "B")

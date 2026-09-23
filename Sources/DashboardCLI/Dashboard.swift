@@ -1,5 +1,6 @@
 import ArgumentParser
 import CascadeKit
+import DashboardDomain
 import DashboardRuntime
 import DashboardService
 import Foundation
@@ -10,7 +11,7 @@ struct Dashboard: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "dashboard",
         abstract: "Manage dashboard projects (kanban workspaces in folders) and run the API server.",
-        version: "0.1.0",
+        version: DashboardVersion.declared,
         subcommands: [ProjectCommand.self, SettingsCommand.self, AICommand.self, MCPCommand.self, ServeCommand.self, DaemonCommand.self]
     )
 

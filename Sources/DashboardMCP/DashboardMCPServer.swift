@@ -1,3 +1,4 @@
+import DashboardDomain
 import DashboardService
 import Logging
 import MCP
@@ -6,7 +7,7 @@ import MCP
 /// (stdio, HTTP) is chosen by the host; the tools only see command protocols.
 public enum DashboardMCPServer {
     public static let name = "mvp-dashboard"
-    public static let version = "0.1.0"
+    public static let version = DashboardVersion.declared
 
     public static func make(projects: any ProjectCommands, boards: any BoardCommands) async -> Server {
         let server = Server(

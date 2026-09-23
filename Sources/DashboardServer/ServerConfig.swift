@@ -8,13 +8,26 @@ public struct ServerConfig: Sendable {
     /// Extra browser origins allowed to call the API, on top of `settings.json`.
     public var corsOrigins: [String]
 
-    public init(home: String, staticDir: String? = nil, corsOrigins: [String] = [], claudeExecutable: String? = nil) {
-        runtime = RuntimeConfig(home: home, claudeExecutable: claudeExecutable)
+    public init(
+        home: String,
+        staticDir: String? = nil,
+        corsOrigins: [String] = [],
+        claudeExecutable: String? = nil
+    ) {
+        self.runtime = RuntimeConfig(home: home, claudeExecutable: claudeExecutable)
         self.staticDir = staticDir
         self.corsOrigins = corsOrigins
     }
 
-    public var home: String { runtime.home }
-    public var registryPath: String { runtime.registryPath }
-    public var settingsPath: String { runtime.settingsPath }
+    public var home: String {
+        runtime.home
+    }
+
+    public var registryPath: String {
+        runtime.registryPath
+    }
+
+    public var settingsPath: String {
+        runtime.settingsPath
+    }
 }

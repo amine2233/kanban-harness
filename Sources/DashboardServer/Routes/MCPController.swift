@@ -16,25 +16,40 @@ struct MCPController: RouteCollection {
 
     func handle(req: Vapor.Request) async throws -> Vapor.Response {
         var headers: [String: String] = [:]
-        for (name, value) in req.headers { headers[name] = value }
+        for (name, value) in req.headers {
+            headers[name] = value
+        }
         let body = req.body.data.map { Data(buffer: $0) }
-        let mcpResponse = await transport.handleRequest(MCP.HTTPRequest(method: "POST", headers: headers, body: body, path: req.url.path))
-        return Self.response(from: mcpResponse)
+        let mcpResponse = await transport.handleRequest(MCP.HTTPRequest(
+            method: "POST",
+            headers: headers,
+            body: body,
+            path: req.url.path
+        ))
+        return response(from: mcpResponse)
     }
 
     func reject(req: Vapor.Request) -> Vapor.Response {
-        Self.response(from: .error(statusCode: 405, .invalidRequest("Method Not Allowed"), extraHeaders: ["Allow": "POST"]))
+        response(from: .error(
+            statusCode: 405,
+            .invalidRequest("Method Not Allowed"),
+            extraHeaders: ["Allow": "POST"]
+        ))
     }
 
-    static func response(from mcp: MCP.HTTPResponse) -> Vapor.Response {
+    private func response(from mcp: MCP.HTTPResponse) -> Vapor.Response {
         let response = Vapor.Response(status: HTTPResponseStatus(statusCode: mcp.statusCode))
-        for (name, value) in mcp.headers { response.headers.replaceOrAdd(name: name, value: value) }
+        for (name, value) in mcp.headers {
+            response.headers.replaceOrAdd(name: name, value: value)
+        }
         switch mcp {
         case let .data(data, _):
             response.body = .init(data: data)
         case let .stream(stream, _):
-            response.body = .init(asyncStream: { writer in
-                for try await chunk in stream { try await writer.write(.buffer(ByteBuffer(data: chunk))) }
+            response.body = Response.Body(asyncStream: { writer in
+                for try await chunk in stream {
+                    try await writer.write(.buffer(ByteBuffer(data: chunk)))
+                }
                 try await writer.write(.end)
             })
         case .error:

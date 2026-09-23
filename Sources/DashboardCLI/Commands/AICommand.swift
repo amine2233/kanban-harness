@@ -30,8 +30,8 @@ struct AICommand: AsyncParsableCommand {
             }
 
             init(_ config: AIConfig) {
-                defaultProvider = config.defaultProviderId
-                providers = config.providers.map(ProviderView.init)
+                self.defaultProvider = config.defaultProviderId
+                self.providers = config.providers.map(ProviderView.init)
             }
         }
 
@@ -46,31 +46,38 @@ struct AICommand: AsyncParsableCommand {
             let hasAPIKey: Bool
 
             enum CodingKeys: String, CodingKey {
-                case id, kind, name, model, pricing
+                case id
+                case kind
+                case name
+                case model
+                case pricing
                 case baseURL = "base_url"
                 case maxTokens = "max_tokens"
                 case hasAPIKey = "has_api_key"
             }
 
-            init(_ p: AIProviderConfig) {
-                id = p.id
-                kind = p.kind
-                name = p.name
-                model = p.model
-                baseURL = p.baseURL
-                maxTokens = p.maxTokens
-                pricing = p.pricing
-                hasAPIKey = p.hasAPIKey
+            init(_ provider: AIProviderConfig) {
+                self.id = provider.id
+                self.kind = provider.kind
+                self.name = provider.name
+                self.model = provider.model
+                self.baseURL = provider.baseURL
+                self.maxTokens = provider.maxTokens
+                self.pricing = provider.pricing
+                self.hasAPIKey = provider.hasAPIKey
             }
         }
 
         struct List: AsyncParsableCommand {
-            static let configuration = CommandConfiguration(abstract: "Show configured providers (keys are never printed).")
+            static let configuration =
+                CommandConfiguration(abstract: "Show configured providers (keys are never printed).")
             @OptionGroup var global: GlobalOptions
 
             func run() async throws {
                 try await failing {
-                    try Output.json(View(try await Runtime.run(global) { try await $0.make(AIConfigCommandsKey.self).current() }))
+                    try await Output
+                        .json(View(Runtime
+                                .run(global) { try await $0.make(AIConfigCommandsKey.self).current() }))
                 }
             }
         }
@@ -91,25 +98,40 @@ struct AICommand: AsyncParsableCommand {
             @Option(help: "Display name (defaults to the id).")
             var name: String?
 
-            @Option(name: .customLong("base-url"), help: "API base URL; defaults to the vendor endpoint (OpenAI-compatible servers: their /v1 URL).")
+            @Option(
+                name: .customLong("base-url"),
+                help: "API base URL; defaults to the vendor endpoint (OpenAI-compatible servers: their /v1 URL)."
+            )
             var baseURL: String?
 
-            @Option(name: .customLong("api-key"), help: "API key; prefer the env var MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY to keep it out of the file.")
+            @Option(
+                name: .customLong("api-key"),
+                help: "API key; prefer the env var MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY to keep it out of the file."
+            )
             var apiKey: String?
 
             @Option(name: .customLong("max-tokens"), help: "Response token limit.")
             var maxTokens: Int?
 
-            @Option(name: .customLong("input-price"), help: "USD per million input tokens, to price drafts when the vendor reports none.")
+            @Option(
+                name: .customLong("input-price"),
+                help: "USD per million input tokens, to price drafts when the vendor reports none."
+            )
             var inputPrice: Double?
 
             @Option(name: .customLong("output-price"), help: "USD per million output tokens.")
             var outputPrice: Double?
 
-            @Option(name: .customLong("oauth-client-id"), help: "Client id of the OAuth app registered at the vendor (Hugging Face); enables `login`.")
+            @Option(
+                name: .customLong("oauth-client-id"),
+                help: "Client id of the OAuth app registered at the vendor (Hugging Face); enables `login`."
+            )
             var oauthClientId: String?
 
-            @Option(name: .customLong("oauth-client-secret"), help: "Client secret of that app, when the vendor issued one.")
+            @Option(
+                name: .customLong("oauth-client-secret"),
+                help: "Client secret of that app, when the vendor issued one."
+            )
             var oauthClientSecret: String?
 
             func run() async throws {
@@ -118,10 +140,17 @@ struct AICommand: AsyncParsableCommand {
                         try AIPricing(inputPerMillion: inputPrice ?? 0, outputPerMillion: outputPrice ?? 0)
                     }
                     let provider = try AIProviderConfig(
-                        id: id, kind: kind, name: name ?? id, model: model, baseURL: baseURL, apiKey: apiKey, maxTokens: maxTokens, pricing: pricing,
-                        oauth: oauthClientId.map { OAuthClientSettings(clientId: $0, clientSecret: oauthClientSecret) }
+                        id: id, kind: kind, name: name ?? id, model: model, baseURL: baseURL, apiKey: apiKey,
+                        maxTokens: maxTokens, pricing: pricing,
+                        oauth: oauthClientId.map { OAuthClientSettings(
+                            clientId: $0,
+                            clientSecret: oauthClientSecret
+                        ) }
                     )
-                    try Output.json(View(try await Runtime.run(global) { try await $0.make(AIConfigCommandsKey.self).upsert(provider) }))
+                    try await Output
+                        .json(View(Runtime
+                                .run(global) { try await $0.make(AIConfigCommandsKey.self).upsert(provider)
+                                }))
                 }
             }
         }
@@ -133,7 +162,9 @@ struct AICommand: AsyncParsableCommand {
 
             func run() async throws {
                 try await failing {
-                    try Output.json(View(try await Runtime.run(global) { try await $0.make(AIConfigCommandsKey.self).remove(id) }))
+                    try await Output
+                        .json(View(Runtime
+                                .run(global) { try await $0.make(AIConfigCommandsKey.self).remove(id) }))
                 }
             }
         }
@@ -145,7 +176,9 @@ struct AICommand: AsyncParsableCommand {
 
             func run() async throws {
                 try await failing {
-                    try Output.json(View(try await Runtime.run(global) { try await $0.make(AIConfigCommandsKey.self).setDefault(id) }))
+                    try await Output
+                        .json(View(Runtime
+                                .run(global) { try await $0.make(AIConfigCommandsKey.self).setDefault(id) }))
                 }
             }
         }
@@ -188,19 +221,52 @@ extension AICommand {
                     let boards = services.make(BoardCommandsKey.self)
                     let ref = ProjectRef.parse(project)
                     let all = try await boards.boards(ref)
-                    guard let target = board.map({ b in all.first { $0.name.caseInsensitiveCompare(b) == .orderedSame || $0.id.uuidString.caseInsensitiveCompare(b) == .orderedSame } }) ?? all.first else {
+                    guard let target = board
+                        .map({ name in
+                            all
+                                .first {
+                                    $0.name.caseInsensitiveCompare(name) == .orderedSame || $0.id.uuidString
+                                        .caseInsensitiveCompare(name) == .orderedSame
+                                } }) ?? all.first else {
                         throw ServiceError.domain(.notFound(board ?? "board"))
                     }
+
                     let assistant = services.make(AssistantCommandsKey.self)
                     let drafted = stream
-                        ? try await Self.watch(assistant.streamTicket(project: ref, boardId: target.id, idea: idea, providerId: provider))
-                        : try await assistant.draftTicket(project: ref, boardId: target.id, idea: idea, providerId: provider)
+                        ? try await Self.watch(assistant.streamTicket(
+                            project: ref,
+                            boardId: target.id,
+                            idea: idea,
+                            providerId: provider
+                        ))
+                        : try await assistant.draftTicket(
+                            project: ref,
+                            boardId: target.id,
+                            idea: idea,
+                            providerId: provider
+                        )
                     if create {
                         let columns = try await boards.columns(ref, boardId: target.id)
-                        guard let destination = column.map({ c in columns.first { $0.name.caseInsensitiveCompare(c) == .orderedSame || $0.id.uuidString.caseInsensitiveCompare(c) == .orderedSame } }) ?? columns.first else {
+                        guard let destination = column
+                            .map({ name in
+                                columns
+                                    .first {
+                                        $0.name.caseInsensitiveCompare(name) == .orderedSame || $0.id
+                                            .uuidString
+                                            .caseInsensitiveCompare(name) == .orderedSame
+                                    } }) ?? columns.first else {
                             throw ServiceError.domain(.notFound(column ?? "column"))
                         }
-                        let card = try await boards.createCard(ref, columnId: destination.id, title: drafted.draft.title, description: drafted.draft.cardDescription, priority: drafted.draft.priority, aiCost: drafted.aiCost, subtasks: drafted.draft.subtasks.map(\.spec))
+
+                        let card = try await boards.createCard(
+                            ref,
+                            columnId: destination.id,
+                            title: drafted.draft.title,
+                            description: drafted.draft.cardDescription,
+                            priority: drafted.draft.priority,
+                            aiCost: drafted.aiCost,
+                            subtasks: drafted.draft.subtasks.map(\.spec)
+                        )
                         try Output.json(CreatedView(draft: drafted, card: card))
                     } else {
                         try Output.json(DraftView(drafted))
@@ -210,14 +276,18 @@ extension AICommand {
         }
 
         /// Narrates the stream on stderr and returns the result; stdout stays JSON-only.
-        static func watch(_ events: AsyncThrowingStream<AssistantEvent, any Error>) async throws -> DraftedTicket {
+        static func watch(_ events: AsyncThrowingStream<AssistantEvent, any Error>) async throws
+            -> DraftedTicket {
             var lastTitle: String?
             for try await event in events {
                 switch event {
                 case let .stage(stage):
                     let elapsed = String(stage.elapsedMs)
                     let padding = String(repeating: " ", count: max(0, 6 - elapsed.count))
-                    Output.progress("[\(padding)\(elapsed)ms] \(stage.step.rawValue)\(stage.detail.map { ": " + $0 } ?? "")")
+                    Output
+                        .progress(
+                            "[\(padding)\(elapsed)ms] \(stage.step.rawValue)\(stage.detail.map { ": " + $0 } ?? "")"
+                        )
                 case .text:
                     break
                 case let .partial(partial):
@@ -226,8 +296,14 @@ extension AICommand {
                         Output.progress("          title: \(title)")
                     }
                 case let .usage(usage):
-                    let cost = usage.costUSD.map { ", \(usage.estimated ? "≈" : "")$" + String(format: "%.4f", $0) } ?? ""
-                    Output.progress("          tokens: \(usage.inputTokens ?? 0) in / \(usage.outputTokens ?? 0) out\(cost)")
+                    let cost = usage.costUSD.map { ", \(usage.estimated ? "≈" : "")$" + String(
+                        format: "%.4f",
+                        $0
+                    ) } ?? ""
+                    Output
+                        .progress(
+                            "          tokens: \(usage.inputTokens ?? 0) in / \(usage.outputTokens ?? 0) out\(cost)"
+                        )
                 case let .result(drafted):
                     return drafted
                 }
@@ -240,7 +316,12 @@ extension AICommand {
             let provider: String
             let model: String
             let usage: CompletionUsage
-            init(_ d: DraftedTicket) { draft = d.draft; provider = d.providerId; model = d.model; usage = d.usage }
+            init(_ drafted: DraftedTicket) {
+                self.draft = drafted.draft
+                self.provider = drafted.providerId
+                self.model = drafted.model
+                self.usage = drafted.usage
+            }
         }
 
         struct CreatedView: Encodable {
@@ -248,7 +329,10 @@ extension AICommand {
             let cardId: String
             let key: String
             enum CodingKeys: String, CodingKey { case draft, key; case cardId = "card_id" }
-            init(draft: DraftedTicket, card: Card) { self.draft = DraftView(draft); cardId = card.id.uuidString.lowercased(); key = "\(card.prefix)-\(card.cardNumber)" }
+            init(draft: DraftedTicket, card: Card) {
+                self.draft = DraftView(draft); self.cardId = card.id.uuidString.lowercased(); self
+                    .key = "\(card.prefix)-\(card.cardNumber)"
+            }
         }
     }
 }

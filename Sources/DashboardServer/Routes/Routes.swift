@@ -40,7 +40,7 @@ func routes(_ app: Vapor.Application, config: ServerConfig) async throws {
     try api.register(collection: AIConfigController())
     try api.register(collection: AssistantController())
     try api.register(collection: EventsController())
-    try app.register(collection: try await MCPHost.start(app))
+    try await app.register(collection: MCPHost.start(app))
     try api.grouped("projects", ":project", "kanban", "v1").register(collection: KanbanController())
 
     if let staticDir = config.staticDir {
@@ -58,6 +58,7 @@ extension Request {
         guard let id = parameters.get(name, as: UUID.self) else {
             throw Abort(.notFound, reason: "invalid \(name) id")
         }
+
         return id
     }
 

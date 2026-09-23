@@ -7,7 +7,7 @@ enum Output {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         RFC3339.configure(encoder)
-        print(String(decoding: try encoder.encode(value), as: UTF8.self))
+        try print(String(decoding: encoder.encode(value), as: UTF8.self))
     }
 
     static func progress(_ line: String) {
@@ -22,7 +22,9 @@ extension AsyncParsableCommand {
             try await body()
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? String(describing: error)
-            let envelope = try JSONSerialization.data(withJSONObject: ["error": ["message": message]])
+            let envelope = try JSONSerialization.data(
+                withJSONObject: ["error": ["message": message]]
+            )
             FileHandle.standardError.write(envelope)
             FileHandle.standardError.write(Data("\n".utf8))
             throw ExitCode.failure

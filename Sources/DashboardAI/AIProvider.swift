@@ -10,7 +10,7 @@ public struct CompletionRequest: Sendable, Equatable {
     public var schema: JSONValue
     public var maxTokens: Int
 
-    public init(system: String, prompt: String, schema: JSONValue, maxTokens: Int = 2048) {
+    public init(system: String, prompt: String, schema: JSONValue, maxTokens: Int = 2_048) {
         self.system = system
         self.prompt = prompt
         self.schema = schema
@@ -32,7 +32,12 @@ public struct CompletionUsage: Sendable, Equatable, Codable {
         case estimated
     }
 
-    public init(inputTokens: Int? = nil, outputTokens: Int? = nil, costUSD: Double? = nil, estimated: Bool = false) {
+    public init(
+        inputTokens: Int? = nil,
+        outputTokens: Int? = nil,
+        costUSD: Double? = nil,
+        estimated: Bool = false
+    ) {
         self.inputTokens = inputTokens
         self.outputTokens = outputTokens
         self.costUSD = costUSD
@@ -74,10 +79,10 @@ public enum AIProviderError: Error, Equatable, Sendable {
 extension AIProviderError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case let .notConfigured(m): "provider not configured: \(m)"
-        case let .unavailable(m): "provider unavailable: \(m)"
-        case let .request(m): "provider request failed: \(m)"
-        case let .badResponse(m): "provider returned an unusable answer: \(m)"
+        case let .notConfigured(reason): "provider not configured: \(reason)"
+        case let .unavailable(reason): "provider unavailable: \(reason)"
+        case let .request(reason): "provider request failed: \(reason)"
+        case let .badResponse(reason): "provider returned an unusable answer: \(reason)"
         }
     }
 }
@@ -95,7 +100,7 @@ extension AIProvider {
         for try await event in stream(request) {
             switch event {
             case .text, .snapshot: continue
-            case let .usage(u): usage = u
+            case let .usage(reported): usage = reported
             case let .done(json, model): return CompletionResult(json: json, usage: usage, model: model)
             }
         }
@@ -122,11 +127,13 @@ public struct AIProviderRegistry: Sendable {
 
     public mutating func register(_ kind: AIProviderKind, _ factory: @escaping Factory) {
         guard !disabled.contains(kind) else { return }
+
         factories[kind] = factory
     }
 
     public mutating func registerSignIn(_ kind: AIProviderKind, _ factory: @escaping SignInFactory) {
         guard !disabled.contains(kind) else { return }
+
         signIns[kind] = factory
     }
 
@@ -138,22 +145,34 @@ public struct AIProviderRegistry: Sendable {
                     : "no implementation for kind '\(config.kind.rawValue)'"
             )
         }
+
         return factory(config)
     }
 
     public func signIn(for config: AIProviderConfig) throws -> any ProviderSignIn {
-        guard let factory = signIns[config.kind] else { throw AIProviderError.notConfigured("\(config.kind.rawValue) has no browser sign-in — paste an API key") }
+        guard let factory = signIns[config.kind]
+        else {
+            throw AIProviderError
+                .notConfigured("\(config.kind.rawValue) has no browser sign-in — paste an API key")
+        }
+
         return try factory(config)
     }
 
-    public var kinds: [AIProviderKind] { Array(factories.keys) }
-    public var signInKinds: [AIProviderKind] { Array(signIns.keys) }
+    public var kinds: [AIProviderKind] {
+        Array(factories.keys)
+    }
+
+    public var signInKinds: [AIProviderKind] {
+        Array(signIns.keys)
+    }
 }
 
 /// Pulls the first JSON object out of model text: tolerates prose and ``` fences.
 public enum JSONExtractor {
     public static func firstObject(in text: String) -> Data? {
         guard let start = text.firstIndex(of: "{") else { return nil }
+
         var depth = 0
         var inString = false
         var escaped = false
@@ -161,7 +180,13 @@ public enum JSONExtractor {
         while index < text.endIndex {
             let char = text[index]
             if inString {
-                if escaped { escaped = false } else if char == "\\" { escaped = true } else if char == "\"" { inString = false }
+                if escaped {
+                    escaped = false
+                } else if char == "\\" {
+                    escaped = true
+                } else if char == "\"" {
+                    inString = false
+                }
             } else if char == "\"" {
                 inString = true
             } else if char == "{" {

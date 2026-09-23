@@ -22,14 +22,19 @@ struct DaemonCommand: AsyncParsableCommand {
 
     /// Starts one in the background and waits until it answers.
     struct Start: AsyncParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Start the daemon for this home if it is not already running.")
+        static let configuration =
+            CommandConfiguration(abstract: "Start the daemon for this home if it is not already running.")
 
         @ArgumentParser.OptionGroup var global: GlobalOptions
 
         func run() async throws {
             try await failing {
                 let client = try await DaemonProcess.connect(home: global.resolvedHome)
-                try Output.json(Report(home: global.resolvedHome, running: true, url: client.baseURL.absoluteString))
+                try Output.json(Report(
+                    home: global.resolvedHome,
+                    running: true,
+                    url: client.baseURL.absoluteString
+                ))
             }
         }
     }
@@ -68,10 +73,10 @@ struct DaemonCommand: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
             abstract: "Run the daemon in the foreground until it is stopped.",
             discussion: """
-                Binds 127.0.0.1 on a port of its own and writes it, with its pid, to
-                `daemon.port` in the home — so two homes never share a daemon and
-                whoever takes the home over knows whom to ask to let go.
-                """
+            Binds 127.0.0.1 on a port of its own and writes it, with its pid, to
+            `daemon.port` in the home — so two homes never share a daemon and
+            whoever takes the home over knows whom to ask to let go.
+            """
         )
 
         @ArgumentParser.OptionGroup var global: GlobalOptions
@@ -88,7 +93,9 @@ struct DaemonCommand: AsyncParsableCommand {
                     app.http.server.configuration.hostname = "127.0.0.1"
                     app.http.server.configuration.port = 0
                     try await app.startup()
-                    guard let port = app.http.server.shared.localAddress?.port else { throw CLIError.daemonDidNotBind }
+                    guard let port = app.http.server.shared.localAddress?.port
+                    else { throw CLIError.daemonDidNotBind }
+
                     try DaemonHandover.publish(port: port, config: config.runtime)
                     try await app.running?.onStop.get()
                 } catch {

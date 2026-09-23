@@ -19,8 +19,10 @@ public enum DashboardVersion {
     /// build and the skew would go unnoticed.
     public static let current: String = {
         guard let path = Bundle.main.executablePath,
-              let modified = try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate] as? Date
+              let modified = try? FileManager.default
+              .attributesOfItem(atPath: path)[.modificationDate] as? Date
         else { return declared }
+
         return "\(declared)+\(Int(modified.timeIntervalSince1970))"
     }()
 }

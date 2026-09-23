@@ -16,17 +16,28 @@ public struct SpawnsEdge: Hashable, Sendable {
         self.archivedAt = archivedAt
     }
 
-    public var isActive: Bool { archivedAt == nil }
+    public var isActive: Bool {
+        archivedAt == nil
+    }
 
     init?(json: JSONValue) {
         guard let object = json.objectValue,
               case let .string(source)? = object["source"], let sourceId = UUID(uuidString: source),
               case let .string(target)? = object["target"], let targetId = UUID(uuidString: target)
         else { return nil }
+
         self.source = sourceId
         self.target = targetId
-        if case let .string(created)? = object["created_at"] { createdAt = created } else { createdAt = Self.timestamp(Date()) }
-        if case let .string(archived)? = object["archived_at"] { archivedAt = archived } else { archivedAt = nil }
+        if case let .string(created)? = object["created_at"] {
+            self.createdAt = created
+        } else {
+            self.createdAt = Self.timestamp(Date())
+        }
+        if case let .string(archived)? = object["archived_at"] {
+            self.archivedAt = archived
+        } else {
+            self.archivedAt = nil
+        }
     }
 
     var json: JSONValue {
@@ -34,7 +45,7 @@ public struct SpawnsEdge: Hashable, Sendable {
             "source": .string(source.uuidString.lowercased()),
             "target": .string(target.uuidString.lowercased()),
             "created_at": .string(createdAt),
-            "archived_at": archivedAt.map(JSONValue.string) ?? .null,
+            "archived_at": archivedAt.map(JSONValue.string) ?? .null
         ])
     }
 
@@ -52,7 +63,12 @@ public struct SubtaskSpec: Equatable, Sendable {
     public var priority: CardPriority?
     public var points: Int?
 
-    public init(title: String, description: String? = nil, priority: CardPriority? = nil, points: Int? = nil) {
+    public init(
+        title: String,
+        description: String? = nil,
+        priority: CardPriority? = nil,
+        points: Int? = nil
+    ) {
         self.title = title
         self.description = description
         self.priority = priority
@@ -102,16 +118,23 @@ extension Workspace {
 
     /// Links `childId` under `parentId`: same board, one parent per card, no cycles.
     @discardableResult
-    public mutating func attach(_ childId: UUID, to parentId: UUID, now: Date = .timestamp()) throws -> SpawnsEdge {
+    public mutating func attach(
+        _ childId: UUID,
+        to parentId: UUID,
+        now: Date = .timestamp()
+    ) throws -> SpawnsEdge {
         let child = try card(childId)
         let parent = try card(parentId)
         guard childId != parentId else { throw DomainError.selfRelation }
         guard child.boardId == parent.boardId else { throw DomainError.crossBoardRelation }
+
         if let existing = self.parent(of: childId) {
             guard existing != parentId else { return spawns.first { $0.isActive && $0.target == childId }! }
+
             throw DomainError.alreadyHasParent(childId)
         }
         guard !ancestors(of: parentId).contains(childId) else { throw DomainError.relationCycle }
+
         let edge = SpawnsEdge(source: parentId, target: childId, createdAt: SpawnsEdge.timestamp(now))
         spawns.append(edge)
         return edge
@@ -124,7 +147,11 @@ extension Workspace {
 
     /// Creates the children in the parent's column and links them, atomically.
     @discardableResult
-    public mutating func createSubtasks(of parentId: UUID, _ specs: [SubtaskSpec], now: Date = .timestamp()) throws -> [Card] {
+    public mutating func createSubtasks(
+        of parentId: UUID,
+        _ specs: [SubtaskSpec],
+        now: Date = .timestamp()
+    ) throws -> [Card] {
         let parent = try card(parentId)
         let column = try column(parent.columnId)
         try checkWipLimit(column, adding: specs.count)
@@ -132,7 +159,13 @@ extension Workspace {
         do {
             var created: [Card] = []
             for spec in specs {
-                var child = try createCard(columnId: column.id, title: spec.title, description: spec.description, priority: spec.priority ?? parent.priority, now: now)
+                var child = try createCard(
+                    columnId: column.id,
+                    title: spec.title,
+                    description: spec.description,
+                    priority: spec.priority ?? parent.priority,
+                    now: now
+                )
                 if let points = spec.points {
                     child = try updateCard(child.id, points: .some(points), now: now)
                 }

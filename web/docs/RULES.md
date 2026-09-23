@@ -33,6 +33,9 @@ _Frontend only. Backend rules: [`docs/RULES.md`](../../docs/RULES.md)._
   `.tsx` rendering (D-09).
 - **R-13 SHOULD** Every mutation has a visible pending state and an error path using
   `errorMessage(error)`; never swallow a rejection.
+- **R-26 MUST** An implementation of an interface is the interface name plus a suffix saying
+  how (`ApiClientHttp`, `BoardStoreInMemory`) — never a prefix (`InMemoryBoardStore`), never
+  `Impl`.
 
 ## Accessibility
 

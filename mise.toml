@@ -5,6 +5,8 @@
 node = "24.21.0"
 pnpm = "12.4.2"
 swift = "6.4.0"
+"github:executor-cli/executor" = "0.28.5"
+"github:executor-cli/gitlab-cli" = "2.0.1"
 
 [env]
 # Keep dev data out of ~/.config: registry, settings.json and project folders
@@ -132,3 +134,53 @@ run = ["rm -rf web/dist web/coverage .build"]
 [tasks."backend:test:linux"]
 description = "Run the Swift tests in the swift:6.4.0 Linux container (needs docker/colima)"
 run = 'docker run --rm -v "$PWD:/src" -v mvp-dashboard-linux-build:/src/.build-linux -w /src swift:6.4.0-noble swift test --scratch-path /src/.build-linux'
+
+# --- Code Check -------------------------------------------------------------
+
+[tasks.lint]
+description = "Run all static checks (format + code + documentation) — used by CI's lint job"
+depends = ["check:format", "check:code", "check:code:documentation"]
+
+[tasks.format]
+description = "Format the code using SwiftFormat"
+run = "executor format ."
+
+[tasks."check:code:documentation"]
+description = "Lint code documentation"
+run = "executor linting documentation ./Sources --reporter console"
+
+[tasks."check:web"]
+description = "ESLint and tsc over the web workspace"
+run = ["pnpm lint", "pnpm typecheck"]
+
+[tasks."check:code"]
+description = "Lint source code"
+run = "executor linting code ./Sources --reporter console"
+
+[tasks."check:commit:title"]
+description = "Lint the latest commit title against the project's convention."
+run = "executor check-ci commit-title"
+
+[tasks."check:format"]
+description = "Fail if the code is not already formatted"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+# ponytail: executor format has no --lint flag, so format then diff the diff
+before=$(git diff)
+executor format .
+if [[ "$before" != "$(git diff)" ]]; then
+    git diff
+    echo "❌ formatting changed files — commit the result of 'mise run format'" >&2
+    exit 1
+fi
+'''
+
+[tasks."check:merge_request:title"]
+description = "Lint the pull request title and post the result as a PR comment."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+export GITHUB_PULL_REQUEST_TITLE="${GITHUB_PULL_REQUEST_TITLE:-$(gh pr view "${COMMENT_TARGET?}" --json title -q .title)}"
+executor check-ci merge-request-title --post-comment --comment-token "${GITHUB_TOKEN?}" --comment-target "${COMMENT_TARGET?}"
+'''

@@ -12,14 +12,20 @@ struct Dashboard: AsyncParsableCommand {
         commandName: "dashboard",
         abstract: "Manage dashboard projects (kanban workspaces in folders) and run the API server.",
         version: DashboardVersion.declared,
-        subcommands: [ProjectCommand.self, SettingsCommand.self, AICommand.self, MCPCommand.self, ServeCommand.self, DaemonCommand.self]
+        subcommands: [
+            ProjectCommand.self,
+            SettingsCommand.self,
+            AICommand.self,
+            MCPCommand.self,
+            ServeCommand.self,
+            DaemonCommand.self
+        ]
     )
 
     @OptionGroup var global: GlobalOptions
 }
 
 struct GlobalOptions: ParsableArguments {
-
     @Flag(name: .long, help: "Show info-level logs (migrations, database activity) on stderr.")
     var verbose = false
 

@@ -6,12 +6,14 @@ public protocol SettingsStore: Sendable {
     func save(_ settings: Settings) async throws
 }
 
-public actor InMemorySettingsStore: SettingsStore {
+public actor SettingsStoreInMemory: SettingsStore {
     private var settings = Settings.default
 
     public init() {}
 
-    public func load() async throws -> Settings { settings }
+    public func load() async throws -> Settings {
+        settings
+    }
 
     public func save(_ settings: Settings) async throws {
         self.settings = settings

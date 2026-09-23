@@ -8,12 +8,14 @@ public protocol CredentialStore: Sendable {
     func remove(_ providerId: String) async throws
 }
 
-public actor InMemoryCredentialStore: CredentialStore {
+public actor CredentialStoreInMemory: CredentialStore {
     private var credentials: [String: Credential] = [:]
 
     public init() {}
 
-    public func get(_ providerId: String) async throws -> Credential? { credentials[providerId] }
+    public func get(_ providerId: String) async throws -> Credential? {
+        credentials[providerId]
+    }
 
     public func set(_ credential: Credential, for providerId: String) async throws {
         credentials[providerId] = credential
@@ -25,17 +27,22 @@ public actor InMemoryCredentialStore: CredentialStore {
 }
 
 extension StoreContract {
+    /// used only for unit-test
     public static func verify(_ store: any CredentialStore) async throws {
-        try require(try await store.get("hf") == nil, "fresh store must be empty")
-        let token = Credential(secret: "hf_abc", refreshToken: "r1", expiresAt: .timestamp().addingTimeInterval(3600))
+        try await require(store.get("hf") == nil, "fresh store must be empty")
+        let token = Credential(
+            secret: "hf_abc",
+            refreshToken: "r1",
+            expiresAt: .timestamp().addingTimeInterval(3_600)
+        )
         try await store.set(token, for: "hf")
         try await store.set(Credential(secret: "sk-or-1"), for: "router")
-        try require(try await store.get("hf") == token, "set then get must round-trip, expiry included")
-        try require(try await store.get("router")?.secret == "sk-or-1", "stores are keyed by provider")
+        try await require(store.get("hf") == token, "set then get must round-trip, expiry included")
+        try await require(store.get("router")?.secret == "sk-or-1", "stores are keyed by provider")
         try await store.set(Credential(secret: "hf_new"), for: "hf")
-        try require(try await store.get("hf")?.refreshToken == nil, "set replaces the whole credential")
+        try await require(store.get("hf")?.refreshToken == nil, "set replaces the whole credential")
         try await store.remove("hf")
-        try require(try await store.get("hf") == nil, "remove must forget the credential")
-        try require(try await store.get("router") != nil, "remove must not touch the others")
+        try await require(store.get("hf") == nil, "remove must forget the credential")
+        try await require(store.get("router") != nil, "remove must not touch the others")
     }
 }

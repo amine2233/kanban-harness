@@ -21,8 +21,9 @@ public struct Settings: Codable, Equatable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        defaultStorage = try container.decodeIfPresent(StorageKind.self, forKey: .defaultStorage) ?? .json
-        corsOrigins = try container.decodeIfPresent([String].self, forKey: .corsOrigins) ?? []
+        self.defaultStorage = try container
+            .decodeIfPresent(StorageKind.self, forKey: .defaultStorage) ?? .json
+        self.corsOrigins = try container.decodeIfPresent([String].self, forKey: .corsOrigins) ?? []
     }
 
     /// Normalises and validates an origin: scheme + host[:port], no path, http(s) only.
@@ -33,6 +34,7 @@ public struct Settings: Codable, Equatable, Sendable {
               let host = url.host, !host.isEmpty,
               url.path.isEmpty || url.path == "/", url.query == nil
         else { throw DomainError.invalidOrigin(trimmed) }
+
         let port = url.port.map { ":\($0)" } ?? ""
         return "\(scheme)://\(host.lowercased())\(port)"
     }

@@ -8,7 +8,8 @@ import Vapor
 /// HTTP vendors go through AnyLanguageModel, checked here against a stub
 /// Vapor server that records the request and answers in the vendor's shape.
 /// Claude Code is checked against a stub `claude` executable.
-@Suite(.serialized) struct ProvidersTests {
+@Suite(.serialized)
+struct ProvidersTests {
     struct Recorded: @unchecked Sendable {
         let path: String
         let headers: [String: String]
@@ -17,19 +18,31 @@ import Vapor
 
     actor Recorder {
         var requests: [Recorded] = []
-        func add(_ r: Recorded) { requests.append(r) }
-        func first() -> Recorded? { requests.first }
+        func add(_ r: Recorded) {
+            requests.append(r)
+        }
+
+        func first() -> Recorded? {
+            requests.first
+        }
     }
 
-    func withStub(_ answer: String, contentType: HTTPMediaType = .json, _ body: (URL, Recorder) async throws -> Void) async throws {
+    func withStub(
+        _ answer: String,
+        contentType: HTTPMediaType = .json,
+        _ body: (URL, Recorder) async throws -> Void
+    ) async throws {
         var environment = Environment.testing
         environment.arguments = ["vapor"]
         let app = try await Application.make(environment)
         let recorder = Recorder()
         app.on(.POST, "**", body: .collect) { req -> Response in
-            let json = (try? JSONSerialization.jsonObject(with: Data(buffer: req.body.data ?? ByteBuffer()))) as? [String: Any] ?? [:]
+            let json = (try? JSONSerialization
+                .jsonObject(with: Data(buffer: req.body.data ?? ByteBuffer()))) as? [String: Any] ?? [:]
             var headers: [String: String] = [:]
-            for (n, v) in req.headers { headers[n.lowercased()] = v }
+            for (n, v) in req.headers {
+                headers[n.lowercased()] = v
+            }
             await recorder.add(Recorded(path: req.url.path, headers: headers, body: json))
             let response = Response(status: .ok)
             response.headers.contentType = contentType
@@ -49,11 +62,18 @@ import Vapor
         try await app.asyncShutdown()
     }
 
-    let request = CompletionRequest(system: "sys", prompt: "draft", schema: TicketDraft.jsonSchema, maxTokens: 300)
+    let request = CompletionRequest(
+        system: "sys",
+        prompt: "draft",
+        schema: TicketDraft.jsonSchema,
+        maxTokens: 300
+    )
 
     func collect(_ provider: any AIProvider) async throws -> [CompletionEvent] {
         var events: [CompletionEvent] = []
-        for try await event in provider.stream(request) { events.append(event) }
+        for try await event in provider.stream(request) {
+            events.append(event)
+        }
         return events
     }
 
@@ -61,18 +81,30 @@ import Vapor
         events.compactMap { if case let .snapshot(data) = $0 { PartialTicketDraft.parse(data) } else { nil } }
     }
 
-    @Test func ollamaStreamsPartialDraftsThroughAnyLanguageModel() async throws {
+    @Test
+    func ollamaStreamsPartialDraftsThroughAnyLanguageModel() async throws {
         let lines = [
             #"{"model":"llama3.2","created_at":"2026-01-01T00:00:00Z","message":{"role":"assistant","content":"{\"title\":\"Lo"},"done":false}"#,
-            #"{"model":"llama3.2","created_at":"2026-01-01T00:00:00Z","message":{"role":"assistant","content":"cal\",\"priority\":\"medium\"}"},"done":true,"prompt_eval_count":7,"eval_count":8}"#,
+            #"{"model":"llama3.2","created_at":"2026-01-01T00:00:00Z","message":{"role":"assistant","content":"cal\",\"priority\":\"medium\"}"},"done":true,"prompt_eval_count":7,"eval_count":8}"#
         ]
-        try await withStub(lines.joined(separator: "\n") + "\n", contentType: .init(type: "application", subType: "x-ndjson")) { base, recorder in
-            let config = try AIProviderConfig(id: "l", kind: .ollama, name: "L", model: "llama3.2", baseURL: base.absoluteString)
-            let events = try await collect(try AIProviderRegistry.standard().make(config))
+        try await withStub(
+            lines.joined(separator: "\n") + "\n",
+            contentType: .init(type: "application", subType: "x-ndjson")
+        ) { base, recorder in
+            let config = try AIProviderConfig(
+                id: "l",
+                kind: .ollama,
+                name: "L",
+                model: "llama3.2",
+                baseURL: base.absoluteString
+            )
+            let events = try await collect(AIProviderRegistry.standard().make(config))
             let partials = snapshots(events)
             #expect(partials.first?.title == "Lo")
             #expect(partials.last?.priority == .medium)
-            guard case let .done(json, model) = try #require(events.last) else { Issue.record("no done event"); return }
+            guard case let .done(json, model) = try #require(events.last)
+            else { Issue.record("no done event"); return }
+
             #expect(model == "llama3.2")
             #expect(try TicketDraft.parse(json).title == "Local")
             #expect(events.contains(.usage(CompletionUsage(inputTokens: 7, outputTokens: 8))))
@@ -83,21 +115,31 @@ import Vapor
         }
     }
 
-    @Test func keyedVendorsWithoutAKeyAreNotConfigured() async throws {
+    @Test
+    func keyedVendorsWithoutAKeyAreNotConfigured() async throws {
         for kind in [AIProviderKind.anthropic, .gemini] {
             let config = try AIProviderConfig(id: "a", kind: kind, name: "A", model: "m")
             await #expect(throws: AIProviderError.notConfigured("A has no API key")) {
-                _ = try await collect(try AIProviderRegistry.standard().make(config))
+                _ = try await collect(AIProviderRegistry.standard().make(config))
             }
         }
     }
 
-    // An unreachable host is not covered: AsyncHTTPClient keeps retrying the
-    // connection until its 60 s deadline before surfacing "connection refused".
-    @Test func badAnswersAreTyped() async throws {
+    /// An unreachable host is not covered: AsyncHTTPClient keeps retrying the
+    /// connection until its 60 s deadline before surfacing "connection refused".
+    @Test
+    func badAnswersAreTyped() async throws {
         try await withStub("not json") { base, _ in
-            let bad = try AIProviderConfig(id: "l", kind: .ollama, name: "L", model: "m", baseURL: base.absoluteString)
-            await #expect(throws: AIProviderError.self) { _ = try await collect(try AIProviderRegistry.standard().make(bad)) }
+            let bad = try AIProviderConfig(
+                id: "l",
+                kind: .ollama,
+                name: "L",
+                model: "m",
+                baseURL: base.absoluteString
+            )
+            await #expect(throws: AIProviderError.self) {
+                _ = try await collect(AIProviderRegistry.standard().make(bad))
+            }
         }
     }
 
@@ -110,7 +152,8 @@ import Vapor
         return (dir, stub)
     }
 
-    @Test func claudeCodeStreamsPartialMessagesThenTheStructuredResult() async throws {
+    @Test
+    func claudeCodeStreamsPartialMessagesThenTheStructuredResult() async throws {
         let (dir, stub) = try stubClaude("""
         printf '%s\\n' "$@" > "$(dirname "$0")/args.txt"
         echo '{"type":"system","subtype":"init"}'
@@ -123,13 +166,17 @@ import Vapor
         let partials = snapshots(events)
         #expect(partials.map { $0.title } == ["From Cl", "From Claude Code"])
         #expect(partials.last?.priority == nil, "a half-typed enum value is dropped, not guessed")
-        guard case let .done(json, _) = try #require(events.last) else { Issue.record("no done event"); return }
+        guard case let .done(json, _) = try #require(events.last)
+        else { Issue.record("no done event"); return }
+
         let draft = try TicketDraft.parse(json)
         #expect(draft.title == "From Claude Code")
         #expect(draft.acceptanceCriteria == ["a"])
         #expect(events.contains(.usage(CompletionUsage(inputTokens: 3, outputTokens: 4, costUSD: 0.01))))
-        let args = try String(contentsOfFile: dir + "/args.txt", encoding: .utf8).split(separator: "\n").map(String.init)
-        #expect(args.contains("stream-json") && args.contains("--include-partial-messages") && args.contains("--verbose"))
+        let args = try String(contentsOfFile: dir + "/args.txt", encoding: .utf8).split(separator: "\n")
+            .map(String.init)
+        #expect(args.contains("stream-json") && args.contains("--include-partial-messages") && args
+            .contains("--verbose"))
         #expect(args.contains("--json-schema"))
         #expect(args.contains("--model") && args.contains("sonnet"))
         #expect(args.contains("--tools"))
@@ -137,7 +184,8 @@ import Vapor
         #expect(args.last == "draft")
     }
 
-    @Test func claudeCodeWrappedStructuredOutputStillYieldsPartials() throws {
+    @Test
+    func claudeCodeWrappedStructuredOutputStillYieldsPartials() throws {
         let typed = #"{"$PARAMETER_NAME": "{\n  \"title\": \"Support Apple Pay\",\n  \"priority\": \"hi"#
         let partial = try #require(ClaudeCodeProvider.partialSnapshot(typed))
         #expect(PartialTicketDraft.parse(partial).title == "Support Apple Pay")
@@ -146,9 +194,16 @@ import Vapor
         #expect(PartialTicketDraft.parse(plain).title == "Plain")
     }
 
-    @Test func claudeCodeErrorsAreSurfaced() async throws {
+    @Test
+    func claudeCodeErrorsAreSurfaced() async throws {
         let config = try AIProviderConfig(id: "cc", kind: .claudeCode, name: "CC", model: "sonnet")
-        let (dir, notLoggedIn) = try stubClaude("echo '{\"type\":\"result\",\"is_error\":true,\"result\":\"Not logged in · Please run /login\"}'\n")
+        let (
+            dir,
+            notLoggedIn
+        ) =
+            try stubClaude(
+                "echo '{\"type\":\"result\",\"is_error\":true,\"result\":\"Not logged in · Please run /login\"}'\n"
+            )
         await #expect(throws: AIProviderError.request("Not logged in · Please run /login")) {
             _ = try await collect(ClaudeCodeProvider(config: config, executable: notLoggedIn))
         }
@@ -169,10 +224,24 @@ import Vapor
         }
     }
 
-    @Test func standardRegistryCoversEveryKind() throws {
+    @Test
+    func standardRegistryCoversEveryKind() throws {
         let registry = AIProviderRegistry.standard(claudeExecutable: "/stub/claude")
-        #expect(Set(registry.kinds) == Set(AIProviderKind.allCases).subtracting([.huggingface, .openrouter]), "vendor modules register the rest")
-        #expect((try registry.make(AIProviderConfig(id: "x", kind: .claudeCode, name: "x", model: "sonnet")) as? ClaudeCodeProvider)?.executable == "/stub/claude")
-        #expect(try registry.make(AIProviderConfig(id: "x", kind: .apple, name: "x", model: "system")) is AnyLanguageModelProvider)
+        #expect(
+            Set(registry.kinds) == Set(AIProviderKind.allCases).subtracting([.huggingface, .openrouter]),
+            "vendor modules register the rest"
+        )
+        #expect(try (registry.make(AIProviderConfig(
+            id: "x",
+            kind: .claudeCode,
+            name: "x",
+            model: "sonnet"
+        )) as? ClaudeCodeProvider)?.executable == "/stub/claude")
+        #expect(try registry.make(AIProviderConfig(
+            id: "x",
+            kind: .apple,
+            name: "x",
+            model: "system"
+        )) is AnyLanguageModelProvider)
     }
 }

@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .executable(name: "dashboard", targets: ["DashboardCLI"]),
-        .library(name: "DashboardServer", targets: ["DashboardServer"]),
+        .library(name: "DashboardServer", targets: ["DashboardServer"])
     ],
     dependencies: [
         .package(url: "https://github.com/amine2233/cascade-kit.git", from: "1.0.0"),
@@ -15,11 +15,19 @@ let package = Package(
         .package(url: "https://github.com/vapor/fluent.git", from: "4.13.0"),
         .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.9.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.6.0"),
-        .package(url: "https://github.com/apple/swift-configuration.git", from: "1.2.0", traits: ["JSON", "YAML"]),
+        .package(
+            url: "https://github.com/apple/swift-configuration.git",
+            from: "1.2.0",
+            traits: ["JSON", "YAML"]
+        ),
         .package(url: "https://github.com/jpsim/Yams.git", from: "6.2.2"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.0"),
-        .package(url: "https://github.com/mattt/AnyLanguageModel.git", from: "0.13.0", traits: ["AsyncHTTPClient"]),
-        .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.2"),
+        .package(
+            url: "https://github.com/mattt/AnyLanguageModel.git",
+            from: "0.13.0",
+            traits: ["AsyncHTTPClient"]
+        ),
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.2")
     ],
     targets: [
         .target(name: "DashboardDomain"),
@@ -30,14 +38,14 @@ let package = Package(
             dependencies: [
                 "DashboardPersistence",
                 .product(name: "Configuration", package: "swift-configuration"),
-                .product(name: "Yams", package: "Yams"),
+                .product(name: "Yams", package: "Yams")
             ]
         ),
         .target(
             name: "DashboardPersistenceFluent",
             dependencies: [
                 "DashboardPersistence",
-                .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
+                .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver")
             ]
         ),
         .target(
@@ -45,7 +53,7 @@ let package = Package(
             dependencies: [
                 "DashboardPersistence",
                 .product(name: "CascadeKit", package: "cascade-kit"),
-                .product(name: "Logging", package: "swift-log"),
+                .product(name: "Logging", package: "swift-log")
             ]
         ),
         .target(name: "DashboardAPI", dependencies: ["DashboardDomain"]),
@@ -59,16 +67,24 @@ let package = Package(
             dependencies: [
                 "DashboardAI",
                 .product(name: "AnyLanguageModel", package: "AnyLanguageModel"),
-                .product(name: "Logging", package: "swift-log"),
+                .product(name: "Logging", package: "swift-log")
             ]
         ),
         .target(
             name: "DashboardProviderHuggingFace",
-            dependencies: ["DashboardAIProviders", "DashboardOAuth", .product(name: "AnyLanguageModel", package: "AnyLanguageModel")]
+            dependencies: [
+                "DashboardAIProviders",
+                "DashboardOAuth",
+                .product(name: "AnyLanguageModel", package: "AnyLanguageModel")
+            ]
         ),
         .target(
             name: "DashboardProviderOpenRouter",
-            dependencies: ["DashboardAIProviders", "DashboardOAuth", .product(name: "AnyLanguageModel", package: "AnyLanguageModel")]
+            dependencies: [
+                "DashboardAIProviders",
+                "DashboardOAuth",
+                .product(name: "AnyLanguageModel", package: "AnyLanguageModel")
+            ]
         ),
         .target(
             name: "DashboardMCP",
@@ -76,7 +92,7 @@ let package = Package(
                 "DashboardDomain",
                 "DashboardService",
                 .product(name: "MCP", package: "swift-sdk"),
-                .product(name: "Logging", package: "swift-log"),
+                .product(name: "Logging", package: "swift-log")
             ]
         ),
         .target(
@@ -94,7 +110,7 @@ let package = Package(
                 "DashboardProviderHuggingFace",
                 "DashboardProviderOpenRouter",
                 "DashboardPersistenceFluent",
-                .product(name: "CascadeKit", package: "cascade-kit"),
+                .product(name: "CascadeKit", package: "cascade-kit")
             ]
         ),
         .target(
@@ -106,7 +122,7 @@ let package = Package(
                 .product(name: "Vapor", package: "vapor"),
                 .product(name: "Fluent", package: "fluent"),
                 .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
-                .product(name: "CascadeKit", package: "cascade-kit"),
+                .product(name: "CascadeKit", package: "cascade-kit")
             ]
         ),
         .executableTarget(
@@ -116,7 +132,7 @@ let package = Package(
                 "DashboardClient",
                 "DashboardMCP",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                .product(name: "Logging", package: "swift-log"),
+                .product(name: "Logging", package: "swift-log")
             ]
         ),
         .testTarget(name: "DashboardDomainTests", dependencies: ["DashboardDomain"]),
@@ -140,7 +156,11 @@ let package = Package(
         .testTarget(name: "DashboardOAuthTests", dependencies: ["DashboardOAuth"]),
         .testTarget(
             name: "DashboardProviderTests",
-            dependencies: ["DashboardProviderHuggingFace", "DashboardProviderOpenRouter", .product(name: "Vapor", package: "vapor")]
+            dependencies: [
+                "DashboardProviderHuggingFace",
+                "DashboardProviderOpenRouter",
+                .product(name: "Vapor", package: "vapor")
+            ]
         ),
         .testTarget(name: "DashboardAITests", dependencies: ["DashboardAI", "DashboardPersistence"]),
         .testTarget(
@@ -152,17 +172,17 @@ let package = Package(
             dependencies: [
                 "DashboardClient",
                 "DashboardServer",
-                .product(name: "VaporTesting", package: "vapor"),
+                .product(name: "VaporTesting", package: "vapor")
             ]
         ),
         .testTarget(
             name: "DashboardServerTests",
             dependencies: [
                 "DashboardServer",
-                .product(name: "VaporTesting", package: "vapor"),
+                .product(name: "VaporTesting", package: "vapor")
             ]
         ),
-        .testTarget(name: "DashboardCLITests", dependencies: ["DashboardCLI"]),
+        .testTarget(name: "DashboardCLITests", dependencies: ["DashboardCLI"])
     ],
     swiftLanguageModes: [.v6]
 )

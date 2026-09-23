@@ -2,12 +2,14 @@ import Foundation
 import Testing
 @testable import DashboardDomain
 
-@Suite struct ProjectRegistryTests {
+@Suite
+struct ProjectRegistryTests {
     private func project(_ name: String, _ dir: String) throws -> Project {
         try Project(name: name, path: "/\(dir)")
     }
 
-    @Test func addDistinctProjectsKeepsInsertionOrder() throws {
+    @Test
+    func addDistinctProjectsKeepsInsertionOrder() throws {
         var registry = ProjectRegistry()
         try registry.add(project("A", "a"))
         try registry.add(project("B", "b"))
@@ -15,7 +17,8 @@ import Testing
         #expect(registry.count == 2)
     }
 
-    @Test func addDuplicateNameCaseInsensitiveThrowsDuplicateName() throws {
+    @Test
+    func addDuplicateNameCaseInsensitiveThrowsDuplicateName() throws {
         var registry = ProjectRegistry()
         try registry.add(project("Demo", "a"))
         #expect(throws: DomainError.duplicateName("Demo")) {
@@ -24,7 +27,8 @@ import Testing
         #expect(registry.count == 1)
     }
 
-    @Test func addDuplicatePathThrowsDuplicatePath() throws {
+    @Test
+    func addDuplicatePathThrowsDuplicatePath() throws {
         var registry = ProjectRegistry()
         try registry.add(project("A", "same"))
         #expect(throws: DomainError.duplicatePath("/same")) {
@@ -32,14 +36,16 @@ import Testing
         }
     }
 
-    @Test func initFromProjectsRejectsInvalidSnapshot() throws {
+    @Test
+    func initFromProjectsRejectsInvalidSnapshot() throws {
         let projects = try [project("A", "a"), project("a", "b")]
         #expect(throws: DomainError.duplicateName("A")) {
             try ProjectRegistry(projects: projects)
         }
     }
 
-    @Test func removeByNameReturnsRemovedProject() throws {
+    @Test
+    func removeByNameReturnsRemovedProject() throws {
         var registry = ProjectRegistry()
         try registry.add(project("A", "a"))
         try registry.add(project("B", "b"))
@@ -49,21 +55,24 @@ import Testing
         #expect(registry.find(.name("A")) == nil)
     }
 
-    @Test func removeByIdReturnsRemovedProject() throws {
+    @Test
+    func removeByIdReturnsRemovedProject() throws {
         var registry = ProjectRegistry()
         let id = try registry.add(project("A", "a")).id
         #expect(try registry.remove(.id(id)).id == id)
         #expect(registry.isEmpty)
     }
 
-    @Test func removeUnknownNameThrowsNotFound() {
+    @Test
+    func removeUnknownNameThrowsNotFound() {
         var registry = ProjectRegistry()
         #expect(throws: DomainError.notFound("ghost")) {
             try registry.remove(.name("ghost"))
         }
     }
 
-    @Test func getUnknownIdThrowsIdNotFound() {
+    @Test
+    func getUnknownIdThrowsIdNotFound() {
         let registry = ProjectRegistry()
         let id = UUID()
         #expect(throws: DomainError.idNotFound(id)) {
@@ -71,7 +80,8 @@ import Testing
         }
     }
 
-    @Test func updateReplacesProjectWithSameId() throws {
+    @Test
+    func updateReplacesProjectWithSameId() throws {
         var registry = ProjectRegistry()
         let project = try registry.add(project("A", "a"))
         try registry.update(project.with(storage: .sqlite))
@@ -79,7 +89,8 @@ import Testing
         #expect(registry.count == 1)
     }
 
-    @Test func updateUnknownIdThrowsAndStillChecksInvariants() throws {
+    @Test
+    func updateUnknownIdThrowsAndStillChecksInvariants() throws {
         var registry = ProjectRegistry()
         try registry.add(project("A", "a"))
         let b = try registry.add(project("B", "b"))
@@ -93,7 +104,8 @@ import Testing
         }
     }
 
-    @Test func projectsRoundTripThroughInit() throws {
+    @Test
+    func projectsRoundTripThroughInit() throws {
         var registry = ProjectRegistry()
         try registry.add(project("A", "a"))
         try registry.add(project("B", "b"))

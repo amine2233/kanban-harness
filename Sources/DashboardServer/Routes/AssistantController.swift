@@ -17,32 +17,54 @@ struct AssistantController: RouteCollection {
         let body = try req.content.decode(DraftTicketRequest.self)
         let assistant = try req.services.make(AssistantCommandsKey.self)
         guard req.headers.accept.contains(where: { $0.mediaType == eventStream }) else {
-            let drafted = try await assistant.draftTicket(project: req.projectRef, boardId: body.boardId, idea: body.idea, providerId: body.provider)
+            let drafted = try await assistant.draftTicket(
+                project: req.projectRef,
+                boardId: body.boardId,
+                idea: body.idea,
+                providerId: body.provider
+            )
             return try await Self.response(drafted).encodeResponse(for: req)
         }
-        let events = try assistant.streamTicket(project: req.projectRef, boardId: body.boardId, idea: body.idea, providerId: body.provider)
+
+        let events = try assistant.streamTicket(
+            project: req.projectRef,
+            boardId: body.boardId,
+            idea: body.idea,
+            providerId: body.provider
+        )
         let response = Response(status: .ok)
         response.headers.contentType = eventStream
         response.headers.cacheControl = .init(noCache: true)
         response.body = .init(asyncStream: { writer in
             do {
                 for try await event in events {
-                    try await writer.write(.buffer(ByteBuffer(data: try Self.frame(event).encoded())))
+                    try await writer.write(.buffer(ByteBuffer(data: Self.frame(event).encoded())))
                 }
             } catch {
                 let (_, apiError) = ApiErrorMiddleware.classify(error)
-                try await writer.write(.buffer(ByteBuffer(data: try AssistantFrame.error(apiError).encoded())))
+                try await writer
+                    .write(.buffer(ByteBuffer(data: AssistantFrame.error(apiError).encoded())))
             }
             try await writer.write(.end)
         })
         return response
     }
 
-    private var eventStream: HTTPMediaType { .init(type: "text", subType: "event-stream", parameters: ["charset": "utf-8"]) }
+    private var eventStream: HTTPMediaType {
+        .init(
+            type: "text",
+            subType: "event-stream",
+            parameters: ["charset": "utf-8"]
+        )
+    }
 
     private static func frame(_ event: AssistantEvent) -> AssistantFrame {
         switch event {
-        case let .stage(stage): .stage(.init(step: stage.step.rawValue, detail: stage.detail, elapsedMs: stage.elapsedMs))
+        case let .stage(stage): .stage(.init(
+                step: stage.step.rawValue,
+                detail: stage.detail,
+                elapsedMs: stage.elapsedMs
+            ))
         case let .text(delta): .text(.init(delta: delta))
         case let .partial(partial): .partial(partial)
         case let .usage(usage): .usage(Self.usage(usage))
@@ -51,10 +73,20 @@ struct AssistantController: RouteCollection {
     }
 
     private static func response(_ drafted: DraftedTicket) -> DraftTicketResponse {
-        DraftTicketResponse(draft: drafted.draft, provider: drafted.providerId, model: drafted.model, usage: usage(drafted.usage))
+        DraftTicketResponse(
+            draft: drafted.draft,
+            provider: drafted.providerId,
+            model: drafted.model,
+            usage: usage(drafted.usage)
+        )
     }
 
     private static func usage(_ usage: CompletionUsage) -> DraftTicketResponse.UsageDTO {
-        .init(inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, costUSD: usage.costUSD, estimated: usage.estimated)
+        .init(
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            costUSD: usage.costUSD,
+            estimated: usage.estimated
+        )
     }
 }

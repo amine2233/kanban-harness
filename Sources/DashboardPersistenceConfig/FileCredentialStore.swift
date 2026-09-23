@@ -25,11 +25,13 @@ public struct FileCredentialStore: CredentialStore {
     public func remove(_ providerId: String) async throws {
         var all = try read()
         guard all.removeValue(forKey: providerId) != nil else { return }
+
         try write(all)
     }
 
     private func read() throws -> [String: Credential] {
         guard let data = try AtomicFile.read(path), !data.isEmpty else { return [:] }
+
         do {
             return try Self.decoder.decode([String: Credential].self, from: data)
         } catch {

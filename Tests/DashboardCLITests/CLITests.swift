@@ -15,7 +15,7 @@ final class CLI {
         let candidates = [
             Bundle.main.bundleURL.appendingPathComponent("dashboard"),
             packageRoot.appendingPathComponent(".build/debug/dashboard"),
-            packageRoot.appendingPathComponent(".build/release/dashboard"),
+            packageRoot.appendingPathComponent(".build/release/dashboard")
         ]
         return candidates.first { FileManager.default.isExecutableFile(atPath: $0.path) } ?? candidates[1]
     }
@@ -50,7 +50,7 @@ final class CLI {
     }
 
     init() throws {
-        home = NSTemporaryDirectory() + "mvp-dashboard-cli-" + UUID().uuidString
+        self.home = NSTemporaryDirectory() + "mvp-dashboard-cli-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
     }
 
@@ -69,7 +69,9 @@ final class CLI {
         process.waitUntilExit()
     }
 
-    private var baseArguments: [String] { [] }
+    private var baseArguments: [String] {
+        []
+    }
 
     func tempFolder(_ name: String = "project") -> String {
         home + "/folders/" + name
@@ -80,6 +82,7 @@ final class CLI {
         let process = Process()
         process.executableURL = Self.binary
         process.environment = environment
+        process.currentDirectoryURL = URL(fileURLWithPath: home)
         process.arguments = baseArguments + arguments
         let out = Pipe()
         let err = Pipe()
@@ -98,10 +101,14 @@ final class CLI {
         return try JSONSerialization.jsonObject(with: Data(result.stdout.utf8))
     }
 
-    private func run(_ first: String, _ rest: [String]) throws -> (status: Int32, stdout: String, stderr: String) {
+    private func run(
+        _ first: String,
+        _ rest: [String]
+    ) throws -> (status: Int32, stdout: String, stderr: String) {
         let process = Process()
         process.executableURL = Self.binary
         process.environment = environment
+        process.currentDirectoryURL = URL(fileURLWithPath: home)
         process.arguments = baseArguments + [first] + rest
         let out = Pipe()
         let err = Pipe()
@@ -115,13 +122,16 @@ final class CLI {
     }
 }
 
-@Suite(.serialized) struct CLITests {
-    @Test func projectListStartsEmpty() throws {
+@Suite(.serialized)
+struct CLITests {
+    @Test
+    func projectListStartsEmpty() throws {
         let cli = try CLI()
-        #expect((try cli.json("project", "list") as? [Any])?.isEmpty == true)
+        #expect(try (cli.json("project", "list") as? [Any])?.isEmpty == true)
     }
 
-    @Test func projectAddDefaultsNameToFolderAndSeedsWorkspace() throws {
+    @Test
+    func projectAddDefaultsNameToFolderAndSeedsWorkspace() throws {
         let cli = try CLI()
         let folder = cli.tempFolder("Alpha Project")
         let created = try #require(try cli.json("project", "add", folder) as? [String: Any])
@@ -131,17 +141,23 @@ final class CLI {
         #expect(FileManager.default.fileExists(atPath: cli.home + "/projects.sqlite"))
     }
 
-    @Test func projectAddResolvesRelativePathsAgainstCwd() throws {
+    @Test
+    func projectAddResolvesRelativePathsAgainstCwd() throws {
         let cli = try CLI()
-        let cwd = FileManager.default.currentDirectoryPath
-        let created = try #require(try cli.json("project", "add", "relative-demo-\(UUID().uuidString)", "--name", "Rel") as? [String: Any])
+        let created = try #require(try cli.json(
+            "project",
+            "add",
+            "relative-demo-\(UUID().uuidString)",
+            "--name",
+            "Rel"
+        ) as? [String: Any])
         let path = try #require(created["path"] as? String)
-        #expect(path.hasPrefix("/"))
-        #expect(path.hasPrefix(URL(fileURLWithPath: cwd).standardizedFileURL.path))
-        try? FileManager.default.removeItem(atPath: path)
+        let resolvedHome = URL(fileURLWithPath: cli.home).resolvingSymlinksInPath().path
+        #expect(URL(fileURLWithPath: path).resolvingSymlinksInPath().path.hasPrefix(resolvedHome + "/"))
     }
 
-    @Test func projectAddDuplicateNameFailsWithJSONError() throws {
+    @Test
+    func projectAddDuplicateNameFailsWithJSONError() throws {
         let cli = try CLI()
         _ = try cli.json("project", "add", cli.tempFolder("a"), "--name", "Dup")
         let result = try cli.run("project", "add", cli.tempFolder("b"), "--name", "dup")
@@ -150,25 +166,29 @@ final class CLI {
         #expect(result.stderr.hasPrefix("{\"error\""))
     }
 
-    @Test func projectShowAndRemoveByNameAndId() throws {
+    @Test
+    func projectShowAndRemoveByNameAndId() throws {
         let cli = try CLI()
         let folder = cli.tempFolder("gamma")
-        let created = try #require(try cli.json("project", "add", folder, "--name", "Gamma") as? [String: Any])
+        let created = try #require(try cli
+            .json("project", "add", folder, "--name", "Gamma") as? [String: Any])
         let id = try #require(created["id"] as? String)
-        #expect((try cli.json("project", "show", "gamma") as? [String: Any])?["id"] as? String == id)
-        #expect((try cli.json("project", "remove", id) as? [String: Any])?["name"] as? String == "Gamma")
-        #expect((try cli.json("project", "list") as? [Any])?.isEmpty == true)
+        #expect(try (cli.json("project", "show", "gamma") as? [String: Any])?["id"] as? String == id)
+        #expect(try (cli.json("project", "remove", id) as? [String: Any])?["name"] as? String == "Gamma")
+        #expect(try (cli.json("project", "list") as? [Any])?.isEmpty == true)
         #expect(FileManager.default.fileExists(atPath: folder + "/kanban.json"), "files are kept")
     }
 
-    @Test func projectRemoveUnknownFails() throws {
+    @Test
+    func projectRemoveUnknownFails() throws {
         let cli = try CLI()
         let result = try cli.run("project", "remove", "ghost")
         #expect(result.status == 1)
         #expect(result.stderr.contains("not found"))
     }
 
-    @Test func projectBoardsListsSeededBoard() throws {
+    @Test
+    func projectBoardsListsSeededBoard() throws {
         let cli = try CLI()
         _ = try cli.json("project", "add", cli.tempFolder("delta"), "--name", "Delta")
         let boards = try #require(try cli.json("project", "boards", "Delta") as? [[String: Any]])
@@ -178,7 +198,8 @@ final class CLI {
         #expect(boards[0].keys.contains("card_prefix"))
     }
 
-    @Test func projectStorageConvertsBetweenFormats() throws {
+    @Test
+    func projectStorageConvertsBetweenFormats() throws {
         let cli = try CLI()
         let folder = cli.tempFolder("conv")
         _ = try cli.json("project", "add", folder, "--name", "Conv")
@@ -191,31 +212,36 @@ final class CLI {
         #expect(json["storage"] as? String == "json")
     }
 
-    @Test func projectAddWithSQLiteStorage() throws {
+    @Test
+    func projectAddWithSQLiteStorage() throws {
         let cli = try CLI()
         let folder = cli.tempFolder("sq")
-        let created = try #require(try cli.json("project", "add", folder, "--storage", "sqlite") as? [String: Any])
+        let created = try #require(try cli
+            .json("project", "add", folder, "--storage", "sqlite") as? [String: Any])
         #expect(created["storage"] as? String == "sqlite")
         #expect(FileManager.default.fileExists(atPath: folder + "/kanban.sqlite"))
     }
 
-    @Test func registryPersistsBetweenInvocations() throws {
+    @Test
+    func registryPersistsBetweenInvocations() throws {
         let cli = try CLI()
         _ = try cli.json("project", "add", cli.tempFolder("p"), "--name", "Persist")
         let listed = try #require(try cli.json("project", "list") as? [[String: Any]])
         #expect(listed.first?["name"] as? String == "Persist")
     }
 
-    @Test func unknownStorageIsRejectedByTheParser() throws {
+    @Test
+    func unknownStorageIsRejectedByTheParser() throws {
         let cli = try CLI()
         let result = try cli.run("project", "add", cli.tempFolder("x"), "--storage", "yaml")
         #expect(result.status != 0)
         #expect(result.stderr.contains("storage"))
     }
 
-    @Test func serveAnswersHealthUntilTerminated() async throws {
+    @Test
+    func serveAnswersHealthUntilTerminated() async throws {
         let cli = try CLI()
-        let port = Int.random(in: 20000 ... 40000)
+        let port = Int.random(in: 20_000 ... 40_000)
         let process = Process()
         process.executableURL = CLI.binary
         process.arguments = ["serve", "--port", String(port)]
@@ -227,7 +253,8 @@ final class CLI {
 
         var body: String?
         for _ in 0 ..< 50 {
-            if let data = try? await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/api/health")!).0 {
+            if let data = try? await URLSession.shared
+                .data(from: try #require(URL(string: "http://127.0.0.1:\(port)/api/health"))).0 {
                 body = String(decoding: data, as: UTF8.self)
                 break
             }
@@ -235,14 +262,26 @@ final class CLI {
         }
         let health = try JSONSerialization.jsonObject(with: Data((body ?? "").utf8)) as? [String: Any]
         #expect(health?["status"] as? String == "ok")
-        #expect(health?["version"] as? String != nil, "the owner names its build so an upgraded client can spot the skew")
+        #expect(
+            health?["version"] as? String != nil,
+            "the owner names its build so an upgraded client can spot the skew"
+        )
     }
 
-    @Test func settingsShowAndSetPersistToSettingsFile() throws {
+    @Test
+    func settingsShowAndSetPersistToSettingsFile() throws {
         let cli = try CLI()
         let initial = try #require(try cli.json("settings", "show") as? [String: Any])
         #expect(initial["default_storage"] as? String == "json")
-        let updated = try #require(try cli.json("settings", "set", "--default-storage", "sqlite", "--cors-origin", "http://localhost:5173/", "http://127.0.0.1:5173") as? [String: Any])
+        let updated = try #require(try cli.json(
+            "settings",
+            "set",
+            "--default-storage",
+            "sqlite",
+            "--cors-origin",
+            "http://localhost:5173/",
+            "http://127.0.0.1:5173"
+        ) as? [String: Any])
         #expect(updated["default_storage"] as? String == "sqlite")
         #expect(updated["cors_origins"] as? [String] == ["http://localhost:5173", "http://127.0.0.1:5173"])
         #expect(FileManager.default.fileExists(atPath: cli.home + "/settings.json"))
@@ -256,12 +295,14 @@ final class CLI {
         #expect(bad.stderr.contains("invalid origin"))
     }
 
-    @Test func homeFallsBackToEnvironmentWhenFlagIsAbsent() throws {
+    @Test
+    func homeFallsBackToEnvironmentWhenFlagIsAbsent() throws {
         let cli = try CLI()
         let process = Process()
         process.executableURL = CLI.binary
         process.arguments = ["project", "list"]
-        process.environment = ProcessInfo.processInfo.environment.merging(["MVP_DASHBOARD_HOME": cli.home]) { $1 }
+        process.environment = ProcessInfo.processInfo.environment
+            .merging(["MVP_DASHBOARD_HOME": cli.home]) { $1 }
         let out = Pipe()
         process.standardOutput = out
         process.standardError = Pipe()
@@ -275,9 +316,13 @@ final class CLI {
 
     /// Migrations belong to the daemon now, so they show up in *its* stderr, not
     /// in the stderr of a command that merely asked it something.
-    @Test func verboseFlagTurnsOnInfoLogsInTheDaemon() throws {
+    @Test
+    func verboseFlagTurnsOnInfoLogsInTheDaemon() throws {
         let cli = try CLI()
-        #expect(!(try cli.run("project", "list")).stderr.contains("Migrator"), "a command's own stderr stays quiet")
+        #expect(
+            try !(cli.run("project", "list")).stderr.contains("Migrator"),
+            "a command's own stderr stays quiet"
+        )
 
         let daemon = try CLI()
         let process = Process()
@@ -300,7 +345,7 @@ final class CLI {
 
     /// Starts `dashboard serve` on a free port and returns (process, port).
     func startServer(_ cli: CLI) throws -> (Process, Int) {
-        let port = Int.random(in: 20000 ... 40000)
+        let port = Int.random(in: 20_000 ... 40_000)
         let process = Process()
         process.executableURL = CLI.binary
         process.arguments = ["serve", "--port", String(port)]
@@ -313,13 +358,17 @@ final class CLI {
 
     func waitForHealth(port: Int) async throws {
         for _ in 0 ..< 50 {
-            if (try? await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/api/health")!)) != nil { return }
+            if await (
+                try? URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/api/health")!)
+            ) !=
+                nil { return }
             try await Task.sleep(for: .milliseconds(100))
         }
         Issue.record("server did not come up")
     }
 
-    @Test func aRunningServerOwnsItsHomeAndCommandsGoThroughIt() async throws {
+    @Test
+    func aRunningServerOwnsItsHomeAndCommandsGoThroughIt() async throws {
         let cli = try CLI()
         let (server, port) = try startServer(cli)
         defer { server.terminate() }
@@ -331,23 +380,40 @@ final class CLI {
             try await Task.sleep(for: .milliseconds(50))
         }
         let handle = try String(contentsOfFile: handlePath, encoding: .utf8)
-        #expect(handle.hasPrefix("\(port) "), "serve owns the home rather than opening the databases beside a daemon")
+        #expect(
+            handle.hasPrefix("\(port) "),
+            "serve owns the home rather than opening the databases beside a daemon"
+        )
 
-        let created = try #require(try cli.json("project", "add", cli.tempFolder("via-server"), "--name", "Via server") as? [String: Any])
+        let created = try #require(try cli.json(
+            "project",
+            "add",
+            cli.tempFolder("via-server"),
+            "--name",
+            "Via server"
+        ) as? [String: Any])
         #expect(created["name"] as? String == "Via server")
 
-        let (data, _) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/api/projects")!)
+        let (data, _) = try await URLSession.shared
+            .data(from: #require(URL(string: "http://127.0.0.1:\(port)/api/projects")))
         let serverSide = try #require(try JSONSerialization.jsonObject(with: data) as? [[String: Any]])
-        #expect(serverSide.map { $0["name"] as? String } == ["Via server"], "the command went through the server, not around it")
+        #expect(
+            serverSide.map { $0["name"] as? String } == ["Via server"],
+            "the command went through the server, not around it"
+        )
 
         let elsewhere = try CLI()
-        #expect(try #require(try elsewhere.json("project", "list") as? [Any]).isEmpty, "another home is independent")
+        #expect(
+            try #require(try elsewhere.json("project", "list") as? [Any]).isEmpty,
+            "another home is independent"
+        )
     }
 
     /// T-52. A copy of the executable with a different modification time *is* a
     /// different build as far as `DashboardVersion` is concerned, so the skew can
     /// be staged without a second toolchain.
-    @Test func anUpgradedBinaryReplacesTheDaemonTheOldOneLeftRunning() async throws {
+    @Test
+    func anUpgradedBinaryReplacesTheDaemonTheOldOneLeftRunning() throws {
         let cli = try CLI()
         _ = try cli.json("daemon", "start")
         let before = try #require(RuntimeConfig(home: cli.home).daemonHandle)
@@ -375,25 +441,64 @@ final class CLI {
         #expect(after.pid != before.pid, "the daemon from the previous build was asked to let go")
     }
 
-    @Test func aiProvidersAreEditedThroughTheCLIAndStoredInConfigJSON() throws {
+    @Test
+    func aiProvidersAreEditedThroughTheCLIAndStoredInConfigJSON() throws {
         let cli = try CLI()
-        #expect(((try cli.json("ai", "providers", "list") as? [String: Any])?["providers"] as? [Any])?.isEmpty == true)
-        let added = try #require(try cli.json("ai", "providers", "add", "claude", "--kind", "anthropic", "--model", "claude-sonnet-5", "--api-key", "sk-cli") as? [String: Any])
+        #expect(try ((cli.json("ai", "providers", "list") as? [String: Any])?["providers"] as? [Any])?
+            .isEmpty == true)
+        let added = try #require(try cli.json(
+            "ai",
+            "providers",
+            "add",
+            "claude",
+            "--kind",
+            "anthropic",
+            "--model",
+            "claude-sonnet-5",
+            "--api-key",
+            "sk-cli"
+        ) as? [String: Any])
         #expect(added["default_provider"] as? String == "claude")
         let provider = try #require((added["providers"] as? [[String: Any]])?.first)
         #expect(provider["has_api_key"] as? Bool == true)
         #expect(provider["api_key"] == nil, "the key is never printed")
-        #expect(!(try String(contentsOfFile: cli.home + "/config.json", encoding: .utf8)).contains("sk-cli"), "secrets never land in the config file")
-        #expect(try String(contentsOfFile: cli.home + "/credentials.json", encoding: .utf8).contains("sk-cli"))
+        #expect(
+            try !String(contentsOfFile: cli.home + "/config.json", encoding: .utf8).contains("sk-cli"),
+            "secrets never land in the config file"
+        )
+        #expect(try String(contentsOfFile: cli.home + "/credentials.json", encoding: .utf8)
+            .contains("sk-cli"))
 
-        _ = try cli.json("ai", "providers", "add", "local", "--kind", "ollama", "--model", "llama3.2", "--base-url", "http://127.0.0.1:11434")
-        #expect((try cli.json("ai", "providers", "default", "local") as? [String: Any])?["default_provider"] as? String == "local")
-        #expect(((try cli.json("ai", "providers", "remove", "claude") as? [String: Any])?["providers"] as? [Any])?.count == 1)
-        #expect(try cli.run("ai", "providers", "add", "Bad Id", "--kind", "ollama", "--model", "m").status == 1)
+        _ = try cli.json(
+            "ai",
+            "providers",
+            "add",
+            "local",
+            "--kind",
+            "ollama",
+            "--model",
+            "llama3.2",
+            "--base-url",
+            "http://127.0.0.1:11434"
+        )
+        #expect(try (cli
+                .json(
+                    "ai",
+                    "providers",
+                    "default",
+                    "local"
+                ) as? [String: Any])?["default_provider"] as? String ==
+            "local")
+        #expect(try ((cli
+                .json("ai", "providers", "remove", "claude") as? [String: Any])?["providers"] as? [Any])?
+                        .count == 1)
+        #expect(try cli.run("ai", "providers", "add", "Bad Id", "--kind", "ollama", "--model", "m")
+            .status == 1)
         #expect(try cli.run("ai", "providers", "add", "x", "--kind", "magic", "--model", "m").status != 0)
     }
 
-    @Test func mcpOverStdioAnswersInitializeAndToolsList() throws {
+    @Test
+    func mcpOverStdioAnswersInitializeAndToolsList() throws {
         let cli = try CLI()
         _ = try cli.json("project", "add", cli.tempFolder("mcp"), "--name", "MCP demo")
         let process = Process()
@@ -408,30 +513,42 @@ final class CLI {
         let messages = [
             #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}"#,
             #"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
-            #"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_boards","arguments":{"project":"MCP demo"}}}"#,
+            #"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"list_boards","arguments":{"project":"MCP demo"}}}"#
         ]
         input.fileHandleForWriting.write(Data((messages.joined(separator: "\n") + "\n").utf8))
         var collected = Data()
         let deadline = Date().addingTimeInterval(10)
         while Date() < deadline {
             collected.append(output.fileHandleForReading.availableData)
-            if String(decoding: collected, as: UTF8.self).components(separatedBy: "\n").filter({ $0.contains("\"id\"") }).count >= 2 { break }
+            if String(decoding: collected, as: UTF8.self).components(separatedBy: "\n")
+                .filter({ $0.contains("\"id\"") }).count >= 2 { break }
         }
         process.terminate()
-        let lines = String(decoding: collected, as: UTF8.self).split(separator: "\n").compactMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any] }
+        let lines = String(decoding: collected, as: UTF8.self).split(separator: "\n")
+            .compactMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any] }
         let initialize = try #require(lines.first { $0["id"] as? Int == 1 })
-        #expect(((initialize["result"] as? [String: Any])?["serverInfo"] as? [String: Any])?["name"] as? String == "mvp-dashboard")
+        #expect(
+            ((initialize["result"] as? [String: Any])?["serverInfo"] as? [String: Any])?["name"] as? String ==
+                "mvp-dashboard"
+        )
         let call = try #require(lines.first { $0["id"] as? Int == 2 })
-        let structured = try #require((call["result"] as? [String: Any])?["structuredContent"] as? [String: Any])
+        let structured =
+            try #require((call["result"] as? [String: Any])?["structuredContent"] as? [String: Any])
         #expect((structured["items"] as? [[String: Any]])?.first?["name"] as? String == "MCP demo")
     }
 
-    @Test func aiTicketDraftsAndOptionallyCreatesACard() throws {
+    @Test
+    func aiTicketDraftsAndOptionallyCreatesACard() throws {
         var cli = try CLI()
         let dir = NSTemporaryDirectory() + "claude-stub-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         let stub = dir + "/claude"
-        try "#!/bin/sh\ncat > /dev/null\necho '{\"is_error\":false,\"result\":\"\",\"structured_output\":{\"title\":\"Drafted by CLI\",\"acceptance_criteria\":[\"ok\"],\"priority\":\"low\",\"subtasks\":[{\"title\":\"Part one\"},{\"title\":\"Part two\",\"points\":2}]}}'\n".write(toFile: stub, atomically: true, encoding: .utf8)
+        try "#!/bin/sh\ncat > /dev/null\necho '{\"is_error\":false,\"result\":\"\",\"structured_output\":{\"title\":\"Drafted by CLI\",\"acceptance_criteria\":[\"ok\"],\"priority\":\"low\",\"subtasks\":[{\"title\":\"Part one\"},{\"title\":\"Part two\",\"points\":2}]}}'\n"
+            .write(
+                toFile: stub,
+                atomically: true,
+                encoding: .utf8
+            )
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub)
         cli.extraEnvironment["MVP_DASHBOARD_CLAUDE_BIN"] = stub
         let folder = cli.tempFolder("ai")
@@ -451,26 +568,44 @@ final class CLI {
             let data = out.fileHandleForReading.readDataToEndOfFile()
             let stderr = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
             p.waitUntilExit()
-            return (try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:], stderr)
+            return try (JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:], stderr)
         }
         let process = { (args: [String]) throws -> [String: Any] in try run(args).0 }
         let drafted = try process(["ai", "ticket", "AI demo", "password reset"])
         #expect((drafted["draft"] as? [String: Any])?["title"] as? String == "Drafted by CLI")
         #expect(drafted["provider"] as? String == "cc")
         let (streamed, narration) = try run(["ai", "ticket", "AI demo", "password reset", "--stream"])
-        #expect((streamed["draft"] as? [String: Any])?["title"] as? String == "Drafted by CLI", "stdout stays JSON")
+        #expect(
+            (streamed["draft"] as? [String: Any])?["title"] as? String == "Drafted by CLI",
+            "stdout stays JSON"
+        )
         #expect(narration.contains("] resolve: cc (sonnet)") && narration.contains("] done"))
-        let created = try process(["ai", "ticket", "AI demo", "password reset", "--create", "--column", "To do"])
+        let created = try process([
+            "ai",
+            "ticket",
+            "AI demo",
+            "password reset",
+            "--create",
+            "--column",
+            "To do"
+        ])
         #expect(created["key"] as? String == "task-1")
         let file = try String(contentsOfFile: folder + "/kanban.json", encoding: .utf8)
-        #expect(file.contains(#""ai_cost""#) && file.contains(#""provider" : "cc""#), "the created card remembers its draft cost")
+        #expect(
+            file.contains(#""ai_cost""#) && file.contains(#""provider" : "cc""#),
+            "the created card remembers its draft cost"
+        )
         #expect(file.contains("Part one") && file.contains("Part two"), "sub-tasks are created with the card")
-        #expect(file.components(separatedBy: #""source" :"#).count == 3, "two spawns edges link them to the parent")
+        #expect(
+            file.components(separatedBy: #""source" :"#).count == 3,
+            "two spawns edges link them to the parent"
+        )
         let boards = try #require(try cli.json("project", "boards", "AI demo") as? [[String: Any]])
         #expect(boards.count == 1)
     }
 
-    @Test func helpListsSubcommands() throws {
+    @Test
+    func helpListsSubcommands() throws {
         let result = try CLI().run("--help")
         #expect(result.status == 0)
         #expect(result.stdout.contains("project"))

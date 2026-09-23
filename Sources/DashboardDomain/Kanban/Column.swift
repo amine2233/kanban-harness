@@ -11,7 +11,9 @@ public struct Column: Codable, Hashable, Sendable, Identifiable {
     public var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, name, position
+        case id
+        case name
+        case position
         case boardId = "board_id"
         case wipLimit = "wip_limit"
         case defaultStatus = "default_status"
@@ -34,9 +36,11 @@ public struct Column: Codable, Hashable, Sendable, Identifiable {
         self.position = position
         self.wipLimit = wipLimit
         self.defaultStatus = defaultStatus
-        createdAt = now
-        updatedAt = now
+        self.createdAt = now
+        self.updatedAt = now
     }
 
-    public var isCompletion: Bool { defaultStatus == .done }
+    public var isCompletion: Bool {
+        defaultStatus == .done
+    }
 }

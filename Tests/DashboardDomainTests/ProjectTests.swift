@@ -2,40 +2,47 @@ import Foundation
 import Testing
 @testable import DashboardDomain
 
-@Suite struct ProjectTests {
-    @Test func newWithValidInputTrimsName() throws {
+@Suite
+struct ProjectTests {
+    @Test
+    func newWithValidInputTrimsName() throws {
         let project = try Project(name: "  Demo  ", path: "/projects/demo")
         #expect(project.name == "Demo")
         #expect(project.path == "/projects/demo")
         #expect(project.storage == .json)
     }
 
-    @Test func newWithBlankNameThrowsEmptyName() {
+    @Test
+    func newWithBlankNameThrowsEmptyName() {
         #expect(throws: DomainError.emptyName) {
             try Project(name: "   ", path: "/p")
         }
     }
 
-    @Test func newWithTooLongNameThrowsNameTooLong() {
+    @Test
+    func newWithTooLongNameThrowsNameTooLong() {
         let name = String(repeating: "x", count: maxProjectNameLength + 1)
         #expect(throws: DomainError.nameTooLong(maxProjectNameLength)) {
             try Project(name: name, path: "/p")
         }
     }
 
-    @Test func newWithRelativePathThrowsRelativePath() {
+    @Test
+    func newWithRelativePathThrowsRelativePath() {
         #expect(throws: DomainError.relativePath("relative/dir")) {
             try Project(name: "Demo", path: "relative/dir")
         }
     }
 
-    @Test func dataFileJoinsStorageFileName() throws {
+    @Test
+    func dataFileJoinsStorageFileName() throws {
         let project = try Project(name: "A", path: "/projects/demo")
         #expect(project.dataFile == "/projects/demo/kanban.json")
         #expect(project.with(storage: .sqlite).dataFile == "/projects/demo/kanban.sqlite")
     }
 
-    @Test func withStorageKeepsIdentity() throws {
+    @Test
+    func withStorageKeepsIdentity() throws {
         let project = try Project(name: "A", path: "/p")
         let switched = project.with(storage: .sqlite)
         #expect(switched.id == project.id)
@@ -43,7 +50,8 @@ import Testing
         #expect(project.storage == .json)
     }
 
-    @Test func projectCodableUsesSnakeCaseAndRoundTrips() throws {
+    @Test
+    func projectCodableUsesSnakeCaseAndRoundTrips() throws {
         let project = try Project(name: "A", path: "/p", createdAt: Date(timeIntervalSince1970: 0))
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -56,13 +64,15 @@ import Testing
         #expect(try decoder.decode(Project.self, from: data) == project)
     }
 
-    @Test func projectRefParseDetectsUUIDAndFallsBackToName() {
+    @Test
+    func projectRefParseDetectsUUIDAndFallsBackToName() {
         let id = UUID()
         #expect(ProjectRef.parse(id.uuidString) == .id(id))
         #expect(ProjectRef.parse("demo") == .name("demo"))
     }
 
-    @Test func projectRefMatchesByIdAndCaseInsensitiveName() throws {
+    @Test
+    func projectRefMatchesByIdAndCaseInsensitiveName() throws {
         let project = try Project(name: "Demo", path: "/p")
         #expect(ProjectRef.id(project.id).matches(project))
         #expect(ProjectRef.name("DEMO").matches(project))

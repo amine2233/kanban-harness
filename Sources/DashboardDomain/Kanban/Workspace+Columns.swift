@@ -14,6 +14,7 @@ extension Workspace {
         if let name {
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { throw DomainError.emptyColumnName }
+
             column.name = trimmed
         }
         if let wipLimit { column.wipLimit = wipLimit.map { max($0, 0) } }
@@ -28,8 +29,10 @@ extension Workspace {
         let index = try columnIndex(id)
         let column = columns[index]
         guard columns(of: column.boardId).count > 1 else {
-            throw DomainError.lastColumn(board: (try? board(column.boardId))?.name ?? column.boardId.uuidString)
+            throw DomainError
+                .lastColumn(board: (try? board(column.boardId))?.name ?? column.boardId.uuidString)
         }
+
         let doomed = cards.filter { $0.columnId == id }.map(\.id)
         columns.remove(at: index)
         cards.removeAll { $0.columnId == id }
@@ -40,7 +43,11 @@ extension Workspace {
     }
 
     @discardableResult
-    public mutating func moveColumn(_ id: UUID, toPosition position: Int, now: Date = .timestamp()) throws -> Column {
+    public mutating func moveColumn(
+        _ id: UUID,
+        toPosition position: Int,
+        now: Date = .timestamp()
+    ) throws -> Column {
         let boardId = try column(id).boardId
         var ordered = columns(of: boardId)
         let from = ordered.firstIndex { $0.id == id }!
@@ -56,13 +63,16 @@ extension Workspace {
     }
 
     private func columnIndex(_ id: UUID) throws -> Int {
-        guard let index = columns.firstIndex(where: { $0.id == id }) else { throw DomainError.columnNotFound(id) }
+        guard let index = columns.firstIndex(where: { $0.id == id })
+        else { throw DomainError.columnNotFound(id) }
+
         return index
     }
 
     private mutating func compactColumnPositions(in boardId: UUID) {
         for (position, column) in columns(of: boardId).enumerated() {
-            if let index = columns.firstIndex(where: { $0.id == column.id }), columns[index].position != position {
+            if let index = columns.firstIndex(where: { $0.id == column.id }),
+               columns[index].position != position {
                 columns[index].position = position
             }
         }

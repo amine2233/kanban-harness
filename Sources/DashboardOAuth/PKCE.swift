@@ -5,7 +5,9 @@ import Foundation
 public enum PKCE {
     public static func verifier() -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
-        for index in bytes.indices { bytes[index] = UInt8.random(in: .min ... .max) }
+        for index in bytes.indices {
+            bytes[index] = UInt8.random(in: .min ... .max)
+        }
         return Data(bytes).base64URLEncoded
     }
 
@@ -14,7 +16,9 @@ public enum PKCE {
     }
 
     /// Random `state` for the authorization request; unguessable, URL-safe.
-    public static func state() -> String { verifier() }
+    public static func state() -> String {
+        verifier()
+    }
 }
 
 extension Data {

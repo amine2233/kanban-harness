@@ -24,7 +24,12 @@ public actor SignInSessions {
         expire()
         let state = PKCE.state()
         let verifier = PKCE.verifier()
-        pending[state] = Pending(providerId: providerId, codeVerifier: verifier, callback: callback, startedAt: now())
+        pending[state] = Pending(
+            providerId: providerId,
+            codeVerifier: verifier,
+            callback: callback,
+            startedAt: now()
+        )
         return (state, verifier)
     }
 

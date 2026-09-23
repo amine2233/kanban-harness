@@ -10,7 +10,13 @@ public struct OAuthCodeFlow: ProviderSignIn {
     public let scopes: [String]
     private let transport: any HTTPTransport
 
-    public init(authorizeURL: URL, tokenURL: URL, client: OAuthClientSettings, scopes: [String], transport: any HTTPTransport = URLSessionTransport()) {
+    public init(
+        authorizeURL: URL,
+        tokenURL: URL,
+        client: OAuthClientSettings,
+        scopes: [String],
+        transport: any HTTPTransport = URLSessionTransport()
+    ) {
         self.authorizeURL = authorizeURL
         self.tokenURL = tokenURL
         self.client = client
@@ -27,7 +33,7 @@ public struct OAuthCodeFlow: ProviderSignIn {
             URLQueryItem(name: "scope", value: scopes.joined(separator: " ")),
             URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "code_challenge", value: codeChallenge),
-            URLQueryItem(name: "code_challenge_method", value: "S256"),
+            URLQueryItem(name: "code_challenge_method", value: "S256")
         ]
         return components.url!
     }
@@ -38,7 +44,7 @@ public struct OAuthCodeFlow: ProviderSignIn {
             "code": code,
             "code_verifier": codeVerifier,
             "redirect_uri": callback.absoluteString,
-            "client_id": client.clientId,
+            "client_id": client.clientId
         ]
         if let secret = client.clientSecret { fields["client_secret"] = secret }
         let (status, body) = try await transport.postForm(tokenURL, fields)
@@ -47,7 +53,12 @@ public struct OAuthCodeFlow: ProviderSignIn {
 
     public func refresh(_ credential: Credential) async throws -> Credential? {
         guard let refreshToken = credential.refreshToken else { throw OAuthError.notRefreshable }
-        var fields = ["grant_type": "refresh_token", "refresh_token": refreshToken, "client_id": client.clientId]
+
+        var fields = [
+            "grant_type": "refresh_token",
+            "refresh_token": refreshToken,
+            "client_id": client.clientId
+        ]
         if let secret = client.clientSecret { fields["client_secret"] = secret }
         let (status, body) = try await transport.postForm(tokenURL, fields)
         var renewed = try TokenResponse.credential(from: body, status: status)

@@ -4,7 +4,8 @@ import Foundation
 import Testing
 @testable import DashboardPersistenceFluent
 
-@Suite(.serialized) struct FluentProjectStoreTests {
+@Suite(.serialized)
+struct FluentProjectStoreTests {
     func registry() async throws -> SQLiteDatabase {
         let path = NSTemporaryDirectory() + "mvp-dashboard-fluent-" + UUID().uuidString + "/nested/projects.sqlite"
         let registry = try SQLiteDatabase.registry(path: path)
@@ -12,20 +13,23 @@ import Testing
         return registry
     }
 
-    @Test func satisfiesStoreContract() async throws {
+    @Test
+    func satisfiesStoreContract() async throws {
         let registry = try await registry()
         try await StoreContract.verify(FluentProjectStore(database: registry.database))
         try await registry.shutdown()
     }
 
-    @Test func migrateCreatesParentDirectoriesAndIsIdempotent() async throws {
+    @Test
+    func migrateCreatesParentDirectoriesAndIsIdempotent() async throws {
         let registry = try await registry()
         try await registry.migrate()
         #expect(FileManager.default.fileExists(atPath: registry.path))
         try await registry.shutdown()
     }
 
-    @Test func dataSurvivesReopeningTheFile() async throws {
+    @Test
+    func dataSurvivesReopeningTheFile() async throws {
         let first = try await registry()
         let project = StoreContract.sampleProject("Persist", "p")
         try await FluentProjectStore(database: first.database).save([project])
@@ -37,7 +41,8 @@ import Testing
         try await second.shutdown()
     }
 
-    @Test func loadRejectsUnknownStorageValue() async throws {
+    @Test
+    func loadRejectsUnknownStorageValue() async throws {
         let registry = try await registry()
         let model = ProjectModel(StoreContract.sampleProject("Bad", "b"))
         model.storage = "yaml"

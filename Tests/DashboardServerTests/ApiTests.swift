@@ -12,22 +12,32 @@ func tempDir() throws -> String {
 }
 
 /// `claude` points `claude_code` providers at a stub executable; the real CLI is never run by tests.
-func withServer(claude: String? = nil, _ body: (TestingApplicationTester, String) async throws -> Void) async throws {
+func withServer(
+    claude: String? = nil,
+    _ body: (TestingApplicationTester, String) async throws -> Void
+) async throws {
     let home = try tempDir()
     try await withApp(configure: { app in
-        try await configure(app, config: ServerConfig(home: home, claudeExecutable: claude ?? "/nonexistent/claude"))
+        try await configure(
+            app,
+            config: ServerConfig(home: home, claudeExecutable: claude ?? "/nonexistent/claude")
+        )
     }) { app in
-        try await body(try app.testing(), home)
+        try await body(app.testing(), home)
     }
 }
 
 extension TestingApplicationTester {
-    func json(_ method: HTTPMethod, _ path: String, body: [String: Any]? = nil) async throws -> (HTTPStatus, Any?) {
+    func json(
+        _ method: HTTPMethod,
+        _ path: String,
+        body: [String: Any]? = nil
+    ) async throws -> (HTTPStatus, Any?) {
         var headers = HTTPHeaders()
         var buffer: ByteBuffer? = nil
         if let body {
             headers.contentType = .json
-            buffer = ByteBuffer(data: try JSONSerialization.data(withJSONObject: body))
+            buffer = try ByteBuffer(data: JSONSerialization.data(withJSONObject: body))
         }
         let response = try await sendRequest(method, path, headers: headers, body: buffer)
         let data = Data(buffer: response.body)
@@ -43,14 +53,17 @@ extension TestingApplicationTester {
 
     func firstBoardAndColumns(_ base: String) async throws -> (String, [[String: Any]]) {
         let (_, boards) = try await json(.GET, "\(base)/boards")
-        let boardId = try #require(((boards as? [String: Any])?["items"] as? [[String: Any]])?.first?["id"] as? String)
+        let boardId = try #require(((boards as? [String: Any])?["items"] as? [[String: Any]])?
+            .first?["id"] as? String)
         let (_, columns) = try await json(.GET, "\(base)/boards/\(boardId)/columns")
-        return (boardId, try #require((columns as? [String: Any])?["items"] as? [[String: Any]]))
+        return try (boardId, #require((columns as? [String: Any])?["items"] as? [[String: Any]]))
     }
 }
 
-@Suite(.serialized) struct ApiTests {
-    @Test func healthReturnsOk() async throws {
+@Suite(.serialized)
+struct ApiTests {
+    @Test
+    func healthReturnsOk() async throws {
         try await withServer { app, _ in
             let (status, body) = try await app.json(.GET, "/api/health")
             #expect(status == .ok)
@@ -58,7 +71,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func listProjectsStartsEmpty() async throws {
+    @Test
+    func listProjectsStartsEmpty() async throws {
         try await withServer { app, _ in
             let (status, body) = try await app.json(.GET, "/api/projects")
             #expect(status == .ok)
@@ -66,7 +80,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func createProjectReturns201AndListsIt() async throws {
+    @Test
+    func createProjectReturns201AndListsIt() async throws {
         try await withServer { app, home in
             let created = try await app.createProject("Demo", at: home + "/demo")
             #expect(created["name"] as? String == "Demo")
@@ -79,7 +94,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func createProjectWithInvalidBodyReturns400Envelope() async throws {
+    @Test
+    func createProjectWithInvalidBodyReturns400Envelope() async throws {
         try await withServer { app, _ in
             let (status, body) = try await app.json(.POST, "/api/projects", body: ["name": "x"])
             #expect(status == .badRequest)
@@ -87,23 +103,34 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func createProjectWithRelativePathReturns400() async throws {
+    @Test
+    func createProjectWithRelativePathReturns400() async throws {
         try await withServer { app, _ in
-            let (status, _) = try await app.json(.POST, "/api/projects", body: ["name": "x", "path": "relative"])
+            let (status, _) = try await app.json(
+                .POST,
+                "/api/projects",
+                body: ["name": "x", "path": "relative"]
+            )
             #expect(status == .badRequest)
         }
     }
 
-    @Test func createDuplicateProjectReturns409() async throws {
+    @Test
+    func createDuplicateProjectReturns409() async throws {
         try await withServer { app, home in
             _ = try await app.createProject("Demo", at: home + "/a")
-            let (status, body) = try await app.json(.POST, "/api/projects", body: ["name": "demo", "path": home + "/b"])
+            let (status, body) = try await app.json(
+                .POST,
+                "/api/projects",
+                body: ["name": "demo", "path": home + "/b"]
+            )
             #expect(status == .conflict)
             #expect((body as? [String: Any])?["code"] as? String == "ALREADY_EXISTS")
         }
     }
 
-    @Test func getUnknownProjectReturns404() async throws {
+    @Test
+    func getUnknownProjectReturns404() async throws {
         try await withServer { app, _ in
             let (status, body) = try await app.json(.GET, "/api/projects/\(UUID().uuidString)")
             #expect(status == .notFound)
@@ -111,7 +138,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func everyResponseCarriesARequestIdFromTheRequestContainer() async throws {
+    @Test
+    func everyResponseCarriesARequestIdFromTheRequestContainer() async throws {
         try await withServer { app, _ in
             let ok = try await app.sendRequest(.GET, "/api/health")
             let failed = try await app.sendRequest(.GET, "/api/projects/\(UUID().uuidString)")
@@ -122,7 +150,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func deleteProjectReturns204Then404AndKeepsFiles() async throws {
+    @Test
+    func deleteProjectReturns204Then404AndKeepsFiles() async throws {
         try await withServer { app, home in
             let id = try #require(try await app.createProject("Demo", at: home + "/demo")["id"] as? String)
             #expect(try await app.json(.DELETE, "/api/projects/\(id)").0 == .noContent)
@@ -131,7 +160,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func patchProjectSwitchesStorageAndKeepsBoardData() async throws {
+    @Test
+    func patchProjectSwitchesStorageAndKeepsBoardData() async throws {
         try await withServer { app, home in
             let id = try #require(try await app.createProject("Demo", at: home + "/demo")["id"] as? String)
             let base = "/api/projects/\(id)/kanban/v1"
@@ -139,7 +169,11 @@ extension TestingApplicationTester {
             let todo = try #require(columns[0]["id"] as? String)
             _ = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "Keep me"])
 
-            let (status, body) = try await app.json(.PATCH, "/api/projects/\(id)", body: ["storage": "sqlite"])
+            let (status, body) = try await app.json(
+                .PATCH,
+                "/api/projects/\(id)",
+                body: ["storage": "sqlite"]
+            )
             #expect(status == .ok)
             #expect((body as? [String: Any])?["storage"] as? String == "sqlite")
             #expect(FileManager.default.fileExists(atPath: home + "/demo/kanban.sqlite"))
@@ -154,9 +188,14 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func createProjectWithSQLiteStorage() async throws {
+    @Test
+    func createProjectWithSQLiteStorage() async throws {
         try await withServer { app, home in
-            let (status, body) = try await app.json(.POST, "/api/projects", body: ["name": "S", "path": home + "/s", "storage": "sqlite"])
+            let (status, body) = try await app.json(
+                .POST,
+                "/api/projects",
+                body: ["name": "S", "path": home + "/s", "storage": "sqlite"]
+            )
             #expect(status == .created)
             #expect((body as? [String: Any])?["storage"] as? String == "sqlite")
             let id = try #require((body as? [String: Any])?["id"] as? String)
@@ -165,7 +204,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func registryPersistsAcrossRestarts() async throws {
+    @Test
+    func registryPersistsAcrossRestarts() async throws {
         let home = try tempDir()
         try await withApp(configure: { try await configure($0, config: ServerConfig(home: home)) }) { app in
             _ = try await app.testing().createProject("Persist", at: home + "/p")
@@ -176,7 +216,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func kanbanListsSeededBoardAndColumns() async throws {
+    @Test
+    func kanbanListsSeededBoardAndColumns() async throws {
         try await withServer { app, home in
             let id = try #require(try await app.createProject("Demo", at: home + "/demo")["id"] as? String)
             let base = "/api/projects/\(id)/kanban/v1"
@@ -191,13 +232,18 @@ extension TestingApplicationTester {
             let (_, columns) = try await app.firstBoardAndColumns(base)
             #expect(columns.map { $0["name"] as? String } == ["Backlog", "To do", "In progress", "Done"])
             #expect(columns[0]["default_status"] is NSNull)
-            #expect(columns.dropFirst().map { $0["default_status"] as? String } == ["todo", "in_progress", "done"])
+            #expect(columns.dropFirst().map { $0["default_status"] as? String } == [
+                "todo",
+                "in_progress",
+                "done"
+            ])
             #expect(columns[0]["wip_limit"] is NSNull, "nullable fields are explicit nulls, like kanban-api")
             #expect(board["description"] is NSNull)
         }
     }
 
-    @Test func kanbanCardLifecycleCreateMoveUpdateDelete() async throws {
+    @Test
+    func kanbanCardLifecycleCreateMoveUpdateDelete() async throws {
         try await withServer { app, home in
             let id = try #require(try await app.createProject("Demo", at: home + "/demo")["id"] as? String)
             let base = "/api/projects/\(id)/kanban/v1"
@@ -207,7 +253,14 @@ extension TestingApplicationTester {
 
             let (created, card) = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: [
                 "title": "Ship it", "priority": "high",
-                "ai_cost": ["provider": "cc", "model": "sonnet", "input_tokens": 2, "output_tokens": 400, "cost_usd": 0.03, "estimated": false],
+                "ai_cost": [
+                    "provider": "cc",
+                    "model": "sonnet",
+                    "input_tokens": 2,
+                    "output_tokens": 400,
+                    "cost_usd": 0.03,
+                    "estimated": false
+                ]
             ])
             #expect(created == .created)
             let cardBody = try #require(card as? [String: Any])
@@ -218,12 +271,20 @@ extension TestingApplicationTester {
             #expect(cardBody["card_number"] as? Int == 1)
             let cardId = try #require(cardBody["id"] as? String)
 
-            let (moved, movedBody) = try await app.json(.PATCH, "\(base)/boards/\(boardId)/cards/\(cardId)", body: ["column_id": done])
+            let (moved, movedBody) = try await app.json(
+                .PATCH,
+                "\(base)/boards/\(boardId)/cards/\(cardId)",
+                body: ["column_id": done]
+            )
             #expect(moved == .ok)
             #expect((movedBody as? [String: Any])?["status"] as? String == "done")
             #expect((movedBody as? [String: Any])?["completed_at"] is String)
 
-            let (updated, updatedBody) = try await app.json(.PATCH, "\(base)/boards/\(boardId)/cards/\(cardId)", body: ["title": "Shipped", "description": NSNull()])
+            let (updated, updatedBody) = try await app.json(
+                .PATCH,
+                "\(base)/boards/\(boardId)/cards/\(cardId)",
+                body: ["title": "Shipped", "description": NSNull()]
+            )
             #expect(updated == .ok)
             #expect((updatedBody as? [String: Any])?["title"] as? String == "Shipped")
 
@@ -236,17 +297,21 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func cardsCanBeCreatedWithSubtasksAndReparented() async throws {
+    @Test
+    func cardsCanBeCreatedWithSubtasksAndReparented() async throws {
         try await withServer { app, home in
             let project = try await app.createProject("Demo", at: home + "/demo")
-            let base = "/api/projects/\(try #require(project["id"] as? String))/kanban/v1"
+            let base = try "/api/projects/\(#require(project["id"] as? String))/kanban/v1"
             let (boardId, columns) = try await app.firstBoardAndColumns(base)
             let todo = try #require(columns[0]["id"] as? String)
             let done = try #require(columns[3]["id"] as? String)
 
             let (status, parentBody) = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: [
                 "title": "Epic", "priority": "high",
-                "subtasks": [["title": "One", "points": 3], ["title": "Two", "priority": "low", "description": "d"]],
+                "subtasks": [
+                    ["title": "One", "points": 3],
+                    ["title": "Two", "priority": "low", "description": "d"]
+                ]
             ])
             #expect(status == .created)
             let parent = try #require(parentBody as? [String: Any])
@@ -254,66 +319,114 @@ extension TestingApplicationTester {
             #expect(parent["parent_id"] is NSNull)
             let parentId = try #require(parent["id"] as? String)
 
-            let (_, childrenBody) = try await app.json(.GET, "\(base)/boards/\(boardId)/cards/\(parentId)/children")
+            let (_, childrenBody) = try await app.json(
+                .GET,
+                "\(base)/boards/\(boardId)/cards/\(parentId)/children"
+            )
             let children = try #require((childrenBody as? [String: Any])?["items"] as? [[String: Any]])
             #expect(children.map { $0["title"] as? String } == ["One", "Two"])
             #expect(children[0]["points"] as? Int == 3 && children[0]["priority"] as? String == "high")
             #expect(children[1]["priority"] as? String == "low")
-            #expect(children.allSatisfy { $0["parent_id"] as? String == parentId && $0["column_id"] as? String == todo })
+            #expect(children
+                .allSatisfy { $0["parent_id"] as? String == parentId && $0["column_id"] as? String == todo })
 
             let oneId = try #require(children[0]["id"] as? String)
-            _ = try await app.json(.PATCH, "\(base)/boards/\(boardId)/cards/\(oneId)", body: ["column_id": done])
+            _ = try await app.json(
+                .PATCH,
+                "\(base)/boards/\(boardId)/cards/\(oneId)",
+                body: ["column_id": done]
+            )
             let (_, listed) = try await app.json(.GET, "\(base)/boards/\(boardId)/cards")
-            let epic = try #require(((listed as? [String: Any])?["items"] as? [[String: Any]])?.first { $0["id"] as? String == parentId })
+            let epic = try #require(((listed as? [String: Any])?["items"] as? [[String: Any]])?
+                .first { $0["id"] as? String == parentId })
             #expect((epic["children"] as? [String: Any])?["done"] as? Int == 1)
 
-            let (detached, detachedBody) = try await app.json(.PUT, "\(base)/boards/\(boardId)/cards/\(oneId)/parent", body: ["parent_id": NSNull()])
+            let (detached, detachedBody) = try await app.json(
+                .PUT,
+                "\(base)/boards/\(boardId)/cards/\(oneId)/parent",
+                body: ["parent_id": NSNull()]
+            )
             #expect(detached == .ok)
             #expect((detachedBody as? [String: Any])?["parent_id"] is NSNull)
-            let (reattached, reattachedBody) = try await app.json(.PUT, "\(base)/boards/\(boardId)/cards/\(oneId)/parent", body: ["parent_id": parentId])
+            let (reattached, reattachedBody) = try await app.json(
+                .PUT,
+                "\(base)/boards/\(boardId)/cards/\(oneId)/parent",
+                body: ["parent_id": parentId]
+            )
             #expect(reattached == .ok)
             #expect((reattachedBody as? [String: Any])?["parent_id"] as? String == parentId)
-            let (cycle, cycleBody) = try await app.json(.PUT, "\(base)/boards/\(boardId)/cards/\(parentId)/parent", body: ["parent_id": oneId])
+            let (cycle, cycleBody) = try await app.json(
+                .PUT,
+                "\(base)/boards/\(boardId)/cards/\(parentId)/parent",
+                body: ["parent_id": oneId]
+            )
             #expect(cycle == .badRequest)
             #expect((cycleBody as? [String: Any])?["code"] as? String == "VALIDATION_FAILED")
 
-            let (partial, _) = try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "Bad", "subtasks": [["title": "ok"], ["title": " "]]])
+            let (partial, _) = try await app.json(
+                .POST,
+                "\(base)/columns/\(todo)/cards",
+                body: ["title": "Bad", "subtasks": [["title": "ok"], ["title": " "]]]
+            )
             #expect(partial == .badRequest)
             let (_, after) = try await app.json(.GET, "\(base)/boards/\(boardId)/cards")
-            #expect((after as? [String: Any])?["total"] as? Int == 3, "an invalid sub-task creates nothing at all")
+            #expect(
+                (after as? [String: Any])?["total"] as? Int == 3,
+                "an invalid sub-task creates nothing at all"
+            )
 
             let raw = try String(contentsOfFile: home + "/demo/kanban.json", encoding: .utf8)
-            #expect(raw.contains("\"spawns\"") && raw.contains("\"archived_at\""), "links are kanban-rs graph edges")
+            #expect(
+                raw.contains("\"spawns\"") && raw.contains("\"archived_at\""),
+                "links are kanban-rs graph edges"
+            )
         }
     }
 
-    @Test func kanbanRejectsBadPriorityAndUnknownCards() async throws {
+    @Test
+    func kanbanRejectsBadPriorityAndUnknownCards() async throws {
         try await withServer { app, home in
             let id = try #require(try await app.createProject("Demo", at: home + "/demo")["id"] as? String)
             let base = "/api/projects/\(id)/kanban/v1"
             let (boardId, columns) = try await app.firstBoardAndColumns(base)
             let todo = try #require(columns[0]["id"] as? String)
-            #expect(try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "x", "priority": "urgent"]).0 == .badRequest)
-            #expect(try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "   "]).0 == .badRequest)
-            #expect(try await app.json(.POST, "\(base)/columns/\(UUID().uuidString)/cards", body: ["title": "x"]).0 == .notFound)
-            #expect(try await app.json(.DELETE, "\(base)/boards/\(boardId)/cards/\(UUID().uuidString)").0 == .notFound)
+            #expect(try await app.json(
+                .POST,
+                "\(base)/columns/\(todo)/cards",
+                body: ["title": "x", "priority": "urgent"]
+            ).0 == .badRequest)
+            #expect(try await app.json(.POST, "\(base)/columns/\(todo)/cards", body: ["title": "   "])
+                .0 == .badRequest)
+            #expect(try await app.json(
+                .POST,
+                "\(base)/columns/\(UUID().uuidString)/cards",
+                body: ["title": "x"]
+            ).0 == .notFound)
+            #expect(try await app.json(.DELETE, "\(base)/boards/\(boardId)/cards/\(UUID().uuidString)")
+                .0 == .notFound)
         }
     }
 
-    @Test func kanbanForUnknownProjectReturns404() async throws {
+    @Test
+    func kanbanForUnknownProjectReturns404() async throws {
         try await withServer { app, _ in
             let (status, _) = try await app.json(.GET, "/api/projects/\(UUID().uuidString)/kanban/v1/boards")
             #expect(status == .notFound)
         }
     }
 
-    @Test func settingsAreReadAndUpdatedLiveAndDriveDefaultStorage() async throws {
+    @Test
+    func settingsAreReadAndUpdatedLiveAndDriveDefaultStorage() async throws {
         try await withServer { app, home in
             let (status, initial) = try await app.json(.GET, "/api/settings")
             #expect(status == .ok)
             #expect((initial as? [String: Any])?["default_storage"] as? String == "json")
 
-            let (patched, body) = try await app.json(.PATCH, "/api/settings", body: ["default_storage": "sqlite", "cors_origins": ["http://localhost:5173/"]])
+            let (patched, body) = try await app.json(
+                .PATCH,
+                "/api/settings",
+                body: ["default_storage": "sqlite", "cors_origins": ["http://localhost:5173/"]]
+            )
             #expect(patched == .ok)
             #expect((body as? [String: Any])?["cors_origins"] as? [String] == ["http://localhost:5173"])
             let raw = try String(contentsOfFile: home + "/settings.json", encoding: .utf8)
@@ -322,9 +435,16 @@ extension TestingApplicationTester {
             let project = try await app.createProject("Uses default", at: home + "/d")
             #expect(project["storage"] as? String == "sqlite")
 
-            try "{\"default_storage\": \"json\"}".write(toFile: home + "/settings.json", atomically: true, encoding: .utf8)
+            try "{\"default_storage\": \"json\"}".write(
+                toFile: home + "/settings.json",
+                atomically: true,
+                encoding: .utf8
+            )
             let (_, reread) = try await app.json(.GET, "/api/settings")
-            #expect((reread as? [String: Any])?["default_storage"] as? String == "json", "hand edits apply without restart")
+            #expect(
+                (reread as? [String: Any])?["default_storage"] as? String == "json",
+                "hand edits apply without restart"
+            )
 
             let (bad, err) = try await app.json(.PATCH, "/api/settings", body: ["cors_origins": ["ftp://x"]])
             #expect(bad == .badRequest)
@@ -332,7 +452,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func corsOriginsFromSettingsApplyWithoutRestart() async throws {
+    @Test
+    func corsOriginsFromSettingsApplyWithoutRestart() async throws {
         try await withServer { app, _ in
             var origin = HTTPHeaders()
             origin.add(name: .origin, value: "http://localhost:5173")
@@ -344,7 +465,8 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func corsIsOffByDefaultAndOptInPerOrigin() async throws {
+    @Test
+    func corsIsOffByDefaultAndOptInPerOrigin() async throws {
         let home = try tempDir()
         var origin = HTTPHeaders()
         origin.add(name: .origin, value: "http://localhost:5173")
@@ -352,7 +474,10 @@ extension TestingApplicationTester {
             let response = try await app.testing().sendRequest(.GET, "/api/health", headers: origin)
             #expect(response.headers[.accessControlAllowOrigin].isEmpty)
         }
-        try await withApp(configure: { try await configure($0, config: ServerConfig(home: home, corsOrigins: ["http://localhost:5173"])) }) { app in
+        try await withApp(configure: { try await configure(
+            $0,
+            config: ServerConfig(home: home, corsOrigins: ["http://localhost:5173"])
+        ) }) { app in
             let response = try await app.testing().sendRequest(.GET, "/api/health", headers: origin)
             #expect(response.headers[.accessControlAllowOrigin] == ["http://localhost:5173"])
             var other = HTTPHeaders()
@@ -367,12 +492,16 @@ extension TestingApplicationTester {
         }
     }
 
-    @Test func staticDirServesSpaFallback() async throws {
+    @Test
+    func staticDirServesSpaFallback() async throws {
         let home = try tempDir()
         let dist = home + "/dist"
         try FileManager.default.createDirectory(atPath: dist, withIntermediateDirectories: true)
         try "<h1>app</h1>".write(toFile: dist + "/index.html", atomically: true, encoding: .utf8)
-        try await withApp(configure: { try await configure($0, config: ServerConfig(home: home, staticDir: dist)) }) { app in
+        try await withApp(configure: { try await configure(
+            $0,
+            config: ServerConfig(home: home, staticDir: dist)
+        ) }) { app in
             let index = try await app.testing().sendRequest(.GET, "/")
             #expect(index.status == .ok)
             let deep = try await app.testing().sendRequest(.GET, "/projects/abc")

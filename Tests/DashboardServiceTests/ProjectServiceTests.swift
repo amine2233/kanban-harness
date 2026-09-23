@@ -9,11 +9,11 @@ import Testing
 
 /// In-memory workspace stores keyed by project path, so a re-added folder keeps its data.
 actor MemoryWorkspaces {
-    private var stores: [String: InMemoryWorkspaceStore] = [:]
+    private var stores: [String: WorkspaceStoreInMemory] = [:]
 
-    func store(for project: Project) -> InMemoryWorkspaceStore {
+    func store(for project: Project) -> WorkspaceStoreInMemory {
         if let existing = stores[project.path] { return existing }
-        let store = InMemoryWorkspaceStore()
+        let store = WorkspaceStoreInMemory()
         stores[project.path] = store
         return store
     }
@@ -29,8 +29,13 @@ final class LazyWorkspaceStore: WorkspaceStore {
         self.workspaces = workspaces
     }
 
-    func load() async throws -> Workspace { try await workspaces.store(for: project).load() }
-    func save(_ workspace: Workspace) async throws { try await workspaces.store(for: project).save(workspace) }
+    func load() async throws -> Workspace {
+        try await workspaces.store(for: project).load()
+    }
+
+    func save(_ workspace: Workspace) async throws {
+        try await workspaces.store(for: project).save(workspace)
+    }
 }
 
 func tempDir() throws -> String {
@@ -42,7 +47,7 @@ func tempDir() throws -> String {
 func memoryService(changes: ChangeBroadcaster = ChangeBroadcaster()) -> ProjectService {
     let workspaces = MemoryWorkspaces()
     return ProjectService(
-        store: InMemoryProjectStore(),
+        store: ProjectStoreInMemory(),
         workspaces: WorkspaceStoreFactory { LazyWorkspaceStore(project: $0, workspaces: workspaces) },
         changes: changes
     )
@@ -68,46 +73,59 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
     )
 }
 
-@Suite struct ProjectServiceTests {
-    @Test func addRegistersProjectAndListsIt() async throws {
+@Suite
+struct ProjectServiceTests {
+    @Test
+    func addRegistersProjectAndListsIt() async throws {
         let svc = memoryService()
-        let project = try await svc.add(name: "Demo", path: try tempDir())
+        let project = try await svc.add(name: "Demo", path: tempDir())
         #expect(try await svc.list() == [project])
     }
 
-    @Test func addUsesInjectedClockAndIds() async throws {
+    @Test
+    func addUsesInjectedClockAndIds() async throws {
         let fixedDate = Date(timeIntervalSince1970: 42)
         let fixedId = UUID()
         let project = try await withTestDependencies {
             $0.now = { fixedDate }
             $0.uuid = { fixedId }
         } operation: {
-            try await memoryService().add(name: "Demo", path: try tempDir())
+            try await memoryService().add(name: "Demo", path: tempDir())
         }
         #expect(project.id == fixedId)
         #expect(project.createdAt == fixedDate)
     }
 
-    @Test func addCreatesMissingFolderAndSeedsKanbanJSON() async throws {
+    @Test
+    func addCreatesMissingFolderAndSeedsKanbanJSON() async throws {
         let home = try tempDir()
         let folder = home + "/new/project"
         let project = try await jsonService(home: home).add(name: "Demo", path: folder)
         var isDirectory: ObjCBool = false
-        #expect(FileManager.default.fileExists(atPath: folder, isDirectory: &isDirectory) && isDirectory.boolValue)
+        #expect(FileManager.default.fileExists(atPath: folder, isDirectory: &isDirectory) && isDirectory
+            .boolValue)
         #expect(FileManager.default.fileExists(atPath: project.dataFile))
-        let raw = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: project.dataFile))) as? [String: Any])
+        let raw = try #require(JSONSerialization
+            .jsonObject(with: Data(contentsOf: URL(fileURLWithPath: project.dataFile))) as? [String: Any])
         #expect(raw["version"] as? Int == kanbanFormatVersion)
     }
 
-    @Test func addSeedsOneBoardWithTemplateColumns() async throws {
+    @Test
+    func addSeedsOneBoardWithTemplateColumns() async throws {
         let svc = memoryService()
-        try await svc.add(name: "Demo", path: try tempDir())
+        try await svc.add(name: "Demo", path: tempDir())
         let workspace = try await svc.workspace(.name("demo"))
         #expect(workspace.boards.map(\.name) == ["Demo"])
-        #expect(workspace.columns(of: workspace.boards[0].id).map(\.name) == ["Backlog", "To do", "In progress", "Done"])
+        #expect(workspace.columns(of: workspace.boards[0].id).map(\.name) == [
+            "Backlog",
+            "To do",
+            "In progress",
+            "Done"
+        ])
     }
 
-    @Test func addExistingWorkspaceIsNotReseeded() async throws {
+    @Test
+    func addExistingWorkspaceIsNotReseeded() async throws {
         let svc = memoryService()
         let dir = try tempDir()
         let project = try await svc.add(name: "Demo", path: dir)
@@ -117,10 +135,11 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         #expect(workspace.boards.map(\.name) == ["Demo"])
     }
 
-    @Test func addDuplicateNameIsConflictAndPersistsNothing() async throws {
+    @Test
+    func addDuplicateNameIsConflictAndPersistsNothing() async throws {
         let home = try tempDir()
         let svc = jsonService(home: home)
-        try await svc.add(name: "Demo", path: try tempDir())
+        try await svc.add(name: "Demo", path: tempDir())
         let other = try tempDir()
         do {
             try await svc.add(name: "demo", path: other)
@@ -132,7 +151,8 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         #expect(try await svc.list().count == 1)
     }
 
-    @Test func addRelativePathIsValidationError() async {
+    @Test
+    func addRelativePathIsValidationError() async {
         do {
             try await memoryService().add(name: "Demo", path: "relative")
             Issue.record("expected error")
@@ -145,17 +165,19 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         }
     }
 
-    @Test func removeUnregistersButKeepsFiles() async throws {
+    @Test
+    func removeUnregistersButKeepsFiles() async throws {
         let home = try tempDir()
         let svc = jsonService(home: home)
-        let project = try await svc.add(name: "Demo", path: try tempDir())
+        let project = try await svc.add(name: "Demo", path: tempDir())
         let removed = try await svc.remove(.name("Demo"))
         #expect(removed.id == project.id)
         #expect(try await svc.list().isEmpty)
         #expect(FileManager.default.fileExists(atPath: project.dataFile))
     }
 
-    @Test func removeUnknownIsNotFound() async {
+    @Test
+    func removeUnknownIsNotFound() async {
         do {
             try await memoryService().remove(.name("ghost"))
             Issue.record("expected error")
@@ -164,17 +186,19 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         }
     }
 
-    @Test func getByIdAndNameReturnSameProject() async throws {
+    @Test
+    func getByIdAndNameReturnSameProject() async throws {
         let svc = memoryService()
-        let project = try await svc.add(name: "Demo", path: try tempDir())
+        let project = try await svc.add(name: "Demo", path: tempDir())
         #expect(try await svc.get(.id(project.id)) == project)
         #expect(try await svc.get(.parse("DEMO")) == project)
     }
 
-    @Test func mutatePersistsAndUsesInjectedClock() async throws {
+    @Test
+    func mutatePersistsAndUsesInjectedClock() async throws {
         let fixed = Date(timeIntervalSince1970: 500)
         let svc = memoryService()
-        try await svc.add(name: "Demo", path: try tempDir())
+        try await svc.add(name: "Demo", path: tempDir())
         let card = try await withTestDependencies {
             $0.now = { fixed }
         } operation: {
@@ -188,9 +212,10 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         #expect(reloaded.cards.map(\.title) == ["Persisted"])
     }
 
-    @Test func mutateFailureLeavesWorkspaceUntouched() async throws {
+    @Test
+    func mutateFailureLeavesWorkspaceUntouched() async throws {
         let svc = memoryService()
-        try await svc.add(name: "Demo", path: try tempDir())
+        try await svc.add(name: "Demo", path: tempDir())
         do {
             try await svc.mutate(.name("Demo")) { workspace, _ in
                 workspace.createBoard(name: "Ghost")
@@ -203,10 +228,11 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         #expect(try await svc.workspace(.name("Demo")).boards.count == 1)
     }
 
-    @Test func addWithSQLiteStorageSeedsASQLiteFile() async throws {
+    @Test
+    func addWithSQLiteStorageSeedsASQLiteFile() async throws {
         let pool = SQLiteDatabasePool()
-        let svc = fileService(home: try tempDir(), pool: pool)
-        let project = try await svc.add(name: "Demo", path: try tempDir(), storage: .sqlite)
+        let svc = try fileService(home: tempDir(), pool: pool)
+        let project = try await svc.add(name: "Demo", path: tempDir(), storage: .sqlite)
         #expect(project.dataFile.hasSuffix("kanban.sqlite"))
         let header = try Data(contentsOf: URL(fileURLWithPath: project.dataFile)).prefix(16)
         #expect(String(decoding: header, as: UTF8.self).hasPrefix("SQLite format 3"))
@@ -214,13 +240,19 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         await pool.shutdownAll()
     }
 
-    @Test func changeStorageConvertsWorkspaceBothWaysWithoutLoss() async throws {
+    @Test
+    func changeStorageConvertsWorkspaceBothWaysWithoutLoss() async throws {
         let pool = SQLiteDatabasePool()
-        let svc = fileService(home: try tempDir(), pool: pool)
-        let project = try await svc.add(name: "Demo", path: try tempDir())
+        let svc = try fileService(home: tempDir(), pool: pool)
+        let project = try await svc.add(name: "Demo", path: tempDir())
         let card = try await svc.mutate(.id(project.id)) { workspace, now in
             let column = workspace.columns(of: workspace.boards[0].id)[1]
-            return try workspace.createCard(columnId: column.id, title: "Survives", priority: .critical, now: now)
+            return try workspace.createCard(
+                columnId: column.id,
+                title: "Survives",
+                priority: .critical,
+                now: now
+            )
         }
         let before = try await svc.workspace(.id(project.id))
 
@@ -233,7 +265,11 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         #expect(try await svc.workspace(.id(project.id)) == before)
 
         try await svc.mutate(.id(project.id)) { workspace, now in
-            try workspace.moveCard(card.id, toColumn: workspace.columns(of: workspace.boards[0].id)[3].id, now: now)
+            try workspace.moveCard(
+                card.id,
+                toColumn: workspace.columns(of: workspace.boards[0].id)[3].id,
+                now: now
+            )
         }
         let json = try await svc.changeStorage(.id(project.id), to: .json)
         #expect(json.storage == .json)
@@ -244,13 +280,15 @@ func fileService(home: String, pool: SQLiteDatabasePool) -> ProjectService {
         await pool.shutdownAll()
     }
 
-    @Test func changeStorageToSameKindIsNoOp() async throws {
+    @Test
+    func changeStorageToSameKindIsNoOp() async throws {
         let svc = memoryService()
-        let project = try await svc.add(name: "Demo", path: try tempDir())
+        let project = try await svc.add(name: "Demo", path: tempDir())
         #expect(try await svc.changeStorage(.id(project.id), to: .json) == project)
     }
 
-    @Test func workspaceForUnknownProjectIsNotFound() async {
+    @Test
+    func workspaceForUnknownProjectIsNotFound() async {
         do {
             _ = try await memoryService().workspace(.name("nope"))
             Issue.record("expected error")

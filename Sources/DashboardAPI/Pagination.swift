@@ -7,7 +7,9 @@ public struct Page<T: Codable & Sendable>: Codable, Sendable {
     public let totalPages: Int
 
     enum CodingKeys: String, CodingKey {
-        case items, total, page
+        case items
+        case total
+        case page
         case pageSize = "page_size"
         case totalPages = "total_pages"
     }
@@ -41,7 +43,7 @@ public struct PageParams: Codable, Sendable, Equatable {
     public func paginate<T>(_ all: [T]) -> Page<T> {
         let size = min(max(pageSize ?? Self.defaultPageSize, 1), Self.maxPageSize)
         let totalPages = max(1, Int((Double(all.count) / Double(size)).rounded(.up)))
-        let page = min(max(self.page ?? 1, 1), totalPages)
+        let page = min(max(page ?? 1, 1), totalPages)
         let start = (page - 1) * size
         let slice = start < all.count ? Array(all[start ..< min(start + size, all.count)]) : []
         return Page(items: slice, total: all.count, page: page, pageSize: size, totalPages: totalPages)

@@ -13,6 +13,7 @@ public struct JSONSettingsStore: SettingsStore {
 
     public func load() async throws -> Settings {
         guard let data = try AtomicFile.read(path) else { return .default }
+
         do {
             return try JSONDecoder().decode(Settings.self, from: data).validated()
         } catch {
@@ -23,6 +24,6 @@ public struct JSONSettingsStore: SettingsStore {
     public func save(_ settings: Settings) async throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        try AtomicFile.write(try encoder.encode(settings), to: path)
+        try AtomicFile.write(encoder.encode(settings), to: path)
     }
 }

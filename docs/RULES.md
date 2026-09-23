@@ -29,8 +29,9 @@ Rationale: [`DESIGN.md`](DESIGN.md). Traps: [`MEMORY.md`](MEMORY.md).
 - **R-11 SHOULD** `let` over `var`, `struct` over `class`, `guard` for early exits; it is what
   makes `Sendable` free. _(observed)_
 - **R-12 SHOULD** One error type per module, mapped once at the edge (D-07).
-- **R-13 SHOULD** Name a protocol for what it is (`WorkspaceStore`), an implementation for how
-  (`KanbanJSONStore`, `RemoteBoardCommands`). No `Protocol`, `Impl` suffixes. _(observed)_
+- **R-13 MUST** Name a protocol for what it is (`AIConfigStore`); an implementation is the
+  protocol name plus a suffix saying how (`AIConfigStoreInMemory`, `SettingsStoreInMemory`) —
+  never a prefix (`InMemoryAIConfigStore`). No `Protocol`, `Impl` suffixes.
 - **R-14 SHOULD** Comment only what the code cannot say: an invariant, a workaround, a ceiling.
 - **R-15 SHOULD** Mark a deliberate shortcut with a `ponytail:` comment naming its ceiling and
   its upgrade path.

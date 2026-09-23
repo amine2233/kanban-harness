@@ -43,6 +43,7 @@ public struct KanbanJSONStore: WorkspaceStore {
 
     public func load() async throws -> Workspace {
         guard let data = try AtomicFile.read(path) else { return Workspace() }
+
         let envelope: Envelope
         do {
             envelope = try Self.decoder().decode(Envelope.self, from: data)
@@ -54,11 +55,12 @@ public struct KanbanJSONStore: WorkspaceStore {
                 path: path, found: envelope.version, supported: kanbanFormatVersion
             )
         }
+
         return try decodeWorkspace(envelope.data)
     }
 
     public func save(_ workspace: Workspace) async throws {
-        let envelope = Envelope(
+        let envelope = try Envelope(
             version: kanbanFormatVersion,
             metadata: Metadata(
                 instanceId: instanceId,
@@ -66,28 +68,29 @@ public struct KanbanJSONStore: WorkspaceStore {
                 writerVersion: Self.writerVersion,
                 writerCommit: "unknown"
             ),
-            data: try encodeWorkspace(workspace)
+            data: encodeWorkspace(workspace)
         )
         let encoder = Self.encoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let tree = try Self.decoder().decode(JSONValue.self, from: Self.encoder().encode(envelope))
-        try AtomicFile.write(try encoder.encode(tree.lowercasingUUIDs()), to: path)
+        try AtomicFile.write(encoder.encode(tree.lowercasingUUIDs()), to: path)
     }
 
     private func decodeWorkspace(_ data: [String: JSONValue]) throws -> Workspace {
         func section<T: Decodable>(_ key: String, as _: T.Type) throws -> [T] {
             guard let value = data[key] else { return [] }
+
             do {
                 return try Self.decoder().decode([T].self, from: Self.encoder().encode(value))
             } catch {
                 throw PersistenceError.corrupt(path: path, reason: "\(key): \(error)")
             }
         }
-        return Workspace(
-            boards: try section("boards", as: Board.self),
-            columns: try section("columns", as: Column.self),
-            cards: try section("cards", as: Card.self),
-            prefixes: try section("prefixes", as: Prefix.self),
+        return try Workspace(
+            boards: section("boards", as: Board.self),
+            columns: section("columns", as: Column.self),
+            cards: section("cards", as: Card.self),
+            prefixes: section("prefixes", as: Prefix.self),
             extra: data.filter { !Self.modelledKeys.contains($0.key) }
         )
     }
@@ -108,7 +111,7 @@ public struct KanbanJSONStore: WorkspaceStore {
             data["graph"] = .object([
                 "blocks": .object(["edges": .array([])]),
                 "relates": .object(["edges": .array([])]),
-                "spawns": .object(["edges": .array([])]),
+                "spawns": .object(["edges": .array([])])
             ])
         }
         return data

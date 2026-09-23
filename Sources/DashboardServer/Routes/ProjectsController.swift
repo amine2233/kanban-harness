@@ -20,11 +20,10 @@ struct ProjectsController: RouteCollection {
 
     func create(req: Request) async throws -> Response {
         let body = try req.content.decode(CreateProjectRequest.self)
-        let storage: StorageKind
-        if let requested = body.storage {
-            storage = requested
+        let storage: StorageKind = if let requested = body.storage {
+            requested
         } else {
-            storage = try await req.settings.current().defaultStorage
+            try await req.settings.current().defaultStorage
         }
         let project = try await req.projects.add(name: body.name, path: body.path, storage: storage)
         let response = Response(status: .created)

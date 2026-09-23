@@ -8,12 +8,14 @@ public protocol AIConfigStore: Sendable {
     func save(_ config: AIConfig) async throws
 }
 
-public actor InMemoryAIConfigStore: AIConfigStore {
+public actor AIConfigStoreInMemory: AIConfigStore {
     private var config = AIConfig.empty
 
     public init() {}
 
-    public func load() async throws -> AIConfig { config }
+    public func load() async throws -> AIConfig {
+        config
+    }
 
     public func save(_ config: AIConfig) async throws {
         self.config = config
@@ -21,13 +23,27 @@ public actor InMemoryAIConfigStore: AIConfigStore {
 }
 
 extension StoreContract {
+    /// used only for unit-test
     public static func verify(_ store: any AIConfigStore) async throws {
         let fresh = try await store.load()
         try require(fresh == .empty, "fresh store must be empty")
         let config = try AIConfig(
             providers: [
-                AIProviderConfig(id: "claude", kind: .anthropic, name: "Claude", model: "claude-sonnet-5", apiKey: "sk-secret", maxTokens: 4096),
-                AIProviderConfig(id: "local", kind: .ollama, name: "Ollama", model: "llama3.2", baseURL: "http://127.0.0.1:11434"),
+                AIProviderConfig(
+                    id: "claude",
+                    kind: .anthropic,
+                    name: "Claude",
+                    model: "claude-sonnet-5",
+                    apiKey: "sk-secret",
+                    maxTokens: 4_096
+                ),
+                AIProviderConfig(
+                    id: "local",
+                    kind: .ollama,
+                    name: "Ollama",
+                    model: "llama3.2",
+                    baseURL: "http://127.0.0.1:11434"
+                )
             ],
             defaultProviderId: "local"
         )

@@ -22,6 +22,7 @@ public struct Credential: Codable, Equatable, Sendable {
     /// True when the token is past, or within `leeway` seconds of, its expiry.
     public func isExpiring(at now: Date = .timestamp(), leeway: TimeInterval = 60) -> Bool {
         guard let expiresAt else { return false }
+
         return expiresAt.timeIntervalSince(now) <= leeway
     }
 }

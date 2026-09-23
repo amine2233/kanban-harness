@@ -7,12 +7,14 @@ public protocol WorkspaceStore: Sendable {
     func save(_ workspace: Workspace) async throws
 }
 
-public actor InMemoryWorkspaceStore: WorkspaceStore {
+public actor WorkspaceStoreInMemory: WorkspaceStore {
     private var workspace = Workspace()
 
     public init() {}
 
-    public func load() async throws -> Workspace { workspace }
+    public func load() async throws -> Workspace {
+        workspace
+    }
 
     public func save(_ workspace: Workspace) async throws {
         self.workspace = workspace

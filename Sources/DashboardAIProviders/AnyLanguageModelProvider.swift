@@ -18,7 +18,10 @@ struct GeneratedTicket {
     var priority: String
     @Guide(description: "Story points 0-255; omit when unsure")
     var points: Int?
-    @Guide(description: "Child cards only when the idea needs several independent pieces of work; otherwise empty", .maximumCount(8))
+    @Guide(
+        description: "Child cards only when the idea needs several independent pieces of work; otherwise empty",
+        .maximumCount(8)
+    )
     var subtasks: [GeneratedSubtask]
 }
 
@@ -54,22 +57,34 @@ public struct AnyLanguageModelProvider: AIProvider {
                     var last: GeneratedContent?
                     var typed = ""
                     var usage = CompletionUsage()
-                    for try await snapshot in session.streamResponse(to: Prompt(request.prompt), schema: GeneratedTicket.generationSchema, options: options) {
+                    for try await snapshot in session.streamResponse(
+                        to: Prompt(request.prompt),
+                        schema: GeneratedTicket.generationSchema,
+                        options: options
+                    ) {
                         try Task.checkCancellation()
                         last = snapshot.rawContent
                         let text = Self.text(snapshot.rawContent)
                         if text != typed {
-                            continuation.yield(.text(text.hasPrefix(typed) ? String(text.dropFirst(typed.count)) : "\n" + text))
+                            continuation
+                                .yield(.text(text
+                                        .hasPrefix(typed) ? String(text.dropFirst(typed.count)) : "\n" +
+                                        text))
                             typed = text
                         }
                         if let json = Self.json(snapshot.rawContent) { continuation.yield(.snapshot(json)) }
                         let reported = snapshot.usage
                         usage = CompletionUsage(
-                            inputTokens: reported.input.totalTokenCount > 0 ? reported.input.totalTokenCount : nil,
-                            outputTokens: reported.output.totalTokenCount > 0 ? reported.output.totalTokenCount : nil
+                            inputTokens: reported.input.totalTokenCount > 0 ? reported.input
+                                .totalTokenCount : nil,
+                            outputTokens: reported.output.totalTokenCount > 0 ? reported.output
+                                .totalTokenCount : nil
                         )
                     }
-                    guard let final = last, let json = Self.json(final) else { throw AIProviderError.badResponse("\(config.name) produced no content") }
+                    guard let final = last,
+                          let json = Self.json(final)
+                    else { throw AIProviderError.badResponse("\(config.name) produced no content") }
+
                     continuation.yield(.usage(usage))
                     continuation.yield(.done(json: json, model: config.model))
                     continuation.finish()

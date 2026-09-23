@@ -29,6 +29,7 @@ public struct DashboardClient: Sendable {
         guard let (data, response) = try? await session.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200
         else { return nil }
+
         return try? Self.decoder.decode(HealthResponse.self, from: data)
     }
 
@@ -47,7 +48,12 @@ public struct DashboardClient: Sendable {
 
     // MARK: Transport
 
-    func send<Body: Encodable, Out: Decodable>(_ method: String, _ path: String, body: Body?, as _: Out.Type) async throws(ServiceError) -> Out {
+    func send<Body: Encodable, Out: Decodable>(
+        _ method: String,
+        _ path: String,
+        body: Body?,
+        as _: Out.Type
+    ) async throws(ServiceError) -> Out {
         let data = try await raw(method, path, body: body)
         do {
             return try Self.decoder.decode(Out.self, from: data)
@@ -60,10 +66,15 @@ public struct DashboardClient: Sendable {
         _ = try await raw(method, path, body: body)
     }
 
-    private func raw<Body: Encodable>(_ method: String, _ path: String, body: Body?) async throws(ServiceError) -> Data {
+    private func raw<Body: Encodable>(
+        _ method: String,
+        _ path: String,
+        body: Body?
+    ) async throws(ServiceError) -> Data {
         guard let url = URL(string: path, relativeTo: baseURL.appending(path: "")) else {
             throw .remote(code: "BAD_REQUEST", message: "invalid path \(path)")
         }
+
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.timeoutInterval = timeout
@@ -89,18 +100,27 @@ public struct DashboardClient: Sendable {
             }
             throw .remote(code: "HTTP_\(status)", message: String(decoding: data, as: UTF8.self))
         }
+
         return data
     }
 
     /// Sends `body` with `Accept: text/event-stream` and yields the response
     /// line by line (no timeout: a draft takes as long as the model takes).
     /// A non-2xx status is surfaced as the API's error envelope.
-    func eventStream<Body: Encodable>(_ method: String, _ path: String, body: Body) -> AsyncThrowingStream<String, any Error> {
+    func eventStream<Body: Encodable>(
+        _ method: String,
+        _ path: String,
+        body: Body
+    ) -> AsyncThrowingStream<String, any Error> {
         AsyncThrowingStream { continuation in
             guard let url = URL(string: path, relativeTo: baseURL.appending(path: "")) else {
-                continuation.finish(throwing: ServiceError.remote(code: "BAD_REQUEST", message: "invalid path \(path)"))
+                continuation.finish(throwing: ServiceError.remote(
+                    code: "BAD_REQUEST",
+                    message: "invalid path \(path)"
+                ))
                 return
             }
+
             var request = URLRequest(url: url)
             request.httpMethod = method
             request.timeoutInterval = 600
@@ -109,11 +129,15 @@ public struct DashboardClient: Sendable {
             do {
                 request.httpBody = try Self.encoder.encode(body)
             } catch {
-                continuation.finish(throwing: ServiceError.remote(code: "BAD_REQUEST", message: String(describing: error)))
+                continuation.finish(throwing: ServiceError.remote(
+                    code: "BAD_REQUEST",
+                    message: String(describing: error)
+                ))
                 return
             }
             let delegate = LineDelegate(continuation: continuation, server: baseURL.absoluteString)
-            let task = URLSession(configuration: .ephemeral, delegate: delegate, delegateQueue: nil).dataTask(with: request)
+            let task = URLSession(configuration: .ephemeral, delegate: delegate, delegateQueue: nil)
+                .dataTask(with: request)
             task.resume()
             continuation.onTermination = { _ in task.cancel() }
         }
@@ -147,7 +171,12 @@ private final class LineDelegate: NSObject, URLSessionDataDelegate, @unchecked S
         self.server = server
     }
 
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+    func urlSession(
+        _ session: URLSession,
+        dataTask: URLSessionDataTask,
+        didReceive response: URLResponse,
+        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+    ) {
         status = (response as? HTTPURLResponse)?.statusCode ?? 0
         completionHandler(.allow)
     }
@@ -155,6 +184,7 @@ private final class LineDelegate: NSObject, URLSessionDataDelegate, @unchecked S
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         buffer.append(data)
         guard (200 ..< 300).contains(status) else { return }
+
         while let newline = buffer.firstIndex(of: UInt8(ascii: "\n")) {
             continuation.yield(String(decoding: buffer[buffer.startIndex ..< newline], as: UTF8.self))
             buffer.removeSubrange(buffer.startIndex ... newline)
@@ -164,14 +194,20 @@ private final class LineDelegate: NSObject, URLSessionDataDelegate, @unchecked S
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
         defer { session.finishTasksAndInvalidate() }
         if let error {
-            continuation.finish(throwing: ServiceError.unreachable(url: server, reason: error.localizedDescription))
+            continuation.finish(throwing: ServiceError.unreachable(
+                url: server,
+                reason: error.localizedDescription
+            ))
         } else if (200 ..< 300).contains(status) {
             continuation.yield("")
             continuation.finish()
         } else if let apiError = try? DashboardClient.decoder.decode(ApiError.self, from: buffer) {
             continuation.finish(throwing: ServiceError.remote(code: apiError.code, message: apiError.message))
         } else {
-            continuation.finish(throwing: ServiceError.remote(code: "HTTP_\(status)", message: String(decoding: buffer, as: UTF8.self)))
+            continuation.finish(throwing: ServiceError.remote(
+                code: "HTTP_\(status)",
+                message: String(decoding: buffer, as: UTF8.self)
+            ))
         }
     }
 }

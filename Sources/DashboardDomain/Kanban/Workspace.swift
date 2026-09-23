@@ -29,7 +29,7 @@ public struct Workspace: Equatable, Sendable {
     }
 
     public static let defaultTemplateColumns: [(name: String, status: CardStatus?)] = [
-        ("Backlog", nil), ("To do", .todo), ("In progress", .inProgress), ("Done", .done),
+        ("Backlog", nil), ("To do", .todo), ("In progress", .inProgress), ("Done", .done)
     ]
 
     public init(
@@ -43,13 +43,14 @@ public struct Workspace: Equatable, Sendable {
         self.columns = columns
         self.cards = cards
         self.prefixes = prefixes
-        (otherExtra, spawns) = Self.split(extra)
+        (self.otherExtra, self.spawns) = Self.split(extra)
     }
 
     private static func split(_ extra: [String: JSONValue]) -> ([String: JSONValue], [SpawnsEdge]) {
         var other = extra
         var graph = extra["graph"]?.objectValue ?? [:]
-        let edges = (graph.removeValue(forKey: "spawns")?.objectValue?["edges"]?.arrayValue ?? []).compactMap(SpawnsEdge.init(json:))
+        let edges = (graph.removeValue(forKey: "spawns")?.objectValue?["edges"]?.arrayValue ?? [])
+            .compactMap(SpawnsEdge.init(json:))
         if extra["graph"] != nil { other["graph"] = .object(graph) }
         return (other, edges)
     }
@@ -58,16 +59,19 @@ public struct Workspace: Equatable, Sendable {
 
     public func board(_ id: UUID) throws -> Board {
         guard let board = boards.first(where: { $0.id == id }) else { throw DomainError.boardNotFound(id) }
+
         return board
     }
 
     public func column(_ id: UUID) throws -> Column {
         guard let column = columns.first(where: { $0.id == id }) else { throw DomainError.columnNotFound(id) }
+
         return column
     }
 
     public func card(_ id: UUID) throws -> Card {
         guard let card = cards.first(where: { $0.id == id }) else { throw DomainError.cardNotFound(id) }
+
         return card
     }
 
@@ -89,7 +93,12 @@ public struct Workspace: Equatable, Sendable {
 
     @discardableResult
     public mutating func createBoard(name: String, id: UUID = UUID(), now: Date = .timestamp()) -> Board {
-        let board = Board(name: name.trimmingCharacters(in: .whitespacesAndNewlines), position: boards.count, id: id, now: now)
+        let board = Board(
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            position: boards.count,
+            id: id,
+            now: now
+        )
         boards.append(board)
         return board
     }
@@ -147,6 +156,7 @@ public struct Workspace: Equatable, Sendable {
     ) throws -> Card {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw DomainError.emptyTitle }
+
         let column = try column(columnId)
         let board = try board(column.boardId)
         try checkWipLimit(column, adding: 1)
@@ -170,11 +180,16 @@ public struct Workspace: Equatable, Sendable {
     }
 
     @discardableResult
-    public mutating func moveCard(_ id: UUID, toColumn destinationId: UUID, now: Date = .timestamp()) throws -> Card {
+    public mutating func moveCard(
+        _ id: UUID,
+        toColumn destinationId: UUID,
+        now: Date = .timestamp()
+    ) throws -> Card {
         let index = try cardIndex(id)
         let destination = try column(destinationId)
         var card = cards[index]
         guard destination.boardId == card.boardId else { throw DomainError.columnNotFound(destinationId) }
+
         if card.columnId == destination.id { return card }
         try checkWipLimit(destination, adding: 1)
         let origin = columns.first { $0.id == card.columnId }
@@ -206,6 +221,7 @@ public struct Workspace: Equatable, Sendable {
         if let title {
             let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { throw DomainError.emptyTitle }
+
             card.title = trimmed
         }
         if let description { card.description = description }
@@ -234,12 +250,15 @@ public struct Workspace: Equatable, Sendable {
         guard board.id != card.boardId else {
             return try columnId.map { try moveCard(id, toColumn: $0, now: now) } ?? card
         }
+
         let destination: Column
         if let columnId {
             destination = try column(columnId)
             guard destination.boardId == board.id else { throw DomainError.columnNotFound(columnId) }
         } else {
-            guard let first = columns(of: board.id).first else { throw DomainError.lastColumn(board: board.name) }
+            guard let first = columns(of: board.id).first
+            else { throw DomainError.lastColumn(board: board.name) }
+
             destination = first
         }
         try checkWipLimit(destination, adding: 1)
@@ -262,7 +281,11 @@ public struct Workspace: Equatable, Sendable {
     }
 
     /// `includingChildren` deletes the whole sub-task tree; otherwise children are detached and kept.
-    public mutating func deleteCard(_ id: UUID, includingChildren: Bool = false, now: Date = .timestamp()) throws {
+    public mutating func deleteCard(
+        _ id: UUID,
+        includingChildren: Bool = false,
+        now: Date = .timestamp()
+    ) throws {
         if includingChildren {
             for child in children(of: id) {
                 try deleteCard(child.id, includingChildren: true, now: now)
@@ -279,11 +302,13 @@ public struct Workspace: Equatable, Sendable {
 
     private func cardIndex(_ id: UUID) throws -> Int {
         guard let index = cards.firstIndex(where: { $0.id == id }) else { throw DomainError.cardNotFound(id) }
+
         return index
     }
 
     func checkWipLimit(_ column: Column, adding: Int) throws {
         guard let limit = column.wipLimit else { return }
+
         if cards(in: column.id).count + adding > limit {
             throw DomainError.wipLimitExceeded(column: column.name, limit: limit)
         }
@@ -313,9 +338,11 @@ public struct Workspace: Equatable, Sendable {
     mutating func removeGraphEdges(mentioning cardId: UUID, now: Date) {
         archiveSpawns(now: now) { $0.source == cardId || $0.target == cardId }
         guard var graph = otherExtra["graph"]?.objectValue else { return }
+
         let needle = cardId.uuidString
         for (kind, value) in graph {
             guard var bucket = value.objectValue, let edges = bucket["edges"]?.arrayValue else { continue }
+
             bucket["edges"] = .array(edges.filter { !$0.containsString(needle) })
             graph[kind] = .object(bucket)
         }

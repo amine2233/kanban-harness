@@ -10,7 +10,10 @@ extension AICommand.Providers {
     /// callback; otherwise a temporary loopback server is started for the
     /// duration of the sign-in.
     struct Login: AsyncParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "Sign a provider in through the browser (OpenRouter, Hugging Face).")
+        static let configuration =
+            CommandConfiguration(
+                abstract: "Sign a provider in through the browser (OpenRouter, Hugging Face)."
+            )
         @ArgumentParser.OptionGroup var global: GlobalOptions
 
         @ArgumentParser.Argument(help: "Provider id.")
@@ -19,7 +22,10 @@ extension AICommand.Providers {
         @ArgumentParser.Option(help: "Seconds to wait for the browser round trip.")
         var timeout: Int = 300
 
-        @ArgumentParser.Flag(name: .customLong("no-open"), help: "Print the URL instead of opening the browser.")
+        @ArgumentParser.Flag(
+            name: .customLong("no-open"),
+            help: "Print the URL instead of opening the browser."
+        )
         var noOpen = false
 
         func run() async throws {
@@ -34,13 +40,15 @@ extension AICommand.Providers {
             try open(url)
             let config = RemoteAIConfigCommands(client: client)
             try await waitUntil { try await config.current().provider(id)?.hasAPIKey == true }
-            try Output.json(AICommand.Providers.View(try await config.current()))
+            try await Output.json(AICommand.Providers.View(config.current()))
         }
-
 
         private func open(_ url: URL) throws {
             FileHandle.standardError.write(Data("Open this URL to sign in:\n\(url.absoluteString)\n".utf8))
-            guard !noOpen, let opener = ["/usr/bin/open", "/usr/bin/xdg-open"].first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else { return }
+            guard !noOpen,
+                  let opener = ["/usr/bin/open", "/usr/bin/xdg-open"]
+                  .first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else { return }
+
             let process = Process()
             process.executableURL = URL(fileURLWithPath: opener)
             process.arguments = [url.absoluteString]
@@ -66,7 +74,7 @@ extension AICommand.Providers {
 
         func run() async throws {
             try await failing {
-                try Output.json(AICommand.Providers.View(try await Runtime.run(global) { container in
+                try await Output.json(AICommand.Providers.View(Runtime.run(global) { container in
                     try await container.make(SignInCommandsKey.self).signOut(providerId: id)
                     return try await container.make(AIConfigCommandsKey.self).current()
                 }))

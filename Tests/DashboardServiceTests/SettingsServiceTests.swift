@@ -3,14 +3,17 @@ import DashboardPersistence
 import Testing
 @testable import DashboardService
 
-@Suite struct SettingsServiceTests {
-    @Test func currentStartsWithDefaults() async throws {
-        let svc = SettingsService(store: InMemorySettingsStore())
+@Suite
+struct SettingsServiceTests {
+    @Test
+    func currentStartsWithDefaults() async throws {
+        let svc = SettingsService(store: SettingsStoreInMemory())
         #expect(try await svc.current() == .default)
     }
 
-    @Test func updateMergesValidatesAndPersists() async throws {
-        let svc = SettingsService(store: InMemorySettingsStore())
+    @Test
+    func updateMergesValidatesAndPersists() async throws {
+        let svc = SettingsService(store: SettingsStoreInMemory())
         let updated = try await svc.update(corsOrigins: ["http://localhost:5173/"])
         #expect(updated == Settings(defaultStorage: .json, corsOrigins: ["http://localhost:5173"]))
         let again = try await svc.update(defaultStorage: .sqlite)
@@ -19,8 +22,9 @@ import Testing
         #expect(try await svc.current() == again)
     }
 
-    @Test func updateWithBadOriginIsValidationErrorAndChangesNothing() async throws {
-        let svc = SettingsService(store: InMemorySettingsStore())
+    @Test
+    func updateWithBadOriginIsValidationErrorAndChangesNothing() async throws {
+        let svc = SettingsService(store: SettingsStoreInMemory())
         do {
             _ = try await svc.update(corsOrigins: ["ftp://x"])
             Issue.record("expected error")

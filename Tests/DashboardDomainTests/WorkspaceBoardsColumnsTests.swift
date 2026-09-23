@@ -2,7 +2,8 @@ import Foundation
 import Testing
 @testable import DashboardDomain
 
-@Suite struct WorkspaceBoardsColumnsTests {
+@Suite
+struct WorkspaceBoardsColumnsTests {
     let now = Date(timeIntervalSince1970: 2_000)
 
     func seeded() throws -> (Workspace, Board, [Column]) {
@@ -16,9 +17,16 @@ import Testing
 
     // MARK: Boards
 
-    @Test func updateBoardRenamesTrimsAndClearsPrefix() throws {
+    @Test
+    func updateBoardRenamesTrimsAndClearsPrefix() throws {
         var (workspace, board, _) = try seeded()
-        let updated = try workspace.updateBoard(board.id, name: "  Renamed ", description: .some("d"), cardPrefix: .some("KAN"), now: now)
+        let updated = try workspace.updateBoard(
+            board.id,
+            name: "  Renamed ",
+            description: .some("d"),
+            cardPrefix: .some("KAN"),
+            now: now
+        )
         #expect(updated.name == "Renamed")
         #expect(updated.description == "d")
         #expect(updated.cardPrefix == "KAN")
@@ -29,15 +37,19 @@ import Testing
         }
     }
 
-    @Test func deleteBoardCascadesColumnsCardsSprintsAndEdges() throws {
+    @Test
+    func deleteBoardCascadesColumnsCardsSprintsAndEdges() throws {
         var (workspace, board, _) = try seeded()
         let other = workspace.createBoardWithTemplateColumns(name: "Other", now: now)
         let cardId = workspace.cards[0].id
         workspace.extra["sprints"] = .array([
             .object(["id": .string("s1"), "board_id": .string(board.id.uuidString.lowercased())]),
-            .object(["id": .string("s2"), "board_id": .string(other.id.uuidString.lowercased())]),
+            .object(["id": .string("s2"), "board_id": .string(other.id.uuidString.lowercased())])
         ])
-        workspace.extra["graph"] = .object(["blocks": .object(["edges": .array([.object(["from": .string(cardId.uuidString.lowercased())])])])])
+        workspace
+            .extra["graph"] =
+            .object(["blocks": .object(["edges": .array([.object(["from": .string(cardId.uuidString
+                    .lowercased())])])])])
 
         try workspace.deleteBoard(board.id)
 
@@ -52,7 +64,8 @@ import Testing
         }
     }
 
-    @Test func moveBoardReordersAndClamps() throws {
+    @Test
+    func moveBoardReordersAndClamps() throws {
         var workspace = Workspace()
         let a = workspace.createBoard(name: "A", now: now)
         let b = workspace.createBoard(name: "B", now: now)
@@ -65,7 +78,8 @@ import Testing
         _ = b
     }
 
-    @Test func cloneBoardDeepCopiesWithFreshIdsAndNumbers() throws {
+    @Test
+    func cloneBoardDeepCopiesWithFreshIdsAndNumbers() throws {
         var (workspace, board, columns) = try seeded()
         workspace.columns[2].wipLimit = 3
         let clone = try workspace.cloneBoard(board.id, now: now)
@@ -89,13 +103,24 @@ import Testing
 
     // MARK: Columns
 
-    @Test func updateColumnChangesNameWipAndDefaultStatus() throws {
+    @Test
+    func updateColumnChangesNameWipAndDefaultStatus() throws {
         var (workspace, _, columns) = try seeded()
-        let updated = try workspace.updateColumn(columns[0].id, name: " Backlog ", wipLimit: .some(2), defaultStatus: .some(.blocked), now: now)
+        let updated = try workspace.updateColumn(
+            columns[0].id,
+            name: " Backlog ",
+            wipLimit: .some(2),
+            defaultStatus: .some(.blocked),
+            now: now
+        )
         #expect(updated.name == "Backlog")
         #expect(updated.wipLimit == 2)
         #expect(updated.defaultStatus == .blocked)
-        let cleared = try workspace.updateColumn(columns[0].id, wipLimit: .some(nil), defaultStatus: .some(nil))
+        let cleared = try workspace.updateColumn(
+            columns[0].id,
+            wipLimit: .some(nil),
+            defaultStatus: .some(nil)
+        )
         #expect(cleared.wipLimit == nil)
         #expect(cleared.defaultStatus == nil)
         #expect(throws: DomainError.emptyColumnName) {
@@ -103,7 +128,8 @@ import Testing
         }
     }
 
-    @Test func deleteColumnRemovesItsCardsAndCompacts() throws {
+    @Test
+    func deleteColumnRemovesItsCardsAndCompacts() throws {
         var (workspace, board, columns) = try seeded()
         try workspace.deleteColumn(columns[0].id)
         #expect(workspace.columns(of: board.id).map(\.name) == ["To do", "In progress", "Done"])
@@ -111,7 +137,8 @@ import Testing
         #expect(workspace.cards.map(\.title) == ["b"])
     }
 
-    @Test func deleteLastColumnIsRefused() throws {
+    @Test
+    func deleteLastColumnIsRefused() throws {
         var workspace = Workspace()
         let board = workspace.createBoard(name: "Solo")
         let only = try workspace.createColumn(boardId: board.id, name: "Only")
@@ -120,7 +147,8 @@ import Testing
         }
     }
 
-    @Test func moveColumnReordersWithinBoardOnly() throws {
+    @Test
+    func moveColumnReordersWithinBoardOnly() throws {
         var (workspace, board, columns) = try seeded()
         let other = workspace.createBoardWithTemplateColumns(name: "Other")
         try workspace.moveColumn(columns[2].id, toPosition: 0)
@@ -130,7 +158,8 @@ import Testing
 
     // MARK: Cards across boards
 
-    @Test func moveCardToBoardRenumbersAndTakesFirstColumn() throws {
+    @Test
+    func moveCardToBoardRenumbersAndTakesFirstColumn() throws {
         var (workspace, board, _) = try seeded()
         let other = workspace.createBoardWithTemplateColumns(name: "Other", now: now)
         workspace.boards[1].cardPrefix = "OTH"
@@ -142,11 +171,17 @@ import Testing
         #expect(moved.cardNumber == 1)
         #expect(moved.status == .inProgress, "same status rules as an in-board move")
         #expect(workspace.cards(of: board.id).map(\.title) == ["a"])
-        let explicit = try workspace.moveCardToBoard(workspace.cards[0].id, boardId: other.id, columnId: workspace.columns(of: other.id)[3].id, now: now)
+        let explicit = try workspace.moveCardToBoard(
+            workspace.cards[0].id,
+            boardId: other.id,
+            columnId: workspace.columns(of: other.id)[3].id,
+            now: now
+        )
         #expect(explicit.status == .done)
     }
 
-    @Test func moveCardToBoardRejectsForeignColumnAndUnknownBoard() throws {
+    @Test
+    func moveCardToBoardRejectsForeignColumnAndUnknownBoard() throws {
         var (workspace, _, columns) = try seeded()
         let other = workspace.createBoardWithTemplateColumns(name: "Other")
         let card = workspace.cards[0]
@@ -159,7 +194,8 @@ import Testing
         }
     }
 
-    @Test func updateCardSetsDueDateAndPoints() throws {
+    @Test
+    func updateCardSetsDueDateAndPoints() throws {
         var (workspace, _, _) = try seeded()
         let due = Date(timeIntervalSince1970: 3_000)
         let updated = try workspace.updateCard(workspace.cards[0].id, dueDate: .some(due), points: .some(5))

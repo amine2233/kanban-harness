@@ -17,38 +17,39 @@ public struct FluentWorkspaceStore: WorkspaceStore {
         var extra: [String: JSONValue] = [:]
         for section in try await SectionModel.query(on: database).all() {
             guard let key = section.id else { continue }
+
             extra[key] = try JSONText.decode(section.json)
         }
-        return Workspace(
-            boards: try await BoardModel.query(on: database).sort(\.$position).all().map { try $0.toDomain() },
-            columns: try await ColumnModel.query(on: database).sort(\.$position).all().map { try $0.toDomain() },
-            cards: try await CardModel.query(on: database).sort(\.$cardNumber).all().map { try $0.toDomain() },
-            prefixes: try await PrefixModel.query(on: database).all().map { try $0.toDomain() },
+        return try await Workspace(
+            boards: BoardModel.query(on: database).sort(\.$position).all().map { try $0.toDomain() },
+            columns: ColumnModel.query(on: database).sort(\.$position).all().map { try $0.toDomain() },
+            cards: CardModel.query(on: database).sort(\.$cardNumber).all().map { try $0.toDomain() },
+            prefixes: PrefixModel.query(on: database).all().map { try $0.toDomain() },
             extra: extra
         )
     }
 
     public func save(_ workspace: Workspace) async throws {
-        try await database.transaction { db in
-            try await CardModel.query(on: db).delete()
-            try await ColumnModel.query(on: db).delete()
-            try await BoardModel.query(on: db).delete()
-            try await PrefixModel.query(on: db).delete()
-            try await SectionModel.query(on: db).delete()
+        try await database.transaction { transaction in
+            try await CardModel.query(on: transaction).delete()
+            try await ColumnModel.query(on: transaction).delete()
+            try await BoardModel.query(on: transaction).delete()
+            try await PrefixModel.query(on: transaction).delete()
+            try await SectionModel.query(on: transaction).delete()
             for board in workspace.boards {
-                try await BoardModel(board).create(on: db)
+                try await BoardModel(board).create(on: transaction)
             }
             for column in workspace.columns {
-                try await ColumnModel(column).create(on: db)
+                try await ColumnModel(column).create(on: transaction)
             }
             for card in workspace.cards {
-                try await CardModel(card).create(on: db)
+                try await CardModel(card).create(on: transaction)
             }
             for prefix in workspace.prefixes {
-                try await PrefixModel(prefix).create(on: db)
+                try await PrefixModel(prefix).create(on: transaction)
             }
             for (key, value) in workspace.extra {
-                try await SectionModel(key: key, value: value).create(on: db)
+                try await SectionModel(key: key, value: value).create(on: transaction)
             }
         }
     }
@@ -66,10 +67,10 @@ public struct SQLiteWorkspaceStore: WorkspaceStore {
     }
 
     public func load() async throws -> Workspace {
-        try await FluentWorkspaceStore(database: try await pool.database(at: path)).load()
+        try await FluentWorkspaceStore(database: pool.database(at: path)).load()
     }
 
     public func save(_ workspace: Workspace) async throws {
-        try await FluentWorkspaceStore(database: try await pool.database(at: path)).save(workspace)
+        try await FluentWorkspaceStore(database: pool.database(at: path)).save(workspace)
     }
 }

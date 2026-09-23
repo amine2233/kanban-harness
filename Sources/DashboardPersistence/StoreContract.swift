@@ -37,7 +37,14 @@ public enum StoreContract {
         try workspace.createCard(columnId: column.id, title: "Card", priority: .high)
         try workspace.createCard(
             columnId: column.id, title: "Drafted",
-            aiCost: AICost(provider: "cc", model: "sonnet", inputTokens: 2, outputTokens: 400, costUSD: 0.03, estimated: true)
+            aiCost: AICost(
+                provider: "cc",
+                model: "sonnet",
+                inputTokens: 2,
+                outputTokens: 400,
+                costUSD: 0.03,
+                estimated: true
+            )
         )
         let parent = try workspace.createCard(columnId: column.id, title: "Parent")
         try workspace.createSubtasks(of: parent.id, [SubtaskSpec(title: "Child", points: 2)])

@@ -18,7 +18,14 @@ public struct DraftedTicket: Sendable, Equatable {
 
     /// What to stamp on the card when this draft is turned into one.
     public var aiCost: AICost {
-        AICost(provider: providerId, model: model, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, costUSD: usage.costUSD, estimated: usage.estimated)
+        AICost(
+            provider: providerId,
+            model: model,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            costUSD: usage.costUSD,
+            estimated: usage.estimated
+        )
     }
 }
 
@@ -26,7 +33,12 @@ public struct DraftedTicket: Sendable, Equatable {
 /// when it has something to say (`detail`); `elapsedMs` counts from the request.
 public struct AssistantStage: Sendable, Equatable {
     public enum Step: String, Sendable, CaseIterable {
-        case resolve, context, wait, stream, validate, done
+        case resolve
+        case context
+        case wait
+        case stream
+        case validate
+        case done
     }
 
     public let step: Step
@@ -52,14 +64,25 @@ public enum AssistantEvent: Sendable, Equatable {
 
 public protocol AssistantCommands: Sendable {
     /// Streams the drafting of a ticket for `idea` on a board; `providerId` nil = the configured default.
-    func streamTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) -> AsyncThrowingStream<AssistantEvent, any Error>
+    func streamTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?)
+        -> AsyncThrowingStream<AssistantEvent, any Error>
 }
 
 extension AssistantCommands {
     /// The non-streaming form: folds the events into the result.
-    public func draftTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) async throws(ServiceError) -> DraftedTicket {
+    public func draftTicket(
+        project: ProjectRef,
+        boardId: UUID,
+        idea: String,
+        providerId: String?
+    ) async throws(ServiceError) -> DraftedTicket {
         do {
-            for try await event in streamTicket(project: project, boardId: boardId, idea: idea, providerId: providerId) {
+            for try await event in streamTicket(
+                project: project,
+                boardId: boardId,
+                idea: idea,
+                providerId: providerId
+            ) {
                 if case let .result(drafted) = event { return drafted }
             }
             throw ServiceError.remote(code: "AI_PROVIDER", message: "stream ended without a result")
@@ -79,18 +102,33 @@ public actor AssistantService: AssistantCommands {
     private let registry: AIProviderRegistry
     private let signIn: (any SignInCommands)?
 
-    public init(aiConfig: any AIConfigCommands, boards: any BoardCommands, registry: AIProviderRegistry, signIn: (any SignInCommands)? = nil) {
+    public init(
+        aiConfig: any AIConfigCommands,
+        boards: any BoardCommands,
+        registry: AIProviderRegistry,
+        signIn: (any SignInCommands)? = nil
+    ) {
         self.aiConfig = aiConfig
         self.boards = boards
         self.registry = registry
         self.signIn = signIn
     }
 
-    public nonisolated func streamTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?) -> AsyncThrowingStream<AssistantEvent, any Error> {
+    public nonisolated func streamTicket(
+        project: ProjectRef,
+        boardId: UUID,
+        idea: String,
+        providerId: String?
+    ) -> AsyncThrowingStream<AssistantEvent, any Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    try await self.runTicket(project: project, boardId: boardId, idea: idea, providerId: providerId) { continuation.yield($0) }
+                    try await self.runTicket(
+                        project: project,
+                        boardId: boardId,
+                        idea: idea,
+                        providerId: providerId
+                    ) { continuation.yield($0) }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -100,10 +138,20 @@ public actor AssistantService: AssistantCommands {
         }
     }
 
-    private func runTicket(project: ProjectRef, boardId: UUID, idea: String, providerId: String?, emit: @Sendable (AssistantEvent) -> Void) async throws {
+    private func runTicket(
+        project: ProjectRef,
+        boardId: UUID,
+        idea: String,
+        providerId: String?,
+        emit: @Sendable (AssistantEvent) -> Void
+    ) async throws {
         let started = Date()
         func stage(_ step: AssistantStage.Step, _ detail: String?) {
-            emit(.stage(AssistantStage(step, detail: detail, elapsedMs: Int(Date().timeIntervalSince(started) * 1000))))
+            emit(.stage(AssistantStage(
+                step,
+                detail: detail,
+                elapsedMs: Int(Date().timeIntervalSince(started) * 1_000)
+            )))
         }
         let idea = idea.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !idea.isEmpty else { throw ServiceError.domain(.emptyTitle) }
@@ -114,16 +162,26 @@ public actor AssistantService: AssistantCommands {
 
         stage(.context, nil)
         let boardList = try await boards.boards(project)
-        guard let board = boardList.first(where: { $0.id == boardId }) else { throw ServiceError.domain(.boardNotFound(boardId)) }
+        guard let board = boardList.first(where: { $0.id == boardId })
+        else { throw ServiceError.domain(.boardNotFound(boardId)) }
+
         let columns = try await boards.columns(project, boardId: boardId)
         let cards = try await boards.cards(project, boardId: boardId)
         let request = CompletionRequest(
             system: PromptBuilder.ticketSystemPrompt,
-            prompt: PromptBuilder.ticketPrompt(idea: idea, board: board, columns: columns, recentCards: Array(cards.suffix(20))),
+            prompt: PromptBuilder.ticketPrompt(
+                idea: idea,
+                board: board,
+                columns: columns,
+                recentCards: Array(cards.suffix(20))
+            ),
             schema: TicketDraft.jsonSchema,
-            maxTokens: config.maxTokens ?? 2048
+            maxTokens: config.maxTokens ?? 2_048
         )
-        stage(.context, "\(columns.count) columns, \(min(cards.count, 20)) cards, ~\(request.prompt.count / 4) tokens")
+        stage(
+            .context,
+            "\(columns.count) columns, \(min(cards.count, 20)) cards, ~\(request.prompt.count / 4) tokens"
+        )
 
         stage(.wait, nil)
         var usage = CompletionUsage()
@@ -143,21 +201,29 @@ public actor AssistantService: AssistantCommands {
                         lastPartial = partial
                         emit(.partial(partial))
                     }
-                case let .usage(u):
-                    usage = u
-                    emit(.usage(u))
+                case let .usage(reported):
+                    usage = reported
+                    emit(.usage(reported))
                 case let .done(json, model):
                     stage(.validate, nil)
                     let draft: TicketDraft
                     do {
                         draft = try TicketDraft.parse(json)
                     } catch {
-                        throw ServiceError.remote(code: "AI_BAD_OUTPUT", message: "\(config.name) returned an unusable draft: \(error.localizedDescription)")
+                        throw ServiceError.remote(
+                            code: "AI_BAD_OUTPUT",
+                            message: "\(config.name) returned an unusable draft: \(error.localizedDescription)"
+                        )
                     }
                     let priced = Self.priced(usage, for: config)
                     if priced != usage { emit(.usage(priced)) }
                     stage(.done, nil)
-                    emit(.result(DraftedTicket(draft: draft, providerId: config.id, model: model, usage: priced)))
+                    emit(.result(DraftedTicket(
+                        draft: draft,
+                        providerId: config.id,
+                        model: model,
+                        usage: priced
+                    )))
                     return
                 }
             }
@@ -170,12 +236,16 @@ public actor AssistantService: AssistantCommands {
         } catch {
             throw ServiceError.remote(code: "AI_PROVIDER", message: String(describing: error))
         }
-        throw ServiceError.remote(code: "AI_PROVIDER", message: "\(config.name) ended the stream without a result")
+        throw ServiceError.remote(
+            code: "AI_PROVIDER",
+            message: "\(config.name) ended the stream without a result"
+        )
     }
 
     /// Vendor-reported cost wins; otherwise the provider's pricing, or zero for local models.
     static func priced(_ usage: CompletionUsage, for config: AIProviderConfig) -> CompletionUsage {
         guard usage.costUSD == nil else { return usage }
+
         var priced = usage
         if let pricing = config.pricing {
             priced.costUSD = pricing.cost(inputTokens: usage.inputTokens, outputTokens: usage.outputTokens)
@@ -186,7 +256,8 @@ public actor AssistantService: AssistantCommands {
         return priced
     }
 
-    private func resolveProvider(_ id: String?) async throws(ServiceError) -> (any AIProvider, AIProviderConfig) {
+    private func resolveProvider(_ id: String?) async throws(ServiceError)
+        -> (any AIProvider, AIProviderConfig) {
         let config = try await aiConfig.current()
         let chosen: AIProviderConfig?
         if let id {
@@ -194,14 +265,20 @@ public actor AssistantService: AssistantCommands {
             guard chosen != nil else { throw .domain(.providerNotFound(id)) }
         } else {
             chosen = config.defaultProvider
-            guard chosen != nil else { throw .remote(code: "AI_NOT_CONFIGURED", message: "no AI provider configured — add one in Settings → AI providers") }
+            guard chosen != nil else { throw .remote(
+                code: "AI_NOT_CONFIGURED",
+                message: "no AI provider configured — add one in Settings → AI providers"
+            ) }
         }
         var selected = chosen!
         if let signIn { selected = try await signIn.refreshed(selected) }
         do {
-            return (try registry.make(selected), selected)
+            return try (registry.make(selected), selected)
         } catch {
-            throw .remote(code: "AI_PROVIDER", message: (error as? AIProviderError)?.localizedDescription ?? String(describing: error))
+            throw .remote(
+                code: "AI_PROVIDER",
+                message: (error as? AIProviderError)?.localizedDescription ?? String(describing: error)
+            )
         }
     }
 }

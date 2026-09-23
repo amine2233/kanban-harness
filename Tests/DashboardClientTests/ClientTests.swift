@@ -9,26 +9,37 @@ import Vapor
 @testable import DashboardClient
 
 /// The client is exercised against a real running server so both ends of the wire are covered.
-@Suite(.serialized) struct ClientTests {
+@Suite(.serialized)
+struct ClientTests {
     /// A daemon older than the `version` field answers without one; that has to
     /// decode as "unknown build", not as a broken response, or the upgrade path
     /// would look like an unreachable daemon.
-    @Test func healthDecodesADaemonThatReportsNoBuild() throws {
-        let current = try JSONDecoder().decode(HealthResponse.self, from: Data(#"{"status":"ok","version":"9.9"}"#.utf8))
+    @Test
+    func healthDecodesADaemonThatReportsNoBuild() throws {
+        let current = try JSONDecoder().decode(
+            HealthResponse.self,
+            from: Data(#"{"status":"ok","version":"9.9"}"#.utf8)
+        )
         #expect(current.version == "9.9")
         let old = try JSONDecoder().decode(HealthResponse.self, from: Data(#"{"status":"ok"}"#.utf8))
         #expect(old.status == "ok")
         #expect(old.version == nil)
     }
 
-    func withServer(claude: String? = nil, _ body: (DashboardClient, String) async throws -> Void) async throws {
+    func withServer(
+        claude: String? = nil,
+        _ body: (DashboardClient, String) async throws -> Void
+    ) async throws {
         let home = NSTemporaryDirectory() + "mvp-dashboard-client-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
         var environment = Environment.testing
         environment.arguments = ["vapor"]
         let app = try await Application.make(environment)
         do {
-            try await configure(app, config: ServerConfig(home: home, claudeExecutable: claude ?? "/nonexistent/claude"))
+            try await configure(
+                app,
+                config: ServerConfig(home: home, claudeExecutable: claude ?? "/nonexistent/claude")
+            )
             app.http.server.configuration.hostname = "127.0.0.1"
             app.http.server.configuration.port = 0
             try await app.startup()
@@ -41,15 +52,17 @@ import Vapor
         try await app.asyncShutdown()
     }
 
-    @Test func reachabilityReflectsARunningServer() async throws {
+    @Test
+    func reachabilityReflectsARunningServer() async throws {
         try await withServer { client, _ in
             #expect(await client.isReachable())
         }
-        let dead = DashboardClient(baseURL: URL(string: "http://127.0.0.1:1")!)
+        let dead = try DashboardClient(baseURL: #require(URL(string: "http://127.0.0.1:1")))
         #expect(await !dead.isReachable())
     }
 
-    @Test func projectCommandsRoundTripThroughTheServer() async throws {
+    @Test
+    func projectCommandsRoundTripThroughTheServer() async throws {
         try await withServer { client, home in
             let projects = RemoteProjectCommands(client: client)
             #expect(try await projects.list().isEmpty)
@@ -72,11 +85,14 @@ import Vapor
         }
     }
 
-    @Test func serverErrorsBecomeTypedServiceErrors() async throws {
+    @Test
+    func serverErrorsBecomeTypedServiceErrors() async throws {
         try await withServer { client, home in
             let projects = RemoteProjectCommands(client: client)
             await #expect(throws: ServiceError.self) { try await projects.get(.name("ghost")) }
-            do { _ = try await projects.get(.name("ghost")) } catch let error as ServiceError { #expect(error.isNotFound) }
+            do { _ = try await projects.get(.name("ghost")) } catch let error as ServiceError {
+                #expect(error.isNotFound)
+            }
 
             _ = try await projects.add(name: "Dup", path: home + "/a", storage: nil)
             do {
@@ -95,27 +111,50 @@ import Vapor
         }
     }
 
-    @Test func settingsCommandsRoundTrip() async throws {
+    @Test
+    func settingsCommandsRoundTrip() async throws {
         try await withServer { client, _ in
             let settings = RemoteSettingsCommands(client: client)
             #expect(try await settings.current() == .default)
-            let updated = try await settings.update(defaultStorage: .sqlite, corsOrigins: ["http://localhost:5173/"])
+            let updated = try await settings.update(
+                defaultStorage: .sqlite,
+                corsOrigins: ["http://localhost:5173/"]
+            )
             #expect(updated == Settings(defaultStorage: .sqlite, corsOrigins: ["http://localhost:5173"]))
             let projects = RemoteProjectCommands(client: client)
-            let created = try await projects.add(name: "Follows default", path: NSTemporaryDirectory() + "fd-" + UUID().uuidString, storage: nil)
+            let created = try await projects.add(
+                name: "Follows default",
+                path: NSTemporaryDirectory() + "fd-" + UUID().uuidString,
+                storage: nil
+            )
             #expect(created.storage == .sqlite)
         }
     }
 
-    @Test func aiConfigCommandsRoundTripWithRedactedKeys() async throws {
+    @Test
+    func aiConfigCommandsRoundTripWithRedactedKeys() async throws {
         try await withServer { client, _ in
             let ai = RemoteAIConfigCommands(client: client)
             #expect(try await ai.current() == .empty)
-            let claude = try AIProviderConfig(id: "claude", kind: .anthropic, name: "Claude", model: "claude-sonnet-5", apiKey: "sk-1")
+            let claude = try AIProviderConfig(
+                id: "claude",
+                kind: .anthropic,
+                name: "Claude",
+                model: "claude-sonnet-5",
+                apiKey: "sk-1"
+            )
             let config = try await ai.upsert(claude)
             #expect(config.defaultProviderId == "claude")
-            #expect(config.provider("claude")?.apiKey == RemoteAIConfigCommands.redactedKey, "server never returns the key")
-            _ = try await ai.upsert(try AIProviderConfig(id: "local", kind: .ollama, name: "Ollama", model: "llama3.2"))
+            #expect(
+                config.provider("claude")?.apiKey == RemoteAIConfigCommands.redactedKey,
+                "server never returns the key"
+            )
+            _ = try await ai.upsert(AIProviderConfig(
+                id: "local",
+                kind: .ollama,
+                name: "Ollama",
+                model: "llama3.2"
+            ))
             #expect(try await ai.setDefault("local").defaultProviderId == "local")
             #expect(try await ai.remove("claude").providers.map(\.id) == ["local"])
             do {
@@ -127,8 +166,12 @@ import Vapor
         }
     }
 
-    @Test func unreachableServerIsReportedAsSuch() async {
-        let projects = RemoteProjectCommands(client: DashboardClient(baseURL: URL(string: "http://127.0.0.1:1")!, timeout: 1))
+    @Test
+    func unreachableServerIsReportedAsSuch() async throws {
+        let projects = try RemoteProjectCommands(client: DashboardClient(
+            baseURL: #require(URL(string: "http://127.0.0.1:1")),
+            timeout: 1
+        ))
         do {
             _ = try await projects.list()
             Issue.record("expected unreachable")
@@ -140,7 +183,8 @@ import Vapor
         }
     }
 
-    @Test func assistantStreamsFramesBackIntoEvents() async throws {
+    @Test
+    func assistantStreamsFramesBackIntoEvents() async throws {
         let dir = NSTemporaryDirectory() + "claude-stub-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         let stub = dir + "/claude"
@@ -153,14 +197,24 @@ import Vapor
         try await withServer(claude: stub) { client, home in
             let projects = RemoteProjectCommands(client: client)
             _ = try await projects.add(name: "Demo", path: home + "/demo", storage: nil)
-            _ = try await RemoteAIConfigCommands(client: client).upsert(try AIProviderConfig(id: "cc", kind: .claudeCode, name: "CC", model: "sonnet"))
+            _ = try await RemoteAIConfigCommands(client: client).upsert(AIProviderConfig(
+                id: "cc",
+                kind: .claudeCode,
+                name: "CC",
+                model: "sonnet"
+            ))
             let board = try #require(try await projects.boards(.name("Demo")).first)
             let assistant = RemoteAssistantCommands(client: client)
 
             var stages: [AssistantStage.Step] = []
             var partials: [PartialTicketDraft] = []
             var result: DraftedTicket?
-            for try await event in assistant.streamTicket(project: .name("Demo"), boardId: board.id, idea: "x", providerId: nil) {
+            for try await event in assistant.streamTicket(
+                project: .name("Demo"),
+                boardId: board.id,
+                idea: "x",
+                providerId: nil
+            ) {
                 switch event {
                 case let .stage(stage): stages.append(stage.step)
                 case let .partial(p): partials.append(p)
@@ -172,10 +226,20 @@ import Vapor
             #expect(partials.map { $0.title } == ["Str"])
             #expect(result?.draft.title == "Streamed")
             #expect(result?.usage == CompletionUsage(inputTokens: 1, outputTokens: 2))
-            #expect(try await assistant.draftTicket(project: .name("Demo"), boardId: board.id, idea: "x", providerId: nil).draft.title == "Streamed")
+            #expect(try await assistant.draftTicket(
+                project: .name("Demo"),
+                boardId: board.id,
+                idea: "x",
+                providerId: nil
+            ).draft.title == "Streamed")
 
             do {
-                _ = try await assistant.draftTicket(project: .name("Demo"), boardId: board.id, idea: "x", providerId: "ghost")
+                _ = try await assistant.draftTicket(
+                    project: .name("Demo"),
+                    boardId: board.id,
+                    idea: "x",
+                    providerId: "ghost"
+                )
                 Issue.record("expected not found")
             } catch let error as ServiceError {
                 #expect(error.isNotFound)

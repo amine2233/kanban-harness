@@ -6,7 +6,7 @@ import FoundationNetworking
 #endif
 
 /// Runs the built `dashboard` executable, the way a user would.
-struct CLI {
+final class CLI {
     let home: String
 
     /// The `dashboard` product next to the test host (Linux), else under the
@@ -28,12 +28,11 @@ struct CLI {
     }
 
     /// Each home gets its own daemon on its own port, so a dashboard running on
-    /// the machine cannot interfere and tests stay independent. The short idle
-    /// timeout keeps a test run from leaving daemons behind.
+    /// the machine cannot interfere and tests stay independent.
     static var baseEnvironment: [String: String] {
         var environment = ProcessInfo.processInfo.environment
-        environment["MVP_DASHBOARD_DAEMON_IDLE"] = "5"
         environment.removeValue(forKey: "MVP_DASHBOARD_DAEMON_PORT")
+        environment.removeValue(forKey: "MVP_DASHBOARD_HOME")
         return environment
     }
 
@@ -48,6 +47,21 @@ struct CLI {
     init() throws {
         home = NSTemporaryDirectory() + "mvp-dashboard-cli-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
+    }
+
+    /// The daemon outlives the command that started it by design, so every
+    /// fixture releases its home; otherwise a run leaves one daemon per test.
+    deinit { stopDaemon() }
+
+    func stopDaemon() {
+        let process = Process()
+        process.executableURL = Self.binary
+        process.arguments = ["--home", home, "daemon", "stop"]
+        process.environment = environment
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
+        process.waitUntilExit()
     }
 
     private var baseArguments: [String] { ["--home", home] }
@@ -257,17 +271,22 @@ struct CLI {
         let cli = try CLI()
         #expect(!(try cli.run("project", "list")).stderr.contains("Migrator"), "a command's own stderr stays quiet")
 
-        let daemonHome = try CLI().home
+        let daemon = try CLI()
         let process = Process()
         process.executableURL = CLI.binary
-        process.arguments = ["--home", daemonHome, "--verbose", "daemon"]
-        process.environment = CLI.baseEnvironment.merging(["MVP_DASHBOARD_DAEMON_IDLE": "1"]) { $1 }
+        process.arguments = ["--home", daemon.home, "--verbose", "daemon", "run"]
+        process.environment = CLI.baseEnvironment
         let err = Pipe()
         process.standardOutput = FileHandle.nullDevice
         process.standardError = err
         try process.run()
-        let stderr = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        process.waitUntilExit()
+        defer { process.terminate() }
+
+        var stderr = ""
+        let deadline = Date().addingTimeInterval(10)
+        while Date() < deadline, !stderr.contains("Migrator") {
+            stderr += String(decoding: err.fileHandleForReading.availableData, as: UTF8.self)
+        }
         #expect(stderr.contains("Migrator"), "the daemon reports its own migrations")
     }
 

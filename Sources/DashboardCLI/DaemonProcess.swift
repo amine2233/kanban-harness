@@ -6,6 +6,7 @@ import Foundation
 enum CLIError: LocalizedError {
     case daemonUnavailable(home: String)
     case daemonDidNotBind
+    case handoverTimedOut(pid: Int32)
 
     var errorDescription: String? {
         switch self {
@@ -13,6 +14,8 @@ enum CLIError: LocalizedError {
             "no dashboard daemon for \(home) and starting one timed out; run `dashboard daemon --home \(home)` to see why"
         case .daemonDidNotBind:
             "the daemon could not bind a loopback port"
+        case let .handoverTimedOut(pid):
+            "process \(pid) still owns this home after being asked to stop; kill it and retry"
         }
     }
 }
@@ -71,7 +74,7 @@ enum DaemonProcess {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
-        process.arguments = ["daemon", "--home", home]
+        process.arguments = ["daemon", "run", "--home", home]
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice

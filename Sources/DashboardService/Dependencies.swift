@@ -13,7 +13,8 @@ public enum UUIDKey: DependencyKey {
 }
 
 /// Directory holding the project registry and settings.json.
-/// `$MVP_DASHBOARD_HOME`, else `$XDG_CONFIG_HOME/mvp-dashboard`, else `~/.config/mvp-dashboard`.
+/// `$MVP_DASHBOARD_HOME`, else `$XDG_CONFIG_HOME/kanban-harness`, else `~/.config/kanban-harness`.
+/// Holds the registry, `config.yml`, the credentials and the daemon socket.
 public enum HomeKey: DependencyKey {
     public static let liveValue: String = defaultHome()
 
@@ -21,7 +22,7 @@ public enum HomeKey: DependencyKey {
         if let home = environment["MVP_DASHBOARD_HOME"] { return home }
         let config = environment["XDG_CONFIG_HOME"]
             ?? (environment["HOME"].map { $0 + "/.config" } ?? NSHomeDirectory() + "/.config")
-        return config + "/mvp-dashboard"
+        return config + "/kanban-harness"
     }
 }
 

@@ -46,17 +46,19 @@ public struct RuntimeConfig: Sendable, Equatable {
         if let forced = ProcessInfo.processInfo.environment["MVP_DASHBOARD_DAEMON_PORT"].flatMap(Int.init) {
             return URL(string: "http://127.0.0.1:\(forced)")
         }
-        guard let text = try? String(contentsOfFile: daemonPortPath, encoding: .utf8),
-              let port = Int(text.trimmingCharacters(in: .whitespacesAndNewlines))
-        else { return nil }
+        guard let port = daemonHandle?.port else { return nil }
         return URL(string: "http://127.0.0.1:\(port)")
     }
 
-    /// Seconds without a request after which the daemon stops, so a command that
-    /// started one does not leave it behind for ever.
-    public var daemonIdleTimeout: Duration {
-        .seconds(ProcessInfo.processInfo.environment["MVP_DASHBOARD_DAEMON_IDLE"].flatMap(Int.init) ?? 300)
+    /// What the owner of this home wrote: the port it listens on and the process
+    /// to signal to hand the home over.
+    public var daemonHandle: (port: Int, pid: Int32)? {
+        guard let text = try? String(contentsOfFile: daemonPortPath, encoding: .utf8) else { return nil }
+        let fields = text.split(whereSeparator: \.isWhitespace)
+        guard let port = fields.first.flatMap({ Int($0) }) else { return nil }
+        return (port, fields.count > 1 ? Int32(fields[1]) ?? 0 : 0)
     }
+
 
     public var configPath: String {
         let candidates = Self.configFileNames.map { (home as NSString).appendingPathComponent($0) }

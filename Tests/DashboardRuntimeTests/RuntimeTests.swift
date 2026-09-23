@@ -29,8 +29,8 @@ import Testing
 
     @Test func homeKeyReadsEnvironmentThenXDGThenHome() {
         #expect(HomeKey.defaultHome(environment: ["MVP_DASHBOARD_HOME": "/x"]) == "/x")
-        #expect(HomeKey.defaultHome(environment: ["XDG_CONFIG_HOME": "/cfg"]) == "/cfg/mvp-dashboard")
-        #expect(HomeKey.defaultHome(environment: ["HOME": "/me"]) == "/me/.config/mvp-dashboard")
+        #expect(HomeKey.defaultHome(environment: ["XDG_CONFIG_HOME": "/cfg"]) == "/cfg/kanban-harness")
+        #expect(HomeKey.defaultHome(environment: ["HOME": "/me"]) == "/me/.config/kanban-harness")
     }
 
     @Test func registerWiresSingletonsAndServicesWork() async throws {

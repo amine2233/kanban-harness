@@ -233,7 +233,9 @@ final class CLI {
             }
             try await Task.sleep(for: .milliseconds(100))
         }
-        #expect(body == #"{"status":"ok"}"#)
+        let health = try JSONSerialization.jsonObject(with: Data((body ?? "").utf8)) as? [String: Any]
+        #expect(health?["status"] as? String == "ok")
+        #expect(health?["version"] as? String != nil, "the owner names its build so an upgraded client can spot the skew")
     }
 
     @Test func settingsShowAndSetPersistToSettingsFile() throws {
@@ -340,6 +342,37 @@ final class CLI {
 
         let elsewhere = try CLI()
         #expect(try #require(try elsewhere.json("project", "list") as? [Any]).isEmpty, "another home is independent")
+    }
+
+    /// T-52. A copy of the executable with a different modification time *is* a
+    /// different build as far as `DashboardVersion` is concerned, so the skew can
+    /// be staged without a second toolchain.
+    @Test func anUpgradedBinaryReplacesTheDaemonTheOldOneLeftRunning() async throws {
+        let cli = try CLI()
+        _ = try cli.json("daemon", "start")
+        let before = try #require(RuntimeConfig(home: cli.home).daemonHandle)
+
+        let upgraded = URL(fileURLWithPath: cli.home + "/dashboard-upgraded")
+        try FileManager.default.copyItem(at: CLI.binary, to: upgraded)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(60)],
+            ofItemAtPath: upgraded.path
+        )
+
+        let process = Process()
+        process.executableURL = upgraded
+        process.arguments = ["project", "list"]
+        process.environment = cli.environment
+        process.standardOutput = Pipe()
+        let err = Pipe()
+        process.standardError = err
+        try process.run()
+        let stderr = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        process.waitUntilExit()
+        #expect(process.terminationStatus == 0, "stderr: \(stderr)")
+
+        let after = try #require(RuntimeConfig(home: cli.home).daemonHandle)
+        #expect(after.pid != before.pid, "the daemon from the previous build was asked to let go")
     }
 
     @Test func aiProvidersAreEditedThroughTheCLIAndStoredInConfigJSON() throws {

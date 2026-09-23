@@ -26,13 +26,15 @@ extension UpdateCardRequest: Content {}
 extension Page: Content {}
 extension ApiError: Content {}
 
-struct Health: Content {
-    let status = "ok"
-}
+extension HealthResponse: Content {}
 
 func routes(_ app: Vapor.Application, config: ServerConfig) async throws {
     let api = app.grouped("api")
-    api.get("health") { _ in Health() }
+    // Answered from a value built at startup: the executable this process runs
+    // may be replaced on disk while it keeps serving, and the point of the
+    // field is to report the build it actually started from.
+    let health = HealthResponse()
+    api.get("health") { _ in health }
     try api.register(collection: ProjectsController())
     try api.register(collection: SettingsController())
     try api.register(collection: AIConfigController())

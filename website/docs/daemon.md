@@ -40,6 +40,10 @@ answer. You do not normally run `daemon start`.
 **It stays up.** Nothing times it out. A daemon that disappeared on its own would only be
 started again by the next command, so the churn would buy nothing.
 
+**An upgrade replaces it.** A command checks the build the daemon reports, not only that it
+answers. A daemon started by an older binary is asked to let go and a fresh one takes the home,
+so you never have to remember to stop it after `mise run backend:release`.
+
 **You stop it.** Because it runs until told otherwise, stopping is an explicit command.
 
 ```bash
@@ -55,8 +59,9 @@ dashboard daemon run       # run it in the foreground — what start spawns
 dashboard daemon status | jq -e .running >/dev/null && echo up
 ```
 
-Stop it when you want the home released: before deleting the folder, after swapping the
-binary for a new build, or when you would rather it not linger.
+Stop it when you want the home released: before deleting the folder, or when you would rather
+it not linger. Swapping the binary needs nothing — the next command notices the change of build
+and replaces the daemon itself.
 
 ## One daemon per home
 

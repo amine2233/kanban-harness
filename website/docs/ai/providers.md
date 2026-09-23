@@ -80,6 +80,20 @@ secrets in `credentials.json` — see [Configuration](../server/configuration).
 
 Provider settings apply live: the next draft uses the new configuration.
 
+## Switching a kind off
+
+A provider kind can be taken out of the build entirely — not hidden, not disabled at call time,
+but never registered:
+
+```bash
+MVP_DASHBOARD_PROVIDERS_DISABLED=huggingface,claude_code dashboard daemon start
+```
+
+Configuring one afterwards fails with _provider kind … is disabled for this home_. Set it when
+starting the daemon: it does the work and inherits the environment of whatever started it, so
+putting the variable on a later command changes nothing. An unknown name is ignored rather than
+failing the process.
+
 ## How a provider streams
 
 Every provider implements one contract — `stream(request) → text / snapshot / usage / done`

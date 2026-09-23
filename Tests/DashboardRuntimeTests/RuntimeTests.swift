@@ -1,4 +1,6 @@
 import CascadeKit
+import DashboardAI
+import DashboardDomain
 import DashboardPersistenceFluent
 import DashboardService
 import Foundation
@@ -79,6 +81,37 @@ import Testing
         try await DashboardRuntime.register(on: reopened, config: RuntimeConfig(home: home))
         #expect(try await reopened.make(ProjectServiceKey.self).list().isEmpty)
         await DashboardRuntime.shutdown(reopened)
+    }
+
+    /// D-5: a disabled provider is one that does not register, so the kind is
+    /// absent from the registry rather than present and failing at call time.
+    @Test func disabledProvidersNeverRegister() async throws {
+        let home = try tempHome()
+        let container = CascadeKit.Application()
+        let config = RuntimeConfig(home: home, disabledProviders: [.huggingface, .anthropic])
+        try await DashboardRuntime.register(on: container, config: config)
+
+        let registry = container.make(AIProviderRegistryKey.self)
+        #expect(!registry.kinds.contains(.huggingface))
+        #expect(!registry.kinds.contains(.anthropic))
+        #expect(!registry.signInKinds.contains(.huggingface))
+        #expect(registry.kinds.contains(.openai), "a kind nobody disabled still registers")
+
+        let disabled = try AIProviderConfig(id: "hf", kind: .huggingface, name: "HF", model: "m")
+        #expect(throws: AIProviderError.self) { try registry.make(disabled) }
+        await DashboardRuntime.shutdown(container)
+    }
+
+    @Test func disabledProvidersComeFromTheEnvironment() throws {
+        #expect(RuntimeConfig.disabledFromEnvironment([:]).isEmpty)
+        #expect(
+            RuntimeConfig.disabledFromEnvironment(["MVP_DASHBOARD_PROVIDERS_DISABLED": "huggingface, claude_code"])
+                == [.huggingface, .claudeCode]
+        )
+        #expect(
+            RuntimeConfig.disabledFromEnvironment(["MVP_DASHBOARD_PROVIDERS_DISABLED": "nonsense"]).isEmpty,
+            "an unknown name is ignored rather than failing the process"
+        )
     }
 
     @Test func registerAcceptsAnExternalRegistryDatabase() async throws {

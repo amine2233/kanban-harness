@@ -1,4 +1,5 @@
 import CascadeKit
+import DashboardDomain
 import DashboardService
 import Foundation
 
@@ -13,10 +14,24 @@ public struct RuntimeConfig: Sendable, Equatable {
     public var home: String
     /// The Claude Code executable used by `claude_code` providers (`MVP_DASHBOARD_CLAUDE_BIN`, else `claude` on PATH).
     public var claudeExecutable: String
+    /// Provider kinds this home switches off, by raw value and comma-separated
+    /// (`MVP_DASHBOARD_PROVIDERS_DISABLED=huggingface,claude_code`). They never
+    /// register, so they are absent from the registry rather than failing late.
+    /// ponytail: environment only, like `claudeExecutable`; move it into
+    /// `config.yaml` if a home needs it to survive without the variable set.
+    public var disabledProviders: Set<AIProviderKind>
 
-    public init(home: String? = nil, claudeExecutable: String? = nil) {
+    public init(home: String? = nil, claudeExecutable: String? = nil, disabledProviders: Set<AIProviderKind>? = nil) {
         self.home = home ?? DependencyValues.current.home
         self.claudeExecutable = claudeExecutable ?? ProcessInfo.processInfo.environment["MVP_DASHBOARD_CLAUDE_BIN"] ?? "claude"
+        self.disabledProviders = disabledProviders ?? Self.disabledFromEnvironment()
+    }
+
+    static func disabledFromEnvironment(
+        _ environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Set<AIProviderKind> {
+        let raw = environment["MVP_DASHBOARD_PROVIDERS_DISABLED"] ?? ""
+        return Set(raw.split(separator: ",").compactMap { AIProviderKind(rawValue: $0.trimmingCharacters(in: .whitespaces)) })
     }
 
     public var registryPath: String {

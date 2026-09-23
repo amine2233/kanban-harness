@@ -31,6 +31,35 @@ browser stale. Order from `conceptions/live-connection.md`.
   confirm the loopback origin rule). — SRV-17 · T-01 · client half in `web/docs/TASKS.md`
 - **T-09 (M)** Re-evaluate SSE instead of the WebSocket once T-01…T-03 land. — SRV-17 · T-03
 
+## CLI as the owner
+
+From [`conceptions/cli-as-source-of-truth.md`](conceptions/cli-as-source-of-truth.md). The daemon
+becomes the only process that opens a database; the server and MCP become clients over a local
+socket. Fixes the MCP-plus-server deadlock ([`MEMORY.md`](MEMORY.md) §2) and makes a change made
+through MCP visible in the web, which no amount of client work can do today. `T-06` becomes
+daemon status once `T-44` lands.
+
+- **T-43 (S)** Decide the daemon socket protocol: framing, version handshake, what a client
+  older than the daemon does. Needs its own note; blocks the theme. — SRV-19 · —
+- **T-44 (L)** `dashboard daemon`: unix socket under `home`, one accept loop, the single
+  `ChangeBroadcaster`, and `DashboardRuntime.register` called here and nowhere else. —
+  SRV-19 · T-43
+- **T-45 (M)** Socket-backed implementations of the command protocols, beside `DashboardClient`'s
+  HTTP ones. — SRV-19 · T-44
+- **T-46 (M)** `serve` connects to the socket instead of building a container; a dropped or
+  crashed client never reaches the daemon. — SRV-19 · T-45
+- **T-47 (M)** `mcp` and the one-shot commands connect to the socket, spawning the daemon and
+  retrying once when nothing answers; a stale socket file is unlinked. — SRV-19 · T-45
+- **T-48 (S)** Delete `Mode`, `GlobalOptions.forcedMode`, `--local` and `--remote`; there is no
+  second wiring path left to choose. — SRV-19 · T-47
+- **T-49 (S)** Exclusive-create lock under `home` so two commands racing to spawn produce one
+  daemon. — SRV-19 · T-47
+- **T-50 (S)** AI providers register themselves through the container; a disabled provider is one
+  that does not register. — SRV-09 · T-44
+- **T-51 (S)** Daemon lifetime: idle timeout, or run until reboot. — open question · T-44
+- **T-52 (S)** Version skew: an upgraded binary meeting a daemon started by the old one. — open
+  question · T-43
+
 ## Robustness
 
 - **T-10 (M)** Migration failures, corrupt files and provider errors become HTTP errors, never

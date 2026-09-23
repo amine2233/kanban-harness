@@ -72,8 +72,8 @@ server — the binding happens at composition time.
 providers; `shutdown` tears them down in reverse through `ShutdownHooks`. Services are
 registered under typed `ServiceKey`s.
 
-- **CLI** — one container per invocation, built from `RuntimeConfig` (home, server URL,
-  `--local` / `--remote`).
+- **CLI** — one container per invocation, built from `RuntimeConfig`; the home is resolved
+  from the environment or the working directory, never from a flag.
 - **Server** — one container on the Vapor app, plus a per-request container for request-scoped
   values (the request id echoed as `X-Request-Id`), falling through to the app container.
 
@@ -126,9 +126,9 @@ JSON on stdout, narration on stderr.
 ## MCP
 
 `KanbanTools` is the catalogue, `KanbanToolDispatcher` maps a call onto the command protocols.
-Knowing nothing about storage or transport, the same dispatcher serves all three cases:
-`dashboard mcp` on the files, `dashboard mcp` through a server, and `POST /mcp` inside the
-server. Arguments accept names or ids; domain failures come back as tool errors.
+Knowing nothing about storage or transport, the same dispatcher serves both cases:
+`dashboard mcp` through the home's daemon, and `POST /mcp` inside the server. Arguments
+accept names or ids; domain failures come back as tool errors.
 
 ## AI pipeline
 

@@ -91,7 +91,7 @@ Each provider can carry `pricing: {input_per_million, output_per_million}` (USD)
 
 `mise run cli -- <args>` during development, or `./.build/release/dashboard` after `mise run backend:release`. All output is JSON; errors go to stderr as `{"error": {"message": …}}` with exit code 1.
 
-**Where commands go.** If a dashboard server answers (`--server URL`, else `$MVP_DASHBOARD_URL`, else `http://127.0.0.1:$MVP_DASHBOARD_PORT`), the CLI talks to it over the same `/api` the web app uses — the server stays the single writer and every change is pushed to connected browsers. With no server running it falls back to the files directly. `--remote` fails instead of falling back; `--local` forces the files even if a server is up.
+**Where commands go.** Every command routes through this home's daemon, started on the first command that finds nothing answering. The daemon is the single writer, so a change made from the CLI or MCP reaches an open browser without a refresh, and nothing can work on the files behind a running owner's back. There is no flag to point a command elsewhere — the home comes from `$MVP_DASHBOARD_HOME`, else a `./.kanban-harness/` where you ran, else `~/.config/kanban-harness`.
 
 ```sh
 dashboard project add ~/work/demo [--name Demo] [--storage json|sqlite]
@@ -108,8 +108,7 @@ dashboard ai providers list | add <id> --kind K --model M [--base-url URL] [--ap
 dashboard ai ticket <project> "idea" [--board B] [--provider P] [--stream] [--create [--column C]]   # draft (and create) a card; --stream narrates on stderr
 dashboard mcp                                       # MCP server over stdio (boards & cards as tools)
 dashboard serve [--hostname 127.0.0.1] [--port 5175] [--static-dir dist] [--cors-origin URL ...]
-dashboard --home <dir> …                            # registry/settings location (or MVP_DASHBOARD_HOME), local mode only
-dashboard --server http://host:5175 … | --remote | --local
+dashboard daemon start | stop | status              # the process that owns this home's data
 ```
 
 ### HTTP API

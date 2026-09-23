@@ -96,64 +96,64 @@ unregistering leaves the folder intact; an env-supplied key never lands on disk.
 Sourced from `README.md` unless the row says otherwise. `SHOULD` and `MAY` rows are the
 backlog in [`TASKS.md`](TASKS.md).
 
-| ID     | Requirement                                                                                 | Priority |
-| ------ | ------------------------------------------------------------------------------------------- | -------- |
-| SRV-01 | Register, list, show, unregister projects; unregistering deletes no file                    | MUST     |
-| SRV-02 | Seed a new project with one board (TODO / Doing / Complete)                                 | MUST     |
-| SRV-03 | Create, rename, reorder, duplicate, delete boards                                           | MUST     |
-| SRV-04 | Columns with WIP limit and default status; reorder, delete; a board keeps one               | MUST     |
-| SRV-05 | Create, edit, move, delete cards, including across boards                                   | MUST     |
-| SRV-06 | Create a card with its sub-tasks atomically; link/detach a parent; report `children`        | MUST     |
-| SRV-07 | Convert a project between JSON and SQLite in place, keeping the previous file               | MUST     |
-| SRV-08 | Server settings (`default_storage`, `cors_origins`) applied live, no restart                | MUST     |
-| SRV-09 | AI providers with write-only keys, `0600` credentials, env keys never written back          | MUST     |
-| SRV-10 | Draft a ticket and stream `stage` / `partial` / `usage` / `result` / `error`                | MUST     |
-| SRV-11 | Publish a change event for every mutation on a subscribable stream                          | MUST     |
-| SRV-12 | Errors as `{code, message}` with a stable code set and a request id header                  | MUST     |
-| SRV-13 | Card and board text reaches a model as data, never as instructions                          | MUST     |
-| SRV-14 | Loopback by default; LAN exposure only on explicit opt-in                                   | MUST     |
-| SRV-15 | Serve the built web app from the same process                                               | MUST     |
-| SRV-16 | Never trap on data it reads — corrupt files and provider failures become errors             | SHOULD   |
-| SRV-17 | Heartbeat the event stream; answer a stale resume with a resync                             | SHOULD   |
-| SRV-18 | Retain recent events so a short disconnection replays instead of refetching                 | SHOULD   |
-| SRV-19 | Report liveness and process identity (pid, uptime, epoch, clients)                          | MAY      |
-| SRV-20 | Resolve named drafting agents from markdown files, read on every draft                      | MAY      |
-| CLI-01 | JSON on stdout; errors on stderr with exit code 1                                           | MUST     |
-| CLI-02 | Use a running server when one answers, files otherwise; `--remote` / `--local` force either | MUST     |
-| CLI-03 | Projects: add, list, show, boards, storage, remove                                          | MUST     |
-| CLI-04 | Read and write server settings                                                              | MUST     |
-| CLI-05 | AI providers: list, add, remove, default                                                    | MUST     |
-| CLI-06 | Draft a ticket, optionally streaming and creating the card                                  | MUST     |
-| CLI-07 | Run the MCP server over stdio                                                               | MUST     |
-| CLI-08 | Run the HTTP server (host, port, static dir, CORS origins)                                  | MUST     |
-| CLI-09 | Explicit dashboard home and a verbosity flag                                                | SHOULD   |
-| CLI-10 | Select a drafting agent per invocation and manage the agent files                           | MAY      |
-| WEB-01 | Add a project: path (created if missing), optional name, storage kind                       | MUST     |
-| WEB-02 | Boards from tabs: create, rename, duplicate, reorder, delete with confirmation              | MUST     |
-| WEB-03 | Columns inline: add, edit name / WIP / default status, reorder, delete                      | MUST     |
-| WEB-04 | Card dialog: title, description, priority, status, column, due date, points, board, delete  | MUST     |
-| WEB-05 | Move a card by drag and drop and by keyboard-reachable arrows                               | MUST     |
-| WEB-06 | Sub-tasks nested under their parent with a done count; a dragged sub-task stays under it    | MUST     |
-| WEB-07 | Draft with AI in the new-card dialog, filling fields as the model types                     | MUST     |
-| WEB-08 | Activity panel: stages, provider, time to first token, tokens, cost, durations, raw output  | MUST     |
-| WEB-09 | Nothing created until Create; sub-tasks created with the parent in one request              | MUST     |
-| WEB-10 | Show what a drafted card cost, on the board and in the dialog                               | MUST     |
-| WEB-11 | Switch a project's storage kind and unregister it                                           | MUST     |
-| WEB-12 | Settings: browser API URL, server defaults and CORS, AI providers                           | MUST     |
-| WEB-13 | Markdown descriptions with clickable checklists                                             | MUST     |
-| WEB-14 | Refresh on a change from any surface, without a reload                                      | MUST     |
-| WEB-15 | All server state through the store; components never call the network                       | MUST     |
-| WEB-16 | New app areas registered as plugins (nav, routes, optional sidebar)                         | SHOULD   |
-| WEB-17 | Reconnect on visible / online / successful request; distinguish reconnecting from stale     | SHOULD   |
-| WEB-18 | Choose the drafting agent next to the provider; edit agents in settings                     | MAY      |
-| MCP-01 | Projects, boards, columns, cards as tools, with sub-tasks and parent links                  | MUST     |
-| MCP-02 | Same tools over stdio and streamable HTTP; HTTP restricted to local origins                 | MUST     |
-| MCP-03 | Route through a running server so it stays the single writer                                | MUST     |
-| MCP-04 | Expose agents and ticket drafting as tools                                                  | MAY      |
-| MCP-05 | Let drafting agents call external MCP servers, board tools read-only and bounded            | MAY      |
-| DOC-01 | Publish a static site: overview, getting started, architecture, each surface                | MUST     |
-| DOC-02 | One design note per planned feature: built first, deferred, how the deferred part works     | MUST     |
-| DOC-03 | Keep `README.md` accurate as the quick reference                                            | MUST     |
+| ID     | Requirement                                                                                | Priority |
+| ------ | ------------------------------------------------------------------------------------------ | -------- |
+| SRV-01 | Register, list, show, unregister projects; unregistering deletes no file                   | MUST     |
+| SRV-02 | Seed a new project with one board (TODO / Doing / Complete)                                | MUST     |
+| SRV-03 | Create, rename, reorder, duplicate, delete boards                                          | MUST     |
+| SRV-04 | Columns with WIP limit and default status; reorder, delete; a board keeps one              | MUST     |
+| SRV-05 | Create, edit, move, delete cards, including across boards                                  | MUST     |
+| SRV-06 | Create a card with its sub-tasks atomically; link/detach a parent; report `children`       | MUST     |
+| SRV-07 | Convert a project between JSON and SQLite in place, keeping the previous file              | MUST     |
+| SRV-08 | Server settings (`default_storage`, `cors_origins`) applied live, no restart               | MUST     |
+| SRV-09 | AI providers with write-only keys, `0600` credentials, env keys never written back         | MUST     |
+| SRV-10 | Draft a ticket and stream `stage` / `partial` / `usage` / `result` / `error`               | MUST     |
+| SRV-11 | Publish a change event for every mutation on a subscribable stream                         | MUST     |
+| SRV-12 | Errors as `{code, message}` with a stable code set and a request id header                 | MUST     |
+| SRV-13 | Card and board text reaches a model as data, never as instructions                         | MUST     |
+| SRV-14 | Loopback by default; LAN exposure only on explicit opt-in                                  | MUST     |
+| SRV-15 | Serve the built web app from the same process                                              | MUST     |
+| SRV-16 | Never trap on data it reads — corrupt files and provider failures become errors            | SHOULD   |
+| SRV-17 | Heartbeat the event stream; answer a stale resume with a resync                            | SHOULD   |
+| SRV-18 | Retain recent events so a short disconnection replays instead of refetching                | SHOULD   |
+| SRV-19 | Report liveness and process identity (pid, uptime, epoch, clients)                         | MAY      |
+| SRV-20 | Resolve named drafting agents from markdown files, read on every draft                     | MAY      |
+| CLI-01 | JSON on stdout; errors on stderr with exit code 1                                          | MUST     |
+| CLI-02 | Route every command through the home's daemon, starting one when nothing answers           | MUST     |
+| CLI-03 | Projects: add, list, show, boards, storage, remove                                         | MUST     |
+| CLI-04 | Read and write server settings                                                             | MUST     |
+| CLI-05 | AI providers: list, add, remove, default                                                   | MUST     |
+| CLI-06 | Draft a ticket, optionally streaming and creating the card                                 | MUST     |
+| CLI-07 | Run the MCP server over stdio                                                              | MUST     |
+| CLI-08 | Run the HTTP server (host, port, static dir, CORS origins)                                 | MUST     |
+| CLI-09 | Resolve the home from the environment or the working directory; a verbosity flag           | SHOULD   |
+| CLI-10 | Select a drafting agent per invocation and manage the agent files                          | MAY      |
+| WEB-01 | Add a project: path (created if missing), optional name, storage kind                      | MUST     |
+| WEB-02 | Boards from tabs: create, rename, duplicate, reorder, delete with confirmation             | MUST     |
+| WEB-03 | Columns inline: add, edit name / WIP / default status, reorder, delete                     | MUST     |
+| WEB-04 | Card dialog: title, description, priority, status, column, due date, points, board, delete | MUST     |
+| WEB-05 | Move a card by drag and drop and by keyboard-reachable arrows                              | MUST     |
+| WEB-06 | Sub-tasks nested under their parent with a done count; a dragged sub-task stays under it   | MUST     |
+| WEB-07 | Draft with AI in the new-card dialog, filling fields as the model types                    | MUST     |
+| WEB-08 | Activity panel: stages, provider, time to first token, tokens, cost, durations, raw output | MUST     |
+| WEB-09 | Nothing created until Create; sub-tasks created with the parent in one request             | MUST     |
+| WEB-10 | Show what a drafted card cost, on the board and in the dialog                              | MUST     |
+| WEB-11 | Switch a project's storage kind and unregister it                                          | MUST     |
+| WEB-12 | Settings: browser API URL, server defaults and CORS, AI providers                          | MUST     |
+| WEB-13 | Markdown descriptions with clickable checklists                                            | MUST     |
+| WEB-14 | Refresh on a change from any surface, without a reload                                     | MUST     |
+| WEB-15 | All server state through the store; components never call the network                      | MUST     |
+| WEB-16 | New app areas registered as plugins (nav, routes, optional sidebar)                        | SHOULD   |
+| WEB-17 | Reconnect on visible / online / successful request; distinguish reconnecting from stale    | SHOULD   |
+| WEB-18 | Choose the drafting agent next to the provider; edit agents in settings                    | MAY      |
+| MCP-01 | Projects, boards, columns, cards as tools, with sub-tasks and parent links                 | MUST     |
+| MCP-02 | Same tools over stdio and streamable HTTP; HTTP restricted to local origins                | MUST     |
+| MCP-03 | Route through a running server so it stays the single writer                               | MUST     |
+| MCP-04 | Expose agents and ticket drafting as tools                                                 | MAY      |
+| MCP-05 | Let drafting agents call external MCP servers, board tools read-only and bounded           | MAY      |
+| DOC-01 | Publish a static site: overview, getting started, architecture, each surface               | MUST     |
+| DOC-02 | One design note per planned feature: built first, deferred, how the deferred part works    | MUST     |
+| DOC-03 | Keep `README.md` accurate as the quick reference                                           | MUST     |
 
 Sources for the non-`README.md` rows: SRV-16 to SRV-19 and WEB-17 from
 `docs/conceptions/live-connection.md`; SRV-20, CLI-10, WEB-18, MCP-04 from

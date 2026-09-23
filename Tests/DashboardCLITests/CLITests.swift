@@ -1,3 +1,4 @@
+import DashboardRuntime
 import Foundation
 import Testing
 #if canImport(FoundationNetworking)
@@ -26,16 +27,30 @@ struct CLI {
             .deletingLastPathComponent()
     }
 
-    /// Tests run in local mode unless they exercise server routing themselves,
-    /// so a dashboard server running on the machine cannot interfere.
-    var local = true
+    /// Each home gets its own daemon on its own port, so a dashboard running on
+    /// the machine cannot interfere and tests stay independent. The short idle
+    /// timeout keeps a test run from leaving daemons behind.
+    static var baseEnvironment: [String: String] {
+        var environment = ProcessInfo.processInfo.environment
+        environment["MVP_DASHBOARD_DAEMON_IDLE"] = "5"
+        environment.removeValue(forKey: "MVP_DASHBOARD_DAEMON_PORT")
+        return environment
+    }
+
+    /// The daemon inherits the environment of whichever command started it, and
+    /// it is the daemon that does the work — so anything read from the
+    /// environment must be set on *every* invocation, not just the one that
+    /// needs it.
+    var extraEnvironment: [String: String] = [:]
+
+    var environment: [String: String] { Self.baseEnvironment.merging(extraEnvironment) { $1 } }
 
     init() throws {
         home = NSTemporaryDirectory() + "mvp-dashboard-cli-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
     }
 
-    private var baseArguments: [String] { ["--home", home] + (local ? ["--local"] : []) }
+    private var baseArguments: [String] { ["--home", home] }
 
     func tempFolder(_ name: String = "project") -> String {
         home + "/folders/" + name
@@ -45,6 +60,7 @@ struct CLI {
     func run(_ arguments: String...) throws -> (status: Int32, stdout: String, stderr: String) {
         let process = Process()
         process.executableURL = Self.binary
+        process.environment = environment
         process.arguments = baseArguments + arguments
         let out = Pipe()
         let err = Pipe()
@@ -66,6 +82,7 @@ struct CLI {
     private func run(_ first: String, _ rest: [String]) throws -> (status: Int32, stdout: String, stderr: String) {
         let process = Process()
         process.executableURL = Self.binary
+        process.environment = environment
         process.arguments = baseArguments + [first] + rest
         let out = Pipe()
         let err = Pipe()
@@ -234,11 +251,24 @@ struct CLI {
         #expect(FileManager.default.fileExists(atPath: cli.home + "/projects.sqlite"))
     }
 
-    @Test func verboseFlagTurnsOnInfoLogs() throws {
-        let quiet = try CLI()
-        #expect(!(try quiet.run("project", "list")).stderr.contains("Migrator"))
-        let verbose = try CLI()
-        #expect((try verbose.run("--verbose", "project", "list")).stderr.contains("Migrator"))
+    /// Migrations belong to the daemon now, so they show up in *its* stderr, not
+    /// in the stderr of a command that merely asked it something.
+    @Test func verboseFlagTurnsOnInfoLogsInTheDaemon() throws {
+        let cli = try CLI()
+        #expect(!(try cli.run("project", "list")).stderr.contains("Migrator"), "a command's own stderr stays quiet")
+
+        let daemonHome = try CLI().home
+        let process = Process()
+        process.executableURL = CLI.binary
+        process.arguments = ["--home", daemonHome, "--verbose", "daemon"]
+        process.environment = CLI.baseEnvironment.merging(["MVP_DASHBOARD_DAEMON_IDLE": "1"]) { $1 }
+        let err = Pipe()
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = err
+        try process.run()
+        let stderr = String(decoding: err.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        process.waitUntilExit()
+        #expect(stderr.contains("Migrator"), "the daemon reports its own migrations")
     }
 
     /// Starts `dashboard serve` on a free port and returns (process, port).
@@ -261,30 +291,26 @@ struct CLI {
         Issue.record("server did not come up")
     }
 
-    @Test func cliRoutesThroughARunningServerAndFallsBackToLocal() async throws {
+    @Test func cliRoutesThroughItsOwnDaemonAndHonoursAnExplicitServer() async throws {
         let serverHome = try CLI().home
         let (server, port) = try startServer(home: serverHome)
         defer { server.terminate() }
         try await waitForHealth(port: port)
 
-        var cli = try CLI()
-        cli.local = false
+        let cli = try CLI()
         let created = try #require(try cli.json("--server", "http://127.0.0.1:\(port)", "project", "add", cli.tempFolder("via-server"), "--name", "Via server") as? [String: Any])
         #expect(created["name"] as? String == "Via server")
         let (data, _) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/api/projects")!)
         let serverSide = try #require(try JSONSerialization.jsonObject(with: data) as? [[String: Any]])
         #expect(serverSide.map { $0["name"] as? String } == ["Via server"], "the server's registry received it")
-        #expect(!FileManager.default.fileExists(atPath: cli.home + "/projects.sqlite"), "no local registry was touched")
+        #expect(!FileManager.default.fileExists(atPath: cli.home + "/projects.sqlite"), "--server means no daemon was started for this home")
 
-        let local = try #require(try cli.json("--server", "http://127.0.0.1:\(port)", "--local", "project", "list") as? [Any])
-        #expect(local.isEmpty, "--local ignores the server and reads this home's (empty) registry")
+        let own = try #require(try cli.json("project", "list") as? [Any])
+        #expect(own.isEmpty, "without --server the CLI starts a daemon for its own home, which is empty")
+        #expect(FileManager.default.fileExists(atPath: cli.home + "/" + RuntimeConfig.daemonPortFileName), "the daemon published its port")
 
-        let noServer = try cli.run("--server", "http://127.0.0.1:1", "--remote", "project", "list")
-        #expect(noServer.status == 1)
-        #expect(noServer.stderr.contains("unreachable"))
-
-        let fallback = try #require(try cli.json("--server", "http://127.0.0.1:1", "project", "list") as? [Any])
-        #expect(fallback.isEmpty, "without --remote the CLI falls back to local files")
+        let unreachable = try cli.run("--server", "http://127.0.0.1:1", "project", "list")
+        #expect(unreachable.status == 1, "an explicit server that does not answer fails; there is no local fallback left to silently corrupt files")
     }
 
     @Test func aiProvidersAreEditedThroughTheCLIAndStoredInConfigJSON() throws {
@@ -310,7 +336,7 @@ struct CLI {
         _ = try cli.json("project", "add", cli.tempFolder("mcp"), "--name", "MCP demo")
         let process = Process()
         process.executableURL = CLI.binary
-        process.arguments = ["--home", cli.home, "--local", "mcp"]
+        process.arguments = ["--home", cli.home, "mcp"]
         let input = Pipe(), output = Pipe()
         process.standardInput = input
         process.standardOutput = output
@@ -338,12 +364,13 @@ struct CLI {
     }
 
     @Test func aiTicketDraftsAndOptionallyCreatesACard() throws {
-        let cli = try CLI()
+        var cli = try CLI()
         let dir = NSTemporaryDirectory() + "claude-stub-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         let stub = dir + "/claude"
         try "#!/bin/sh\ncat > /dev/null\necho '{\"is_error\":false,\"result\":\"\",\"structured_output\":{\"title\":\"Drafted by CLI\",\"acceptance_criteria\":[\"ok\"],\"priority\":\"low\",\"subtasks\":[{\"title\":\"Part one\"},{\"title\":\"Part two\",\"points\":2}]}}'\n".write(toFile: stub, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub)
+        cli.extraEnvironment["MVP_DASHBOARD_CLAUDE_BIN"] = stub
         let folder = cli.tempFolder("ai")
         _ = try cli.json("project", "add", folder, "--name", "AI demo")
         _ = try cli.json("ai", "providers", "add", "cc", "--kind", "claude_code", "--model", "sonnet")
@@ -351,8 +378,8 @@ struct CLI {
         let run = { (args: [String]) throws -> ([String: Any], String) in
             let p = Process()
             p.executableURL = CLI.binary
-            p.arguments = ["--home", cli.home, "--local"] + args
-            p.environment = ProcessInfo.processInfo.environment.merging(["MVP_DASHBOARD_CLAUDE_BIN": stub]) { $1 }
+            p.arguments = ["--home", cli.home] + args
+            p.environment = cli.environment
             let out = Pipe()
             let err = Pipe()
             p.standardOutput = out

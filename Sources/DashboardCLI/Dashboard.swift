@@ -1,5 +1,6 @@
 import ArgumentParser
 import CascadeKit
+import DashboardRuntime
 import DashboardService
 import Foundation
 import Logging
@@ -10,7 +11,7 @@ struct Dashboard: AsyncParsableCommand {
         commandName: "dashboard",
         abstract: "Manage dashboard projects (kanban workspaces in folders) and run the API server.",
         version: "0.1.0",
-        subcommands: [ProjectCommand.self, SettingsCommand.self, AICommand.self, MCPCommand.self, ServeCommand.self]
+        subcommands: [ProjectCommand.self, SettingsCommand.self, AICommand.self, MCPCommand.self, ServeCommand.self, DaemonCommand.self]
     )
 
     @OptionGroup var global: GlobalOptions
@@ -32,12 +33,6 @@ struct GlobalOptions: ParsableArguments {
     )
     var server: String?
 
-    @Flag(name: .customLong("local"), help: "Work on the files directly even if a server is running.")
-    var local = false
-
-    @Flag(name: .customLong("remote"), help: "Require a running server; fail instead of falling back to the files.")
-    var remote = false
-
     var resolvedHome: String {
         home ?? DependencyValues.current.home
     }
@@ -47,12 +42,6 @@ struct GlobalOptions: ParsableArguments {
         verbose ? .info : .warning
     }
 
-    var forcedMode: Mode? {
-        if local { return .local }
-        if remote { return .remote }
-        return nil
-    }
-
     var serverURL: URL {
         let environment = ProcessInfo.processInfo.environment
         let raw = server ?? environment["MVP_DASHBOARD_URL"]
@@ -60,8 +49,13 @@ struct GlobalOptions: ParsableArguments {
         return URL(string: raw) ?? URL(string: "http://127.0.0.1:5175")!
     }
 
+    /// An address the user pinned with `--server`. When absent the command uses this
+    /// home's daemon, starting one if needed.
+    var explicitServerURL: URL? {
+        server.flatMap(URL.init(string:))
+    }
+
     func validate() throws {
-        if local, remote { throw ValidationError("--local and --remote are mutually exclusive") }
         if let server, URL(string: server)?.host == nil { throw ValidationError("--server must be an http(s) URL") }
     }
 }

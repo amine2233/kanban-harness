@@ -37,7 +37,7 @@ jobs:
           # download against an empty keyring on Linux, which fails
           # intermittently (swift-actions/setup-swift#798, open since 2025-12).
           - os: ubuntu-24.04
-            container: swift:6.3.3-noble
+            container: swift:6.4.0-noble
           - os: macos-26
             container: ''
     runs-on: ${{ matrix.os }}
@@ -48,7 +48,7 @@ jobs:
       - if: matrix.container == ''
         uses: swift-actions/setup-swift@v3
         with:
-          swift-version: '6.3.3'
+          swift-version: '6.4.0'
       - run: swift --version
       - uses: actions/cache@v6
         with:

@@ -3,9 +3,7 @@ import DashboardAI
 import DashboardClient
 import DashboardDomain
 import DashboardRuntime
-import DashboardServer
 import Foundation
-import Vapor
 
 extension AICommand.Providers {
     /// Browser sign-in. With a dashboard server running, the server owns the
@@ -26,47 +24,19 @@ extension AICommand.Providers {
 
         func run() async throws {
             try await failing {
-                let client = DashboardClient(baseURL: global.serverURL)
-                if global.forcedMode != .local, await client.isReachable() {
-                    try await viaServer(client)
-                } else {
-                    try await viaTemporaryServer()
-                }
+                try await viaDaemon(DaemonProcess.connect(explicit: global.explicitServerURL, home: global.resolvedHome))
             }
         }
 
-        private func viaServer(_ client: DashboardClient) async throws {
+        private func viaDaemon(_ client: DashboardClient) async throws {
             let signIn = RemoteSignInCommands(client: client)
-            let url = try await signIn.begin(providerId: id, callback: global.serverURL)
+            let url = try await signIn.begin(providerId: id, callback: client.baseURL)
             try open(url)
             let config = RemoteAIConfigCommands(client: client)
             try await waitUntil { try await config.current().provider(id)?.hasAPIKey == true }
             try Output.json(AICommand.Providers.View(try await config.current()))
         }
 
-        private func viaTemporaryServer() async throws {
-            var environment = Environment.production
-            environment.arguments = [CommandLine.arguments.first ?? "dashboard", "serve"]
-            let app = try await Vapor.Application.make(environment)
-            do {
-                try await configure(app, config: ServerConfig(home: global.resolvedHome))
-                app.http.server.configuration.hostname = "127.0.0.1"
-                app.http.server.configuration.port = 0
-                try await app.startup()
-                guard let port = app.http.server.shared.localAddress?.port, let callback = URL(string: "http://127.0.0.1:\(port)/api/auth/callback") else {
-                    throw ValidationError("could not bind a loopback port for the callback")
-                }
-                let signIn = app.services.make(SignInCommandsKey.self)
-                try open(try await signIn.begin(providerId: id, callback: callback))
-                let credentials = app.services.make(CredentialStoreKey.self)
-                try await waitUntil { try await credentials.get(id) != nil }
-                try Output.json(AICommand.Providers.View(try await app.services.make(AIConfigCommandsKey.self).current()))
-            } catch {
-                try? await app.asyncShutdown()
-                throw error
-            }
-            try await app.asyncShutdown()
-        }
 
         private func open(_ url: URL) throws {
             FileHandle.standardError.write(Data("Open this URL to sign in:\n\(url.absoluteString)\n".utf8))

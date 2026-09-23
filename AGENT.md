@@ -59,7 +59,7 @@ Target-by-target ownership is the table in
 | Command                       | Gates                                                                |
 | ----------------------------- | -------------------------------------------------------------------- |
 | `mise run backend:test`       | `swift test`                                                         |
-| `mise run backend:test:linux` | the same in `swift:6.3.3-noble` — where this package actually breaks |
+| `mise run backend:test:linux` | the same in `swift:6.4.0-noble` — where this package actually breaks |
 | `mise run check`              | everything CI runs, both areas                                       |
 
 ## Rules broken most often

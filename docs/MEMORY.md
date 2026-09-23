@@ -20,6 +20,14 @@ surfaces as `[AsyncKit] Connection request timed out`, which looks like an exhau
 the instinct is to raise the pool size, which makes it worse. `SQLiteDatabase` pins one event
 loop per file. (`SQLiteDatabase.swift`, commit `1920634`)
 
+## The environment reaches the daemon, not the command
+
+The daemon does the work, and it inherits the environment of whichever command happened to start
+it. So `MVP_DASHBOARD_CLAUDE_BIN=… dashboard ai draft …` has no effect if a daemon is already
+running for that home — the variable is read where the provider runs, which is the daemon. It
+looks like the variable is ignored. Set it on every invocation, or put the value in the config
+file, which is read per request. (`DaemonProcess.swift`, `RuntimeConfig.claudeExecutable`)
+
 ## Linux breaks in specific ways
 
 `String` is not `CVarArg`, so `%@` formatting does not compile; `FoundationModels` (the `apple`

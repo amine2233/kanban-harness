@@ -63,6 +63,14 @@ legacy `api_key:` is migrated out on the next save. Order: environment, then `cr
 then the legacy field. Code reading a key from the config store finds nothing for a signed-in
 provider. (`website/docs/server/configuration.md`)
 
+## Vendor kinds are registered by their module, not by `standard()`
+
+`AIProviderRegistry.standard()` must not register `.huggingface` or `.openrouter`;
+`DashboardProviderHuggingFace` and `DashboardProviderOpenRouter` do, together with their
+sign-in. `ProvidersTests.swift:174` asserts the set difference, so adding a vendor to
+`standard()` fails a test that names no vendor. (dropped commit `f2320df`, tag
+`superseded/huggingface-f2320df`)
+
 ## `provider_ids` is maintained by hand
 
 swift-configuration cannot enumerate keys, so `ai.provider_ids` lists what exists. A provider

@@ -118,7 +118,8 @@ maps them once to `{code, message}` with a status and `X-Request-Id`. Codes:
 ## CLI routing
 
 There is one route: the home's daemon, found through `daemon.port` and started when nothing
-answers. Commands bind `Remote*Commands` against it and never open a store, so `Mode`,
+answers. `/api/health` carries the build the owner runs, so a command that finds a daemon from
+another binary asks it to let go instead of driving it. Commands bind `Remote*Commands` against it and never open a store, so `Mode`,
 `--local`, `--remote` and `--server` are all gone. The home is resolved from the environment or
 the working directory ([`HomeKey`](../Sources/DashboardService/Dependencies.swift)), not a flag.
 JSON on stdout, narration on stderr.

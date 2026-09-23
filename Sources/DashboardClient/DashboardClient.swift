@@ -20,13 +20,29 @@ public struct DashboardClient: Sendable {
         self.timeout = timeout
     }
 
-    /// True when `/api/health` answers within `timeout`. Whole seconds only:
-    /// Linux's URLSession (libcurl) truncates sub-second timeouts to zero and fails at once.
-    public func isReachable(timeout: TimeInterval = 1) async -> Bool {
+    /// What `/api/health` answers within `timeout`, or nil when nothing does.
+    /// Whole seconds only: Linux's URLSession (libcurl) truncates sub-second
+    /// timeouts to zero and fails at once.
+    public func health(timeout: TimeInterval = 1) async -> HealthResponse? {
         var request = URLRequest(url: baseURL.appending(path: "api/health"))
         request.timeoutInterval = timeout
-        guard let (_, response) = try? await session.data(for: request) else { return false }
-        return (response as? HTTPURLResponse)?.statusCode == 200
+        guard let (data, response) = try? await session.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200
+        else { return nil }
+        return try? Self.decoder.decode(HealthResponse.self, from: data)
+    }
+
+    /// True when `/api/health` answers within `timeout`.
+    public func isReachable(timeout: TimeInterval = 1) async -> Bool {
+        await health(timeout: timeout) != nil
+    }
+
+    /// True when the answering process runs the same build as this one.
+    /// An upgraded binary must not keep driving a daemon started by the old one:
+    /// they share a database schema and a wire shape, and nothing guarantees
+    /// either still matches.
+    public func isSameBuild(timeout: TimeInterval = 1) async -> Bool {
+        await health(timeout: timeout)?.version == DashboardVersion.current
     }
 
     // MARK: Transport

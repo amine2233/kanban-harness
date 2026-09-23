@@ -31,23 +31,28 @@ enum DaemonProcess {
     static let staleLockAfter: TimeInterval = 30
 
     static func connect(home: String) async throws -> DashboardClient {
-        if let client = await reachableClient(home: home) { return client }
+        if let client = await currentBuildClient(home: home) { return client }
 
+        // Either nothing owns the home, or an older build does. Asking it to let
+        // go covers both: a daemon left by the previous binary would otherwise
+        // keep answering on the same port and never be replaced.
+        try await DaemonHandover.takeOver(RuntimeConfig(home: home))
         try spawnUnlessAnotherIsStarting(home: home)
 
         let deadline = ContinuousClock.now + startTimeout
         while ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(50))
-            if let client = await reachableClient(home: home) { return client }
+            if let client = await currentBuildClient(home: home) { return client }
         }
         throw CLIError.daemonUnavailable(home: home)
     }
 
     /// Re-read the port file every attempt: it does not exist until the daemon binds.
-    private static func reachableClient(home: String) async -> DashboardClient? {
+    /// A daemon from another build does not count as an owner we can use.
+    private static func currentBuildClient(home: String) async -> DashboardClient? {
         guard let url = RuntimeConfig(home: home).daemonURL else { return nil }
         let client = DashboardClient(baseURL: url)
-        return await client.isReachable() ? client : nil
+        return await client.isSameBuild() ? client : nil
     }
 
     /// Two commands racing must produce one daemon. `createDirectory` with

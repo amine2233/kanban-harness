@@ -1,4 +1,5 @@
 import DashboardAI
+import DashboardAPI
 import DashboardDomain
 import DashboardServer
 import DashboardService
@@ -9,6 +10,17 @@ import Vapor
 
 /// The client is exercised against a real running server so both ends of the wire are covered.
 @Suite(.serialized) struct ClientTests {
+    /// A daemon older than the `version` field answers without one; that has to
+    /// decode as "unknown build", not as a broken response, or the upgrade path
+    /// would look like an unreachable daemon.
+    @Test func healthDecodesADaemonThatReportsNoBuild() throws {
+        let current = try JSONDecoder().decode(HealthResponse.self, from: Data(#"{"status":"ok","version":"9.9"}"#.utf8))
+        #expect(current.version == "9.9")
+        let old = try JSONDecoder().decode(HealthResponse.self, from: Data(#"{"status":"ok"}"#.utf8))
+        #expect(old.status == "ok")
+        #expect(old.version == nil)
+    }
+
     func withServer(claude: String? = nil, _ body: (DashboardClient, String) async throws -> Void) async throws {
         let home = NSTemporaryDirectory() + "mvp-dashboard-client-" + UUID().uuidString
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)

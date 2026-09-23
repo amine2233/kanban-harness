@@ -95,6 +95,28 @@ The browser keeps talking HTTP and WebSocket to the server exactly as today — 
 stays where it is, with the behaviour `live-connection.md` specifies. The server stops being a
 data owner and becomes a translator between two sockets.
 
+### D-6 — a daemon from another build is not an owner to use
+
+**Decision.** `/api/health` reports the build the answering process runs, and a command accepts
+a daemon only when that build is its own. A mismatch goes down the path a missing daemon already
+takes: ask the owner to let go, spawn, retry. Upgrading the binary therefore needs no ceremony,
+and the two processes never share a home.
+
+The build is the declared version plus the executable's modification time, read once at process
+start. A rebuild during development is what actually produces the skew, and it does not bump a
+version string; a daemon that read the value lazily would report the binary that replaced its own
+and the mismatch would vanish exactly when it matters.
+
+A daemon older than this field answers without one, which reads as a mismatch — which is the
+right answer, since an old daemon is what the check is looking for.
+
+**Rejected.** A protocol version negotiated per connection. The transport is HTTP and the client
+is `URLSession`: there is no handshake to hang it on, and `/api/health` is already the liveness
+probe every surface calls before doing anything else.
+
+_ponytail: the client evicts on any difference. Comparing a wire-compatibility number instead
+would keep a daemon alive across harmless rebuilds, if respawning ever costs too much._
+
 ### D-5 — CascadeKit is the container; a plugin is a registration that may not happen
 
 **Decision.** Everything with a lifetime resolves through the CascadeKit `Container` under a
@@ -128,8 +150,5 @@ any of that is ours to build and maintain. One toggle with one real case is enou
 
 - **Daemon lifetime.** Does it exit after an idle period, or live until the machine restarts? An
   idle timeout keeps a laptop clean but makes the next command pay a spawn.
-- **Version skew.** Upgrading the binary leaves an old daemon running. Cheapest answer is a
-  version in the hello frame and the client asking the daemon to exit on mismatch, but that
-  needs deciding with the protocol.
 - **Spawn races.** Two commands starting at once both find no socket and both spawn. An
   exclusive create on a lock file under `home` is the usual fix; confirm it before step 1.

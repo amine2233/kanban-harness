@@ -44,6 +44,10 @@ run = "pnpm test"
 description = "Prettier, ESLint and tsc for the web app"
 run = ["pnpm format:check", "pnpm lint", "pnpm typecheck"]
 
+[tasks."web:check:fix"]
+description = "Like web:check, but Prettier and ESLint rewrite what they can"
+run = ["pnpm format", "pnpm --filter mvp-dashboard lint --fix", "pnpm typecheck"]
+
 [tasks."web:build"]
 description = "Production build into dist/"
 run = "pnpm build"

@@ -74,7 +74,9 @@ enum DaemonProcess {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
-        process.arguments = ["daemon", "run", "--home", home]
+        process.arguments = ["daemon", "run"]
+        // The home is not a flag, so it travels to the child the only way it can.
+        process.environment = ProcessInfo.processInfo.environment.merging(["MVP_DASHBOARD_HOME": home]) { $1 }
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice

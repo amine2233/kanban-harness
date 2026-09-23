@@ -32,7 +32,6 @@ final class CLI {
     static var baseEnvironment: [String: String] {
         var environment = ProcessInfo.processInfo.environment
         environment.removeValue(forKey: "MVP_DASHBOARD_DAEMON_PORT")
-        environment.removeValue(forKey: "MVP_DASHBOARD_HOME")
         return environment
     }
 
@@ -42,7 +41,13 @@ final class CLI {
     /// needs it.
     var extraEnvironment: [String: String] = [:]
 
-    var environment: [String: String] { Self.baseEnvironment.merging(extraEnvironment) { $1 } }
+    /// The home is not a flag any more, so a test isolates itself through the
+    /// environment — which is also how the daemon inherits it.
+    var environment: [String: String] {
+        Self.baseEnvironment
+            .merging(["MVP_DASHBOARD_HOME": home]) { $1 }
+            .merging(extraEnvironment) { $1 }
+    }
 
     init() throws {
         home = NSTemporaryDirectory() + "mvp-dashboard-cli-" + UUID().uuidString
@@ -56,7 +61,7 @@ final class CLI {
     func stopDaemon() {
         let process = Process()
         process.executableURL = Self.binary
-        process.arguments = ["--home", home, "daemon", "stop"]
+        process.arguments = ["daemon", "stop"]
         process.environment = environment
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
@@ -64,7 +69,7 @@ final class CLI {
         process.waitUntilExit()
     }
 
-    private var baseArguments: [String] { ["--home", home] }
+    private var baseArguments: [String] { [] }
 
     func tempFolder(_ name: String = "project") -> String {
         home + "/folders/" + name
@@ -213,7 +218,8 @@ final class CLI {
         let port = Int.random(in: 20000 ... 40000)
         let process = Process()
         process.executableURL = CLI.binary
-        process.arguments = ["--home", cli.home, "serve", "--port", String(port)]
+        process.arguments = ["serve", "--port", String(port)]
+        process.environment = cli.environment
         process.standardOutput = Pipe()
         process.standardError = Pipe()
         try process.run()
@@ -274,8 +280,8 @@ final class CLI {
         let daemon = try CLI()
         let process = Process()
         process.executableURL = CLI.binary
-        process.arguments = ["--home", daemon.home, "--verbose", "daemon", "run"]
-        process.environment = CLI.baseEnvironment
+        process.arguments = ["--verbose", "daemon", "run"]
+        process.environment = daemon.environment
         let err = Pipe()
         process.standardOutput = FileHandle.nullDevice
         process.standardError = err
@@ -291,11 +297,12 @@ final class CLI {
     }
 
     /// Starts `dashboard serve` on a free port and returns (process, port).
-    func startServer(home: String) throws -> (Process, Int) {
+    func startServer(_ cli: CLI) throws -> (Process, Int) {
         let port = Int.random(in: 20000 ... 40000)
         let process = Process()
         process.executableURL = CLI.binary
-        process.arguments = ["--home", home, "serve", "--port", String(port)]
+        process.arguments = ["serve", "--port", String(port)]
+        process.environment = cli.environment
         process.standardOutput = Pipe()
         process.standardError = Pipe()
         try process.run()
@@ -311,8 +318,8 @@ final class CLI {
     }
 
     @Test func cliRoutesThroughItsOwnDaemonAndHonoursAnExplicitServer() async throws {
-        let serverHome = try CLI().home
-        let (server, port) = try startServer(home: serverHome)
+        let serverFixture = try CLI()
+        let (server, port) = try startServer(serverFixture)
         defer { server.terminate() }
         try await waitForHealth(port: port)
 
@@ -355,7 +362,8 @@ final class CLI {
         _ = try cli.json("project", "add", cli.tempFolder("mcp"), "--name", "MCP demo")
         let process = Process()
         process.executableURL = CLI.binary
-        process.arguments = ["--home", cli.home, "mcp"]
+        process.arguments = ["mcp"]
+        process.environment = cli.environment
         let input = Pipe(), output = Pipe()
         process.standardInput = input
         process.standardOutput = output
@@ -397,7 +405,7 @@ final class CLI {
         let run = { (args: [String]) throws -> ([String: Any], String) in
             let p = Process()
             p.executableURL = CLI.binary
-            p.arguments = ["--home", cli.home] + args
+            p.arguments = args
             p.environment = cli.environment
             let out = Pipe()
             let err = Pipe()

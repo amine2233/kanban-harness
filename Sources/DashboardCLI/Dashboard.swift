@@ -18,11 +18,6 @@ struct Dashboard: AsyncParsableCommand {
 }
 
 struct GlobalOptions: ParsableArguments {
-    @Option(
-        name: .long,
-        help: "Directory holding the project registry (default: $MVP_DASHBOARD_HOME or $XDG_CONFIG_HOME/mvp-dashboard)."
-    )
-    var home: String?
 
     @Flag(name: .long, help: "Show info-level logs (migrations, database activity) on stderr.")
     var verbose = false
@@ -33,8 +28,11 @@ struct GlobalOptions: ParsableArguments {
     )
     var server: String?
 
+    /// Fixed: `$MVP_DASHBOARD_HOME`, else `~/.config/kanban-harness`. There is no
+    /// flag for it — one machine has one home, and a command that could point at
+    /// another one invites two daemons disagreeing about who owns what.
     var resolvedHome: String {
-        home ?? DependencyValues.current.home
+        DependencyValues.current.home
     }
 
     /// Log level for this invocation, applied through the `\.logger` dependency.

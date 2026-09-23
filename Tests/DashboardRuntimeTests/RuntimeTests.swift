@@ -27,10 +27,25 @@ import Testing
         #expect(RuntimeConfig(home: home).claudeExecutable == (ProcessInfo.processInfo.environment["MVP_DASHBOARD_CLAUDE_BIN"] ?? "claude"))
     }
 
-    @Test func homeKeyReadsEnvironmentThenXDGThenHome() {
-        #expect(HomeKey.defaultHome(environment: ["MVP_DASHBOARD_HOME": "/x"]) == "/x")
-        #expect(HomeKey.defaultHome(environment: ["XDG_CONFIG_HOME": "/cfg"]) == "/cfg/kanban-harness")
-        #expect(HomeKey.defaultHome(environment: ["HOME": "/me"]) == "/me/.config/kanban-harness")
+    @Test func homeKeyReadsEnvironmentThenLocalThenXDGThenHome() throws {
+        #expect(HomeKey.defaultHome(environment: ["MVP_DASHBOARD_HOME": "/x"], currentDirectory: "/nowhere") == "/x")
+        #expect(HomeKey.defaultHome(environment: ["XDG_CONFIG_HOME": "/cfg"], currentDirectory: "/nowhere") == "/cfg/kanban-harness")
+        #expect(HomeKey.defaultHome(environment: ["HOME": "/me"], currentDirectory: "/nowhere") == "/me/.config/kanban-harness")
+    }
+
+    /// A folder with its own `.kanban-harness` keeps its own home; a sibling without
+    /// one falls back to the user's.
+    @Test func homeKeyPrefersALocalDirectoryOverTheGlobalOne() throws {
+        let workspace = try tempHome()
+        let local = workspace + "/" + HomeKey.localDirectoryName
+        try FileManager.default.createDirectory(atPath: local, withIntermediateDirectories: true)
+
+        #expect(HomeKey.defaultHome(environment: ["HOME": "/me"], currentDirectory: workspace) == local)
+        #expect(HomeKey.defaultHome(environment: ["HOME": "/me"], currentDirectory: workspace + "/..") == "/me/.config/kanban-harness")
+        #expect(
+            HomeKey.defaultHome(environment: ["MVP_DASHBOARD_HOME": "/x"], currentDirectory: workspace) == "/x",
+            "an explicit environment home still wins"
+        )
     }
 
     @Test func registerWiresSingletonsAndServicesWork() async throws {

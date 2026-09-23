@@ -12,14 +12,32 @@ public enum UUIDKey: DependencyKey {
     public static let liveValue: @Sendable () -> UUID = { UUID() }
 }
 
-/// Directory holding the project registry and settings.json.
-/// `$MVP_DASHBOARD_HOME`, else `$XDG_CONFIG_HOME/kanban-harness`, else `~/.config/kanban-harness`.
-/// Holds the registry, `config.yml`, the credentials and the daemon socket.
+/// Directory holding the registry, `config.yml`, the credentials and the daemon handle.
+///
+/// A project can keep its own by creating `.kanban-harness/` beside the code, which is then
+/// used for commands run from that folder; everything else shares the one under the user's
+/// config directory. There is no flag: the working directory already says which you meant.
 public enum HomeKey: DependencyKey {
     public static let liveValue: String = defaultHome()
 
-    public static func defaultHome(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
+    /// A per-folder home, used when it exists in the directory the command was run from.
+    public static let localDirectoryName = ".kanban-harness"
+
+    /// `$MVP_DASHBOARD_HOME`, else `./.kanban-harness` when it exists, else
+    /// `$XDG_CONFIG_HOME/kanban-harness`, else `~/.config/kanban-harness`.
+    public static func defaultHome(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        currentDirectory: String = FileManager.default.currentDirectoryPath,
+        fileManager: FileManager = .default
+    ) -> String {
         if let home = environment["MVP_DASHBOARD_HOME"] { return home }
+
+        let local = (currentDirectory as NSString).appendingPathComponent(localDirectoryName)
+        var isDirectory: ObjCBool = false
+        if fileManager.fileExists(atPath: local, isDirectory: &isDirectory), isDirectory.boolValue {
+            return local
+        }
+
         let config = environment["XDG_CONFIG_HOME"]
             ?? (environment["HOME"].map { $0 + "/.config" } ?? NSHomeDirectory() + "/.config")
         return config + "/kanban-harness"

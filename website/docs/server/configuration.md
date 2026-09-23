@@ -5,7 +5,7 @@ title: Configuration
 # Configuration
 
 Three files under the dashboard home (`MVP_DASHBOARD_HOME`, default
-`~/.config/mvp-dashboard`). All are read live: edit them by hand, through the web, or with
+`~/.config/kanban-harness`). All are read live: edit them by hand, through the web, or with
 the CLI — the next request uses the new values, no restart.
 
 ## `settings.json` — server settings

@@ -20,8 +20,10 @@ is why it has no access to settings, providers or API keys, only to boards and c
 | **stdio** | `dashboard mcp` — the client spawns the process        | the default; nothing exposed on the network                 |
 | **HTTP**  | `POST http://127.0.0.1:5175/mcp` on the running server | clients that prefer streamable HTTP; localhost origins only |
 
-Over stdio, `dashboard mcp` behaves like the CLI: when a dashboard server is running the
-tools go through it (single writer, browsers update live); otherwise they work on the files.
+Over stdio, `dashboard mcp` behaves like every other command: the tools go through this home's
+daemon, starting one if none is running. The daemon is the single writer, so a card created
+from an editor appears in an open browser without a refresh, and `dashboard mcp` alongside
+`dashboard serve` is safe — they share one owner instead of opening the databases twice.
 
 ### Claude Code
 
@@ -62,9 +64,9 @@ Conventions the agent can rely on:
 ## Under the hood
 
 `DashboardMCP` holds the tool catalogue (data) and one dispatcher that maps a call to the
-command protocols (`ProjectCommands`, `BoardCommands`). The same dispatcher runs in-process
-(stdio, no server) or against `RemoteBoardCommands` (stdio with a server, and the HTTP
-endpoint inside the server). Nothing in it knows about storage or transport.
+command protocols (`ProjectCommands`, `BoardCommands`). The same dispatcher runs against
+`RemoteBoardCommands` over stdio, and in-process behind the server's HTTP endpoint. Nothing in
+it knows about storage or transport.
 
 ## What comes next
 

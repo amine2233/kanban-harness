@@ -105,24 +105,39 @@ extension AIProvider {
 
 /// Maps a kind to an implementation — and, for vendors that support it, to a
 /// browser sign-in; registered by the composition root.
+///
+/// A kind in `disabled` is one whose registration does not happen: the guard
+/// lives here rather than at each call site, so a module keeps calling
+/// `register` unconditionally and a disabled provider is simply absent.
 public struct AIProviderRegistry: Sendable {
     public typealias Factory = @Sendable (AIProviderConfig) -> any AIProvider
     public typealias SignInFactory = @Sendable (AIProviderConfig) throws -> any ProviderSignIn
     private var factories: [AIProviderKind: Factory] = [:]
     private var signIns: [AIProviderKind: SignInFactory] = [:]
+    private let disabled: Set<AIProviderKind>
 
-    public init() {}
+    public init(disabled: Set<AIProviderKind> = []) {
+        self.disabled = disabled
+    }
 
     public mutating func register(_ kind: AIProviderKind, _ factory: @escaping Factory) {
+        guard !disabled.contains(kind) else { return }
         factories[kind] = factory
     }
 
     public mutating func registerSignIn(_ kind: AIProviderKind, _ factory: @escaping SignInFactory) {
+        guard !disabled.contains(kind) else { return }
         signIns[kind] = factory
     }
 
     public func make(_ config: AIProviderConfig) throws -> any AIProvider {
-        guard let factory = factories[config.kind] else { throw AIProviderError.notConfigured("no implementation for kind '\(config.kind.rawValue)'") }
+        guard let factory = factories[config.kind] else {
+            throw AIProviderError.notConfigured(
+                disabled.contains(config.kind)
+                    ? "provider kind '\(config.kind.rawValue)' is disabled for this home"
+                    : "no implementation for kind '\(config.kind.rawValue)'"
+            )
+        }
         return factory(config)
     }
 

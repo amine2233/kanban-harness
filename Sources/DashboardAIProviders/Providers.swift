@@ -6,8 +6,8 @@ import Foundation
 extension AIProviderRegistry {
     /// Every vendor this build ships. Cloud/local backends go through
     /// AnyLanguageModel; Claude Code is our own CLI-backed implementation.
-    public static func standard(claudeExecutable: String = "claude") -> AIProviderRegistry {
-        var registry = AIProviderRegistry()
+    public static func standard(claudeExecutable: String = "claude", disabled: Set<AIProviderKind> = []) -> AIProviderRegistry {
+        var registry = AIProviderRegistry(disabled: disabled)
         registry.register(.apple) { config in
             AnyLanguageModelProvider(config: config) {
                 #if canImport(FoundationModels)

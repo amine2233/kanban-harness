@@ -57,6 +57,7 @@ Set in `mise.toml` (override in a git-ignored `.env.local`):
 | `MVP_DASHBOARD_PORT`                      | `5175`                  | Port used by the `dev`, `serve` and `backend:serve` tasks.                                                                                |
 | `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` | —                       | Supplies a provider's API key from the environment instead of the config file (never written back).                                       |
 | `MVP_DASHBOARD_HOST`                      | `127.0.0.1`             | Interface the servers bind to; `0.0.0.0` exposes them on the network (see "Reaching it from another machine").                            |
+| `MVP_DASHBOARD_PROVIDERS_DISABLED`        | —                       | Comma-separated provider kinds that never register, e.g. `huggingface,claude_code`. An unknown name is ignored.                           |
 
 ## Use
 
@@ -86,6 +87,8 @@ Providers live in `config.json` (or `config.yaml`) under the dashboard home; the
 | `ollama`      | Local Ollama (`http://127.0.0.1:11434` by default)                                      | Ollama running    |
 
 Each provider can carry `pricing: {input_per_million, output_per_million}` (USD) so drafts get a cost even when the vendor reports none. Everything but `claude_code` goes through [AnyLanguageModel](https://github.com/mattt/AnyLanguageModel), so adding a vendor is one line in `AIProviderRegistry.standard`. Keys are write-only (the API only reports `has_api_key`), the file is written `0600`, and `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` keeps a key out of the file entirely. Card text is passed to the model as data, never as instructions.
+
+A kind listed in `MVP_DASHBOARD_PROVIDERS_DISABLED` never registers at all, so it is absent from the registry rather than present and failing later — set it on every invocation, since the daemon does the work and inherits the environment of whichever command started it.
 
 ### CLI
 

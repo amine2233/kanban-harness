@@ -80,7 +80,11 @@ public enum DashboardRuntime {
         container.register(SettingsCommandsKey.self) { c in c.make(SettingsServiceKey.self) }
         container.register(BoardCommandsKey.self) { c in LocalBoardCommands(projects: c.make(ProjectServiceKey.self)) }
         container.register(AIProviderRegistryKey.self) { c in
-            var registry = AIProviderRegistry.standard(claudeExecutable: c.make(RuntimeConfigKey.self).claudeExecutable)
+            let runtime = c.make(RuntimeConfigKey.self)
+            var registry = AIProviderRegistry.standard(
+                claudeExecutable: runtime.claudeExecutable,
+                disabled: runtime.disabledProviders
+            )
             HuggingFaceProvider.register(in: &registry)
             OpenRouterProvider.register(in: &registry)
             return registry

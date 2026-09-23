@@ -28,7 +28,7 @@ struct DaemonCommand: AsyncParsableCommand {
 
         func run() async throws {
             try await failing {
-                let client = try await DaemonProcess.connect(explicit: nil, home: global.resolvedHome)
+                let client = try await DaemonProcess.connect(home: global.resolvedHome)
                 try Output.json(Report(home: global.resolvedHome, running: true, url: client.baseURL.absoluteString))
             }
         }

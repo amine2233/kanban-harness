@@ -22,15 +22,9 @@ struct GlobalOptions: ParsableArguments {
     @Flag(name: .long, help: "Show info-level logs (migrations, database activity) on stderr.")
     var verbose = false
 
-    @Option(
-        name: .customLong("server"),
-        help: "Dashboard server to talk to (default: $MVP_DASHBOARD_URL, else http://127.0.0.1:$MVP_DASHBOARD_PORT|5175)."
-    )
-    var server: String?
-
-    /// Fixed: `$MVP_DASHBOARD_HOME`, else `~/.config/kanban-harness`. There is no
-    /// flag for it — one machine has one home, and a command that could point at
-    /// another one invites two daemons disagreeing about who owns what.
+    /// Where this command's data lives. There is no flag: the directory it was run
+    /// from already says which home was meant, and a flag pointing somewhere else
+    /// only invites two daemons disagreeing about who owns what.
     var resolvedHome: String {
         DependencyValues.current.home
     }
@@ -38,22 +32,5 @@ struct GlobalOptions: ParsableArguments {
     /// Log level for this invocation, applied through the `\.logger` dependency.
     var logLevel: Logger.Level {
         verbose ? .info : .warning
-    }
-
-    var serverURL: URL {
-        let environment = ProcessInfo.processInfo.environment
-        let raw = server ?? environment["MVP_DASHBOARD_URL"]
-            ?? "http://127.0.0.1:\(environment["MVP_DASHBOARD_PORT"] ?? "5175")"
-        return URL(string: raw) ?? URL(string: "http://127.0.0.1:5175")!
-    }
-
-    /// An address the user pinned with `--server`. When absent the command uses this
-    /// home's daemon, starting one if needed.
-    var explicitServerURL: URL? {
-        server.flatMap(URL.init(string:))
-    }
-
-    func validate() throws {
-        if let server, URL(string: server)?.host == nil { throw ValidationError("--server must be an http(s) URL") }
     }
 }

@@ -317,26 +317,29 @@ final class CLI {
         Issue.record("server did not come up")
     }
 
-    @Test func cliRoutesThroughItsOwnDaemonAndHonoursAnExplicitServer() async throws {
-        let serverFixture = try CLI()
-        let (server, port) = try startServer(serverFixture)
+    @Test func aRunningServerOwnsItsHomeAndCommandsGoThroughIt() async throws {
+        let cli = try CLI()
+        let (server, port) = try startServer(cli)
         defer { server.terminate() }
         try await waitForHealth(port: port)
 
-        let cli = try CLI()
-        let created = try #require(try cli.json("--server", "http://127.0.0.1:\(port)", "project", "add", cli.tempFolder("via-server"), "--name", "Via server") as? [String: Any])
+        let handlePath = cli.home + "/" + RuntimeConfig.daemonPortFileName
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline, !FileManager.default.fileExists(atPath: handlePath) {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        let handle = try String(contentsOfFile: handlePath, encoding: .utf8)
+        #expect(handle.hasPrefix("\(port) "), "serve owns the home rather than opening the databases beside a daemon")
+
+        let created = try #require(try cli.json("project", "add", cli.tempFolder("via-server"), "--name", "Via server") as? [String: Any])
         #expect(created["name"] as? String == "Via server")
+
         let (data, _) = try await URLSession.shared.data(from: URL(string: "http://127.0.0.1:\(port)/api/projects")!)
         let serverSide = try #require(try JSONSerialization.jsonObject(with: data) as? [[String: Any]])
-        #expect(serverSide.map { $0["name"] as? String } == ["Via server"], "the server's registry received it")
-        #expect(!FileManager.default.fileExists(atPath: cli.home + "/projects.sqlite"), "--server means no daemon was started for this home")
+        #expect(serverSide.map { $0["name"] as? String } == ["Via server"], "the command went through the server, not around it")
 
-        let own = try #require(try cli.json("project", "list") as? [Any])
-        #expect(own.isEmpty, "without --server the CLI starts a daemon for its own home, which is empty")
-        #expect(FileManager.default.fileExists(atPath: cli.home + "/" + RuntimeConfig.daemonPortFileName), "the daemon published its port")
-
-        let unreachable = try cli.run("--server", "http://127.0.0.1:1", "project", "list")
-        #expect(unreachable.status == 1, "an explicit server that does not answer fails; there is no local fallback left to silently corrupt files")
+        let elsewhere = try CLI()
+        #expect(try #require(try elsewhere.json("project", "list") as? [Any]).isEmpty, "another home is independent")
     }
 
     @Test func aiProvidersAreEditedThroughTheCLIAndStoredInConfigJSON() throws {

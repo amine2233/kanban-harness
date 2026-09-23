@@ -117,11 +117,11 @@ maps them once to `{code, message}` with a status and `X-Request-Id`. Codes:
 
 ## CLI routing
 
-Resolved once, before the command runs: `--server URL`, else `$MVP_DASHBOARD_URL`, else
-`http://127.0.0.1:$MVP_DASHBOARD_PORT`. If `/api/health` answers, bind `Remote*Commands`;
-otherwise bind the local ones and work on the files. `--remote` fails instead of falling back,
-`--local` skips the probe, `--home` applies to local mode only. JSON on stdout, narration on
-stderr.
+There is one route: the home's daemon, found through `daemon.port` and started when nothing
+answers. Commands bind `Remote*Commands` against it and never open a store, so `Mode`,
+`--local`, `--remote` and `--server` are all gone. The home is resolved from the environment or
+the working directory ([`HomeKey`](../Sources/DashboardService/Dependencies.swift)), not a flag.
+JSON on stdout, narration on stderr.
 
 ## MCP
 

@@ -83,7 +83,7 @@ So `config.yaml` can be committed or shared; `credentials.json` never should be.
 | `MVP_DASHBOARD_HOME`       | the folder above                                                              |
 | `MVP_DASHBOARD_PORT`       | API port (tasks)                                                              |
 | `MVP_DASHBOARD_HOST`       | bind address                                                                  |
-| `MVP_DASHBOARD_URL`        | server the CLI talks to (default `http://127.0.0.1:$MVP_DASHBOARD_PORT`)      |
+| `MVP_DASHBOARD_HOME`       | the home, overriding `./.kanban-harness` and `~/.config/kanban-harness`       |
 | `MVP_DASHBOARD_CLAUDE_BIN` | Claude Code executable for `claude_code` providers (default `claude` on PATH) |
 
 ## Coming: agent and MCP files

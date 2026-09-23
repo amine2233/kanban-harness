@@ -30,10 +30,10 @@ The first command that finds no daemon starts one and waits for it. It then stay
 next command is immediate and a change made through MCP is seen by an open browser. It runs
 until you stop it — see [Daemon](#daemon).
 
-`--server URL` pins a command to an address you chose (another machine, or a server you
-started yourself). It is used as given and never started for you; if nothing answers, the
-command fails rather than falling back, because working on the files behind a running daemon's
-back is what corrupts them.
+There is no flag to point a command somewhere else. `dashboard serve` owns its home like the
+daemon does, so starting a server and then running a command already routes through it —
+nothing to configure, and no way to work on the files behind a running owner's back, which is
+what used to corrupt them.
 
 ## Home
 

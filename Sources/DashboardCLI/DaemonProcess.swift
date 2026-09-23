@@ -30,10 +30,7 @@ enum DaemonProcess {
     /// A lock older than this belonged to a spawner that died before releasing it.
     static let staleLockAfter: TimeInterval = 30
 
-    /// `explicit` is `--server`: an address the user chose, used as given and never
-    /// started on their behalf.
-    static func connect(explicit: URL?, home: String) async throws -> DashboardClient {
-        if let explicit { return DashboardClient(baseURL: explicit) }
+    static func connect(home: String) async throws -> DashboardClient {
         if let client = await reachableClient(home: home) { return client }
 
         try spawnUnlessAnotherIsStarting(home: home)

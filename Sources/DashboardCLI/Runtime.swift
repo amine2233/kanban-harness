@@ -14,7 +14,7 @@ struct Runtime {
     let container = CascadeKit.Application()
 
     static func open(_ global: GlobalOptions) async throws -> Runtime {
-        let client = try await DaemonProcess.connect(explicit: global.explicitServerURL, home: global.resolvedHome)
+        let client = try await DaemonProcess.connect(home: global.resolvedHome)
         let runtime = Runtime()
         runtime.container.register(ProjectCommandsKey.self) { _ in RemoteProjectCommands(client: client) }
         runtime.container.register(SettingsCommandsKey.self) { _ in RemoteSettingsCommands(client: client) }

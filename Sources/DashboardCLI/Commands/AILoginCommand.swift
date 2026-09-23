@@ -24,7 +24,7 @@ extension AICommand.Providers {
 
         func run() async throws {
             try await failing {
-                try await viaDaemon(DaemonProcess.connect(explicit: global.explicitServerURL, home: global.resolvedHome))
+                try await viaDaemon(DaemonProcess.connect(home: global.resolvedHome))
             }
         }
 

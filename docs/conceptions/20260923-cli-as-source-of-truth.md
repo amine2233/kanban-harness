@@ -143,7 +143,7 @@ any of that is ours to build and maintain. One toggle with one real case is enou
 - **The wire protocol on the daemon socket** — framing, versioning and what happens when a
   client is older than the daemon. It needs its own note before step 1 is cut into patches.
 - **The on-disk formats** — unchanged; `PRD.md` §data-contract stays the contract.
-- **Provider OAuth** — [`provider-oauth-hardening.md`](provider-oauth-hardening.md) is
+- **Provider OAuth** — [`20260922-provider-oauth-hardening.md`](20260922-provider-oauth-hardening.md) is
   independent, except that its `publicURL` keeps describing the web server, not the daemon.
 
 ## Open questions

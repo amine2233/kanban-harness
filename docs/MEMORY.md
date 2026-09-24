@@ -28,6 +28,15 @@ running for that home — the variable is read where the provider runs, which is
 looks like the variable is ignored. Set it on every invocation, or put the value in the config
 file, which is read per request. (`DaemonProcess.swift`, `RuntimeConfig.claudeExecutable`)
 
+## The pinned Swift does not always build this package on macOS
+
+`mise.toml` pins Swift for CI's sake, and that toolchain can fail against a newer Xcode SDK —
+a frontend crash compiling `swift-configuration`'s manifest, or `AnyLanguageModel` failing on
+`FoundationModels` types the pinned SDK does not have. `/usr/bin/swift` (the one Xcode ships)
+builds it. CI is unaffected: Linux runs in the `swift:6.4.0-noble` image and macOS uses the
+runner's Xcode toolchain, so this is a local-only trap that looks like a broken checkout.
+Reproduce a real failure with `mise run backend:test:linux` rather than trusting a local build.
+
 ## Linux breaks in specific ways
 
 `String` is not `CVarArg`, so `%@` formatting does not compile; `FoundationModels` (the `apple`

@@ -168,3 +168,18 @@ Independent of sign-in — it is a normal OpenAI-compatible vendor:
   tell users to keep `$MVP_DASHBOARD_HOME` out of dotfile repos or use the env var.
 - The callback route accepts only `state` values it issued, once, within 10 minutes.
 - `--cors-origin` does not apply to the callback (it is a top-level navigation, not XHR).
+
+## Tasks
+
+Steps 1–3 shipped (`b85234d`): the OAuth flow, the file credential store, OpenRouter and
+Hugging Face.
+
+- **T-26 (M)** `KeychainCredentialStore` on macOS behind `#if canImport(Security)`; the file
+  store stays the Linux backend. — SRV-09 · —
+- **T-38 (S)** One `registerOpenAICompatible` helper for the three copies of the
+  guard-key-then-`OpenAILanguageModel` body (`openai`, `huggingface`, `openrouter`). Keep
+  `ProvidersTests.swift:174` passing. — SRV-09 · —
+
+T-37, T-39, T-40, T-41 and T-42 moved to
+[Provider OAuth hardening](provider-oauth-hardening), which decides
+them. A task belongs to the note that settles it, and only to one.

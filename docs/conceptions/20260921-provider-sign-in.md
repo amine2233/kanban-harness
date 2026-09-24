@@ -167,16 +167,10 @@ Hugging Face.
 
 - **T-26 (M)** `KeychainCredentialStore` on macOS behind `#if canImport(Security)`; the file
   store stays the Linux backend. — SRV-09 · —
-- **T-37 (S)** Build the OAuth redirect URI from a configured public URL; when unset, accept
-  the `Host` header only if it is loopback. Today a forged `Host` steers OpenRouter's
-  `callback_url`, which needs no pre-registration. — SRV-09 · —
 - **T-38 (S)** One `registerOpenAICompatible` helper for the three copies of the
   guard-key-then-`OpenAILanguageModel` body (`openai`, `huggingface`, `openrouter`). Keep
   `ProvidersTests.swift:174` passing. — SRV-09 · —
-- **T-39 (M)** Renew an expiring token at read time, or carry `expiresAt` on
-  `AIProviderConfig`; today only `AssistantService` calls `refreshed()`. — SRV-09 · —
-- **T-40 (S)** Record in `ProviderSignInService.signOut` that it does not revoke at the
-  vendor. — SRV-09 · —
-- **T-41 (M)** `OAuthVendor` descriptor so a vendor is data, not a module. — SRV-09 · T-38 ·
-  deferred: one conforming vendor today, OpenRouter deliberately does not fit; revisit at the
-  third standard-OAuth vendor
+
+T-37, T-39, T-40, T-41 and T-42 moved to
+[`20260922-provider-oauth-hardening.md`](20260922-provider-oauth-hardening.md), which decides
+them. A task belongs to the note that settles it, and only to one.

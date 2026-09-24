@@ -63,15 +63,24 @@ jobs:
 
           # ci.yml is in all three: editing CI reruns everything, which is the
           # cheap insurance against a filter that silently stops matching.
+          # $2 is an optional exclusion, applied before the include match, so a
+          # path that only looks like an area does not select it.
           area() {
             if [ "$unknown" = '1' ]; then echo 'true'; return; fi
-            if printf '%s\n' "$changed" | grep -Eq "$1"; then echo 'true'; else echo 'false'; fi
+            if printf '%s\n' "$changed" | grep -Ev "${2:-^$}" | grep -Eq "$1"; then
+              echo 'true'
+            else
+              echo 'false'
+            fi
           }
 
           shared='|^package\.json$|^pnpm-lock\.yaml$|^pnpm-workspace\.yaml$|^\.github/workflows/ci\.yml$'
           {
             echo "backend=$(area "^Sources/|^Tests/|^Package\.(swift|resolved)$|^mise\.toml$|^\.github/workflows/ci\.yml$")"
-            echo "web=$(area "^web/$shared")"
+            # `web/docs/` and `web/*.md` are documentation: eslint, tsc, vitest and
+            # the build cannot fail on them, and the check that can — prettier — is
+            # check:web:format, which is ungated and runs anyway.
+            echo "web=$(area "^web/$shared" '^web/(docs/|[^/]*\.md$)')"
             echo "website=$(area "^website/|^docs/conceptions/$shared")"
           } | tee -a "$GITHUB_OUTPUT"
 

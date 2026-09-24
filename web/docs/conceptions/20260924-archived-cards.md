@@ -30,10 +30,10 @@ On the client, `kanbanApi.deleteCard` issues `DELETE …/cards/:id` and invalida
 **Decision.** **Archive** is added next to **Delete**; delete is not moved, not demoted and not
 replaced. Both appear in both places a card can be acted on:
 
-| Where                                              | What it shows                                  |
-| -------------------------------------------------- | ---------------------------------------------- |
-| the card's dot menu on the board                   | Archive, Delete                                |
-| the card detail dialog (`CardDialog`)              | Archive, Delete                                |
+| Where                                 | What it shows   |
+| ------------------------------------- | --------------- |
+| the card's dot menu on the board      | Archive, Delete |
+| the card detail dialog (`CardDialog`) | Archive, Delete |
 
 One action in one place and not the other is how a user learns a feature exists and then cannot
 find it again. The dot menu is where a card is dismissed in passing; the dialog is where someone
@@ -106,15 +106,32 @@ The live socket carries `workspaceChanged(projectId)` already, and the app refet
 change made from the CLI or MCP should reach both views without a new event kind — confirm that
 against `packages/state/src/live/` before relying on it.
 
-### D-6 — archiving a card does not archive its children
+### D-6 — archiving a card archives its children, and restoring brings them back
 
-**Decision.** Archive the card alone. Its parent/child links are archived exactly as
-`deleteCard` already archives them; the children stay on the board, detached.
+**Decision.** Archiving a parent archives its whole subtree. Restoring it brings back exactly
+the cards that went with it, and nothing else.
 
-A sub-task is a card. Cascading would mean a restore has to rebuild a subtree and decide what
-happens when one child's column is gone — D-3's problem, multiplied, for a case nobody has asked
-for. `with_children` exists on delete because deleting a parent and leaving orphans loses the
-structure permanently; archiving loses nothing, because the links are kept as history.
+A sub-task without its parent is orphaned work: it stays on the board describing a step of
+something no longer there. Leaving children behind would make archiving a parent the fastest way
+to create cards nobody can place.
+
+Two consequences, and both are requirements rather than details:
+
+**The archive remembers the operation, not just the card.** Each archived record carries the id
+of the archive that produced it. Restoring a parent restores that batch — so a child archived on
+its own three weeks earlier is not dragged back by a parent archived today, and a child archived
+_with_ the parent is not left behind. Without this, restore has to guess from the parent/child
+links, which are themselves archived history and say nothing about when.
+
+**Every card in the batch keeps its own origin.** The restore form (D-3) asks for the parent's
+board and column. Each child returns to the column _it_ was archived from; when that column is
+gone, it falls back to the destination chosen for the parent, which is a place the user just
+confirmed exists. So one question restores a subtree, and no card lands somewhere nobody picked.
+
+**Rejected.** A `with_children` flag mirroring delete. Delete has one because deleting a parent
+and keeping orphans loses the structure forever, so the caller must choose. Archiving loses
+nothing — the links are kept as history — so the choice has no stakes and a flag would only
+create a way to make the board wrong.
 
 ### D-7 — the list is flat, newest first, and unpaginated until it hurts
 
@@ -126,19 +143,39 @@ A personal board's archive is tens of cards, not thousands. `Page` already exist
 An empty state says archiving is where finished cards go, because a feature nobody can find is
 a feature nobody uses.
 
-## What this needs from the server
+## Every surface, not only the web
+
+Archiving is a workspace operation, so it belongs to the command protocol every surface already
+goes through (`BoardCommands`), not to the HTTP layer. Once it is there, the three clients are
+three thin call sites:
+
+| Surface | What it gets                                                                  |
+| ------- | ----------------------------------------------------------------------------- |
+| web     | this note — the view, the menu entries, the restore form                      |
+| CLI     | `dashboard card archive <id>` and `dashboard card restore <id> --column <id>` |
+| MCP     | an `archive_card` and a `restore_card` tool, beside `delete_card`             |
+
+The MCP half has prior art: kanban-rs's own server exposes archive and restore tools, so the
+names and shapes are not a fresh invention, and an agent that clears a finished board is exactly
+the case archiving exists for.
+
+Their tasks belong to the backend note, not here — `web/docs/` is frontend only. This note
+records the requirement so the backend note is not written for one client.
+
+## What this needs from the daemon
 
 Not decided here — this is the contract, and the backend note decides how to satisfy it.
 
-| Endpoint                                   | Purpose                                     |
-| ------------------------------------------ | ------------------------------------------- |
-| `GET …/kanban/v1/archive`                  | the project's archived cards, newest first  |
-| `POST …/boards/:board/cards/:card/archive` | move a card off the board                   |
-| `POST …/archive/:card/restore`             | put it back, body `{ board_id, column_id }` |
+| Endpoint                                   | Purpose                                            |
+| ------------------------------------------ | -------------------------------------------------- |
+| `GET …/kanban/v1/archive`                  | the project's archived cards, newest first         |
+| `POST …/boards/:board/cards/:card/archive` | move a card and its subtree off the board          |
+| `POST …/archive/:card/restore`             | put the batch back, body `{ board_id, column_id }` |
 
-An archived card must carry the **board and column it was archived from**, and **when** — D-3
-depends on the first, D-7 on the second. Without the origin the client has to guess a
-destination, which is the failure that decision exists to prevent.
+An archived card must carry the **board and column it was archived from**, **when**, and the
+**id of the archive operation** — D-3 depends on the first, D-7 on the second, D-6 on the third.
+Without the origin the client has to guess a destination; without the operation id, restoring a
+parent cannot tell which children belong to it.
 
 Open on the backend side, and the reason it needs its own note: `archived_cards` is an
 unmodelled passthrough today, kanban-rs writes that section too, and both stores have to keep
@@ -161,6 +198,7 @@ changes the on-disk contract in [`PRD.md`](../../../docs/PRD.md) § Data contrac
   unchanged. — WEB · T-18
 - **T-20 (M)** `/projects/:id/archive`: the route, the list, the empty state. — WEB · T-18
 - **T-21 (M)** Restore with a board and column picker, defaulting to the origin when it still
-  exists. — WEB · T-20
+  exists; a subtree restores as one batch. — WEB · T-20
 - **T-22 (S)** Tests: both lists refetch after archive and after restore; restoring to a deleted
-  column falls back rather than failing. — WEB · T-21
+  column falls back rather than failing; archiving a parent removes its children from the board
+  and restoring it brings back that batch only. — WEB · T-21

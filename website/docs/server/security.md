@@ -20,13 +20,61 @@ port" means "is on this machine".
 
 ## Files and secrets
 
-- `config.yaml` is written with mode **0600**. API keys are **write-only**: the API and the
-  CLI only ever report `has_api_key`.
-- `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` supplies a key from the environment and is
-  never written to disk.
-- Every write to a project file or settings file is **atomic** (write to a temp file, rename),
-  so a crash mid-write cannot corrupt a board.
-- Unregistering a project deletes nothing on disk.
+Secrets are kept apart from settings, so the settings file can be shared and the secret file
+cannot be shared by accident.
+
+| File                      | Holds                                        | Mode   |
+| ------------------------- | -------------------------------------------- | ------ |
+| `<home>/config.yaml`      | providers, models, base URLs — and no secret | `0600` |
+| `<home>/credentials.json` | API keys and OAuth tokens                    | `0600` |
+
+Both are written **atomically** — to a temporary file, then renamed — as is every project and
+settings file, so a crash mid-write cannot corrupt one.
+
+Neither exists until something writes it. A fresh home holds only `projects.sqlite` and
+`daemon.port`; `credentials.json` appears at the first sign-in or the first key stored, and the
+config file at the first `dashboard ai providers add`. So "I cannot find `credentials.json`"
+usually means no provider has been configured in that home — check which home you are in with
+`dashboard daemon status`.
+
+The config file is read as `config.yaml`, `config.yml` or `config.json`, whichever exists; when
+none does, a first save writes `config.json`.
+
+**Where a provider's key comes from**, in order: the environment variable
+`MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY`, then `credentials.json`, then a literal `api_key:`
+in `config.yaml` (kept for existing files). A key that came from the environment is **never
+written to disk** — deliberately, so a CI runner or a shared machine can supply one that leaves
+no trace.
+
+:::caution The environment path and the daemon
+The daemon inherits the environment of whichever command started it, and then outlives every one
+of them. A key exported in one shell therefore lasts exactly as long as that daemon: replace it
+from a shell that never exported the key, and the provider reports itself unconfigured with no
+further explanation. Put the value in `config.yaml` — which is read per request — or
+`dashboard daemon stop` first. See [Daemon](../daemon).
+:::
+
+Keys are **write-only** across every surface: the API, the CLI and the web app only ever report
+`has_api_key`. A secret never appears in a log line, at any level.
+
+Unregistering a project deletes nothing on disk.
+
+### What is planned
+
+Two design notes decide where this goes next, and neither is implemented yet:
+
+- **[Config secret references](../conceptions/config-secret-references)** — `api_key: ${VAR}` in
+  `config.yaml`, resolved on read from the process environment or a `.env` in the home, so the
+  configuration file references a secret instead of containing one, and a key stops depending on
+  the shell that happened to start the daemon.
+- **[The token store](../conceptions/oauth-token-store)** — OAuth access and refresh tokens
+  sealed with AES-GCM under a key generated on first use, because a token the dashboard obtained
+  is the one secret that cannot be referenced from somewhere else.
+
+Both notes also decide two things worth knowing in advance: a home created inside a repository
+gets a `.gitignore`, since everything secret lives in the home and a key committed to a history
+cannot be revoked; and `MVP_DASHBOARD_AI_PROVIDERS_<ID>_API_KEY` becomes redundant once `${VAR}`
+reads the process environment, so it is deprecated with a warning rather than removed.
 
 ## AI
 

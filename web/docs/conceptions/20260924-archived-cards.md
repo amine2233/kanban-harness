@@ -149,11 +149,16 @@ Archiving is a workspace operation, so it belongs to the command protocol every 
 goes through (`BoardCommands`), not to the HTTP layer. Once it is there, the three clients are
 three thin call sites:
 
-| Surface | What it gets                                                                  |
-| ------- | ----------------------------------------------------------------------------- |
-| web     | this note — the view, the menu entries, the restore form                      |
-| CLI     | `dashboard card archive <id>` and `dashboard card restore <id> --column <id>` |
-| MCP     | an `archive_card` and a `restore_card` tool, beside `delete_card`             |
+| Surface | What it gets                                                                                              |
+| ------- | --------------------------------------------------------------------------------------------------------- |
+| web     | this note — the view, the menu entries, the restore form                                                  |
+| CLI     | `dashboard card archive <project> <card>`, `dashboard card restore <project> <card> [--board] [--column]` |
+| MCP     | `archive_card` and `restore_card`, taking `project, board, card` like `delete_card`                       |
+
+Every one of them is **project-scoped**, like every other command in this repository —
+`dashboard project show <name|id>`, `dashboard ai ticket <project> …`, and every MCP tool taking
+`project` first. A card id is unique inside a workspace, not across a machine, so a command
+without a project has nothing to resolve it against.
 
 The MCP half has prior art: kanban-rs's own server exposes archive and restore tools, so the
 names and shapes are not a fresh invention, and an agent that clears a finished board is exactly
@@ -172,10 +177,20 @@ Not decided here — this is the contract, and the backend note decides how to s
 | `POST …/boards/:board/cards/:card/archive` | move a card and its subtree off the board          |
 | `POST …/archive/:card/restore`             | put the batch back, body `{ board_id, column_id }` |
 
-An archived card must carry the **board and column it was archived from**, **when**, and the
-**id of the archive operation** — D-3 depends on the first, D-7 on the second, D-6 on the third.
-Without the origin the client has to guess a destination; without the operation id, restoring a
-parent cannot tell which children belong to it.
+An archived record must carry, at minimum:
+
+| Field                   | Needed by     | Why                                                            |
+| ----------------------- | ------------- | -------------------------------------------------------------- |
+| `project_id`            | every surface | which project and board this card belongs to, without a lookup |
+| `board_id`, `column_id` | D-3           | where to put it back, and what to fall back from               |
+| `archived_at`           | D-7           | newest first                                                   |
+| `archive_id`            | D-6           | which children came with this parent                           |
+
+`project_id` looks redundant inside the file — the archive lives in the project's own workspace,
+so the container already says it. It is not redundant anywhere the record leaves that container:
+a CLI printing JSON, an MCP tool answering an agent, a log line. A record that only means
+something in its container is the kind that gets copied out and loses its meaning, and the fix
+costs one field.
 
 Open on the backend side, and the reason it needs its own note: `archived_cards` is an
 unmodelled passthrough today, kanban-rs writes that section too, and both stores have to keep

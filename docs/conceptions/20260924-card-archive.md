@@ -4,11 +4,14 @@ The server half of [`web/docs/conceptions/20260924-archived-cards.md`](../../web
 which decides the view and blocks every task in it on this one. It also owns the CLI and the
 MCP surfaces, because archiving is one operation and three clients.
 
-## kanban-rs already designed this
+## kanban-rs already designed this, and that is evidence, not a constraint
 
-`archived_cards` is not an empty extension point waiting for us. It is a section of a format we
-do not own, and [`PRD.md`](../PRD.md) lists _a written `kanban.json` opens in `kanban-rs`_ under
-**Never break**. Its own database says what the shape is:
+`archived_cards` is a section of the format this project started from. kanban-rs is **a starting
+example, not a compatibility target for new work** — so what follows is read as prior art from
+someone who solved this before us, and it is taken where it is right rather than because it is
+theirs.
+
+Its own database says the shape:
 
 ```sql
 CREATE TABLE archived_cards (
@@ -21,16 +24,22 @@ CREATE TABLE archived_cards (
 );
 ```
 
-Three things follow, and each corrects an assumption in the web note:
+Two of its choices are worth keeping, and one gap is worth filling:
 
 1. **The card is kept.** `card_id REFERENCES cards(id)` — an archived card is still a row in
-   `cards`. Archiving is a _marker_, not a move, and `cards` carries no `archived` flag: a card
-   is archived exactly when a record names it.
+   `cards`, and `cards` carries no `archived` flag. We reach the same conclusion from our own
+   code, which is why it is D-2 rather than an import: a card that leaves the collection breaks
+   every `spawns` edge pointing at it, the prefix counter, and the card number that makes
+   `task-12` mean something.
 2. **The record carries `original_position`.** The web note remembers the column and forgets
-   where in it. Restoring to the top of a column a card used to sit at the bottom of is a small
-   wrongness that is impossible to explain afterwards.
-3. **There is no batch id and no project id.** D-6 of the web note wants the first and the review
-   asked for the second. Neither can be a new column in someone else's table.
+   where in it. Restoring to the top of a column a card sat at the bottom of is a small wrongness
+   that is impossible to explain afterwards. Keep it.
+3. **There is no batch id.** kanban-rs has no cascade, so it needed none. The web note's D-6 does,
+   so we add one — which is exactly the kind of departure being free of the format allows.
+
+What we do keep is **backward** compatibility, which is a different promise: a `kanban.json` this
+project has already written must go on loading. Adding a section nothing used to read cannot
+break that.
 
 ## Decisions
 
@@ -68,23 +77,20 @@ forgets the filter shows archived cards on the board, which looks like archiving
 The filter belongs in one place — the domain query the routes already use — and not in each
 caller.
 
-### D-3 — `archived_at` is the batch key; no invented field
+### D-3 — one archive, one id
 
-**Decision.** Every card archived by one operation is stamped with the **same** `archived_at`.
-Restoring a parent restores the archived cards sharing its timestamp that its `spawns` history
-links to it.
+**Decision.** `ArchivedCard` carries `archiveId: UUID`. Every card archived by one operation
+shares it. Restoring a parent restores the records with that id.
 
-The web note's D-6 needs to know which children came with a parent. kanban-rs's record has no
-place for an id, and adding a key inside an entry of a format we do not own is the thing the
-PRD forbids. A shared timestamp carries the same information using only fields that already
-exist.
+The web note's D-6 needs to know which children came back with a parent, and the honest way to
+record "these went together" is a field that says so. An earlier draft of this note used the
+shared `archived_at` timestamp as the key, to avoid adding a field to a format we did not own —
+with kanban-rs demoted to prior art, that constraint is gone and the cleverness with it. A
+timestamp used as an identity is a collision waiting for the one millisecond that matters.
 
-**The risk, stated rather than hidden:** two unrelated archives in the same instant would merge
-into one batch. `archived_at` is RFC3339 with sub-second precision and the daemon is the only
-writer, so this needs two operations inside the same millisecond on one machine. If it ever
-matters, the fallback is an extra key inside the entry — **which requires first verifying that
-kanban-rs preserves unknown keys there**, and that check is an open question below, not an
-assumption.
+**Rejected.** Deriving the batch from the `spawns` links alone. They say who is whose child,
+never when they were archived, so a child archived on its own three weeks earlier would come
+back with a parent archived today.
 
 ### D-4 — `project_id` is a wire field, never a stored one
 
@@ -169,13 +175,14 @@ work.
 
 ## Open questions
 
-- **The JSON v18 shape of an `archived_cards` entry.** The schema above is kanban-rs's SQLite;
-  the JSON envelope is a different serialisation of the same idea and the mapping is assumed,
-  not verified — every `archived_cards` array on this machine is empty. Archive one card in
-  kanban-rs and read the file before cutting T-66 into patches. If the field names differ, this
-  note's decisions all hold and only the codec changes.
-- **Does kanban-rs preserve unknown keys inside an entry?** D-3's fallback depends on it, and so
-  does any future field. Worth knowing before it is needed rather than during an incident.
-- **`archived_boards` is absent from that database but present in the JSON envelope.** Either the
-  two are different versions or the section is JSON-only. It does not block this note, and it
-  does block the board equivalent.
+- **The PRD still promises kanban-rs compatibility, in seven places.** A value proposition
+  (§ Why), a principle ("`kanban.json` stays valid `kanban-rs` v18"), the data contract, a
+  **Never break** line, and success criterion 2 ("a project created here opens unchanged in the
+  `kanban-rs` CLI/TUI") — plus `DESIGN.md` D-03, `ARCHITECTURE.md` and `MEMORY.md`. This note
+  assumes the narrow reading: the format is where the project started, existing files keep
+  loading, and new sections are ours to shape. The broad reading — dropping the promise outright
+  — deletes a success criterion and a differentiator, and that is a PRD change, not a note's to
+  make. It needs deciding before T-66, because it decides whether `archive_id` is simply a field
+  or a deliberate divergence worth recording.
+- **`archived_boards`.** Present in the JSON envelope, absent from the kanban-rs database this
+  schema came from. It does not block this note, and it does block the board equivalent.

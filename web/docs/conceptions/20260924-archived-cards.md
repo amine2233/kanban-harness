@@ -1,0 +1,166 @@
+# Archived cards, and putting one back
+
+A card can only be **deleted** today — irreversibly, with `with_children` as the only option —
+and that is the single way to get one off a board. This note decides the view that lists what
+has been archived and the interaction that restores a card to a board.
+
+It does not decide where an archived card is stored. The app owns no data
+([`../../AGENT.md`](../../AGENT.md)): every byte on screen came from `/api`. So this note states
+the contract it needs and stops there — see § What this needs from the server, which is a
+backend note and blocks every task below.
+
+## Today
+
+Nothing is archived. The word appears in the codebase exactly once with this meaning:
+`Workspace.deleteCard` calls `archiveSpawns`, which stamps `archivedAt` on the card's
+parent/child links and keeps them as history, the way kanban-rs does. The card itself is dropped.
+
+`archived_cards` exists in the file format and is **not modelled**: `KanbanJSONStore` seeds the
+key when it is missing so a round-trip is byte-stable, and `Workspace` carries it in `extra`
+untouched. The Fluent backend keeps the same sections as an opaque blob. Whatever the backend
+note decides, both stores have to keep passing `StoreContract`.
+
+On the client, `kanbanApi.deleteCard` issues `DELETE …/cards/:id` and invalidates
+`{ type: 'Card', id: boardId }`. There is no archive anything.
+
+## Decisions
+
+### D-1 — archive sits beside delete, in both places a card is acted on
+
+**Decision.** **Archive** is added next to **Delete**; delete is not moved, not demoted and not
+replaced. Both appear in both places a card can be acted on:
+
+| Where                                              | What it shows                                  |
+| -------------------------------------------------- | ---------------------------------------------- |
+| the card's dot menu on the board                   | Archive, Delete                                |
+| the card detail dialog (`CardDialog`)              | Archive, Delete                                |
+
+One action in one place and not the other is how a user learns a feature exists and then cannot
+find it again. The dot menu is where a card is dismissed in passing; the dialog is where someone
+has the card open and decides it is finished. Both are the moment.
+
+Deleting is currently the only way to clear a finished card, so people delete what they would
+rather keep. Archive does not take that away — it gives the common case somewhere else to go,
+and delete keeps meaning exactly what it means today.
+
+**Delete keeps its confirmation and its `with_children` option; archive has neither.** Archive
+is reversible, so a dialog asking whether you are sure is friction charged for nothing, and
+D-6 settles the children question without asking.
+
+### D-2 — the archive is a route under the project, not a global page
+
+**Decision.** `/projects/:id/archive`, added to the `projects` plugin's `routes` array —
+one line in `src/plugins/projects/index.tsx`, no new plugin.
+
+An archived card belongs to a project's workspace, not to the application: two projects have
+two archives, and there is no view in which they should be mixed. A route rather than a modal
+because the list is unbounded, it has to survive a reload, and a URL is what makes "look at what
+we archived last month" shareable.
+
+**Rejected.** A new `DashboardPlugin`. The contract would take one — `id`, `name`, `nav`,
+`routes` — but a plugin is how a new _area_ is added, and this is the projects area seen from a
+different angle. A plugin would also put "Archive" in the sidebar with no project selected,
+which means nothing.
+
+**Rejected.** A tab beside the board tabs. `BoardTabs` switches between boards inside one
+workspace; the archive is not a board, and putting it there would make it a drop target for
+drag-and-drop, which D-4 deliberately avoids.
+
+### D-3 — restoring must ask where to
+
+**Decision.** Restore is never a bare button. It opens a small form with a board and a column,
+defaulting to where the card was archived from when that column still exists, and to the board's
+first column when it does not.
+
+This is the decision that would otherwise be discovered as a bug. Columns are deleted; boards
+are deleted; a card archived in _Review_ three months ago may have no _Review_ to go back to.
+A restore that guesses silently drops the card somewhere surprising, and a restore that fails
+with "column not found" blames the user for something the board did while the card was away.
+
+It follows that an archived card must carry its origin — board id and column id at the moment it
+was archived — which § What this needs from the server records as a requirement rather than a
+convenience.
+
+### D-4 — no drag-and-drop, in either direction
+
+**Decision.** Archiving is a menu action; restoring is a form. Neither is a drag.
+
+The board already has drag-and-drop for moving cards between columns, and extending it to a
+route that is not on screen at the same time is a different problem — a drag needs both ends
+visible. The reverse, dragging out of the board into a sidebar, hides a destructive-looking
+action behind a gesture with no confirmation.
+
+_ponytail: menu and form. If people archive dozens of cards at a time, multi-select with one
+Archive action is the next step, and it is additive._
+
+### D-5 — two lists change on every archive, and both must be invalidated
+
+**Decision.** A new RTK Query tag `{ type: 'Archive', id: projectId }`. Both mutations
+invalidate the board's `{ type: 'Card', id: boardId }` **and** the project's `Archive` tag.
+
+Miss the first and the board keeps rendering a card that is gone; miss the second and the
+archive view is missing the card that just arrived, or still shows the one just restored. Both
+are the kind of staleness that looks like data loss.
+
+The live socket carries `workspaceChanged(projectId)` already, and the app refetches on it, so a
+change made from the CLI or MCP should reach both views without a new event kind — confirm that
+against `packages/state/src/live/` before relying on it.
+
+### D-6 — archiving a card does not archive its children
+
+**Decision.** Archive the card alone. Its parent/child links are archived exactly as
+`deleteCard` already archives them; the children stay on the board, detached.
+
+A sub-task is a card. Cascading would mean a restore has to rebuild a subtree and decide what
+happens when one child's column is gone — D-3's problem, multiplied, for a case nobody has asked
+for. `with_children` exists on delete because deleting a parent and leaving orphans loses the
+structure permanently; archiving loses nothing, because the links are kept as history.
+
+### D-7 — the list is flat, newest first, and unpaginated until it hurts
+
+**Decision.** Sorted by archived date descending, showing title, key, the board and column it
+came from, and when. No filters, no search, no pagination.
+
+A personal board's archive is tens of cards, not thousands. `Page` already exists in
+`DashboardAPI` for when that stops being true, so the upgrade is a parameter and not a redesign.
+An empty state says archiving is where finished cards go, because a feature nobody can find is
+a feature nobody uses.
+
+## What this needs from the server
+
+Not decided here — this is the contract, and the backend note decides how to satisfy it.
+
+| Endpoint                                   | Purpose                                     |
+| ------------------------------------------ | ------------------------------------------- |
+| `GET …/kanban/v1/archive`                  | the project's archived cards, newest first  |
+| `POST …/boards/:board/cards/:card/archive` | move a card off the board                   |
+| `POST …/archive/:card/restore`             | put it back, body `{ board_id, column_id }` |
+
+An archived card must carry the **board and column it was archived from**, and **when** — D-3
+depends on the first, D-7 on the second. Without the origin the client has to guess a
+destination, which is the failure that decision exists to prevent.
+
+Open on the backend side, and the reason it needs its own note: `archived_cards` is an
+unmodelled passthrough today, kanban-rs writes that section too, and both stores have to keep
+round-tripping it. Whether archiving means "modelled at last" or "appended to the passthrough"
+changes the on-disk contract in [`PRD.md`](../../../docs/PRD.md) § Data contract.
+
+## Not in this note
+
+- **Where archived cards live** — the backend note.
+- **Archived boards.** `archived_boards` is the same kind of unmodelled section; a board is not
+  a card and the destination question does not apply to it.
+- **Retention.** Nothing expires an archived card. If that is ever wanted it is a server policy.
+- **The board's drag-and-drop** — untouched, see D-4.
+
+## Tasks
+
+- **T-18 (S)** `Archive` tag, and the three endpoints in `packages/state/src/api/kanbanApi.ts`.
+  — WEB · blocked by the backend note
+- **T-19 (S)** Archive beside Delete in the card's dot menu **and** in `CardDialog`; delete
+  unchanged. — WEB · T-18
+- **T-20 (M)** `/projects/:id/archive`: the route, the list, the empty state. — WEB · T-18
+- **T-21 (M)** Restore with a board and column picker, defaulting to the origin when it still
+  exists. — WEB · T-20
+- **T-22 (S)** Tests: both lists refetch after archive and after restore; restoring to a deleted
+  column falls back rather than failing. — WEB · T-21

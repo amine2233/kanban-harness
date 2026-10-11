@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v5
         with:
           # Only the formatter: mise.toml's [tools] also pins Swift and node,
           # and neither is needed to lint formatting.

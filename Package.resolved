@@ -1,13 +1,13 @@
 {
-  "originHash" : "008fa6aac963ab0fefd28b53f18bcec5077200af0acfbd5da5c3f6640353f135",
+  "originHash" : "740487dba5b7ab8d751d5efd1b31f6380dc8fff266d4b8674400b07c78f366ca",
   "pins" : [
     {
       "identity" : "anylanguagemodel",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mattt/AnyLanguageModel.git",
       "state" : {
-        "revision" : "4e3622476bb2f368c0cf741e7b55c2affe010082",
-        "version" : "0.13.0"
+        "revision" : "3e00403e1ea1d2e6870eb07747d602482e2fb982",
+        "version" : "0.16.0"
       }
     },
     {
@@ -98,15 +98,6 @@
       "state" : {
         "revision" : "3498e60218e6003894ff95192d756e238c01f44e",
         "version" : "4.7.1"
-      }
-    },
-    {
-      "identity" : "partialjsondecoder",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/mattt/PartialJSONDecoder",
-      "state" : {
-        "revision" : "8737b4cb362041da644400eea5504a6a27e586b5",
-        "version" : "1.0.1"
       }
     },
     {

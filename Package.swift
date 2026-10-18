@@ -24,7 +24,7 @@ let package = Package(
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", from: "0.12.0"),
         .package(
             url: "https://github.com/mattt/AnyLanguageModel.git",
-            from: "0.13.0",
+            from: "1.0.0",
             traits: ["AsyncHTTPClient"]
         ),
         .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.2")

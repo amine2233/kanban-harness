@@ -1,5 +1,5 @@
 {
-  "originHash" : "008fa6aac963ab0fefd28b53f18bcec5077200af0acfbd5da5c3f6640353f135",
+  "originHash" : "33a345ffae047d3602b7409034b5a4f5a7a7270c4a4622dfabb9fdebfb7435b3",
   "pins" : [
     {
       "identity" : "anylanguagemodel",
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/amine2233/cascade-kit.git",
       "state" : {
-        "revision" : "4bab19ccdff3ea14551a3e0023391ec2d6b9c8b8",
-        "version" : "1.0.0"
+        "revision" : "3e7c09d3d3938d957fbea37ab8337bf300a144e7",
+        "version" : "2.0.0"
       }
     },
     {
